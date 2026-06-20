@@ -52,20 +52,44 @@
         <input type="number" step="0.01" min="0" id="cfgCambio" inputmode="decimal" />
       </label>
       <label class="field">
-        <span>Frete (%)</span>
-        <input type="number" step="0.1" min="0" id="cfgFrete" inputmode="decimal" />
+        <span>Margem de lucro (%)</span>
+        <input type="number" step="1" min="0" id="cfgMargem" inputmode="decimal" />
       </label>
       <label class="field">
-        <span>Impostos / Markup (%)</span>
-        <input type="number" step="0.1" min="0" id="cfgImpostos" inputmode="decimal" />
+        <span>Desconto geral (%)</span>
+        <input type="number" step="0.5" min="0" id="cfgDesconto" inputmode="decimal" />
       </label>
       <label class="field">
-        <span>Margem padrão (%)</span>
-        <input type="number" step="0.1" min="0" id="cfgMargem" inputmode="decimal" />
+        <span>II — Imp. Importação (%)</span>
+        <input type="number" step="0.1" min="0" id="cfgII" inputmode="decimal" />
       </label>
-      <label class="field field--switch">
-        <span>Custo em dólar</span>
-        <input type="checkbox" id="cfgCustoDolar" class="switch" />
+      <label class="field">
+        <span>IPI (%)</span>
+        <input type="number" step="0.1" min="0" id="cfgIPI" inputmode="decimal" />
+      </label>
+      <label class="field">
+        <span>PIS/COFINS (%)</span>
+        <input type="number" step="0.01" min="0" id="cfgPis" inputmode="decimal" />
+      </label>
+      <label class="field">
+        <span>ICMS (%)</span>
+        <input type="number" step="0.1" min="0" id="cfgICMS" inputmode="decimal" />
+      </label>
+      <label class="field">
+        <span>IOF (%)</span>
+        <input type="number" step="0.01" min="0" id="cfgIOF" inputmode="decimal" />
+      </label>
+      <label class="field">
+        <span>Seguro intl. (%)</span>
+        <input type="number" step="0.1" min="0" id="cfgSeguro" inputmode="decimal" />
+      </label>
+      <label class="field">
+        <span>Frete intl. (US$/un)</span>
+        <input type="number" step="1" min="0" id="cfgFreteIntl" inputmode="decimal" />
+      </label>
+      <label class="field">
+        <span>Frete nacional (R$/un)</span>
+        <input type="number" step="1" min="0" id="cfgFreteNac" inputmode="decimal" />
       </label>
       <label class="field">
         <span>Parcelas máx.</span>
@@ -83,7 +107,7 @@
     <div class="config__actions">
       <button class="btn btn--primary" id="btnImport" type="button">Importar planilha</button>
       <button class="btn btn--ghost" id="btnAddProduct" type="button">+ Novo produto</button>
-      <button class="btn btn--ghost" id="btnResetData" type="button">Restaurar exemplo</button>
+      <button class="btn btn--ghost" id="btnResetData" type="button">Restaurar catálogo</button>
       <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" hidden />
     </div>
   </section>
@@ -146,10 +170,11 @@
           <label class="field"><span>Código</span><input id="edCodigo" type="text" /></label>
           <label class="field"><span>Série / Categoria</span><input id="edSerie" type="text" list="serieList" /></label>
           <label class="field field--wide"><span>Nome</span><input id="edNome" type="text" required /></label>
-          <label class="field field--wide"><span>Imagem (URL)</span><input id="edImagem" type="url" placeholder="https://…" /></label>
-          <label class="field"><span>Custo</span><input id="edCusto" type="number" step="0.01" min="0" inputmode="decimal" /></label>
-          <label class="field"><span>Margem (%) <small>vazio = padrão</small></span><input id="edMargem" type="number" step="0.1" inputmode="decimal" /></label>
-          <label class="field"><span>Preço manual <small>vazio = automático</small></span><input id="edPreco" type="number" step="0.01" min="0" inputmode="decimal" /></label>
+          <label class="field field--wide"><span>Imagem (URL)</span><input id="edImagem" type="text" placeholder="https://… ou assets/products/…" /></label>
+          <label class="field"><span>Custo FOB (US$)</span><input id="edCusto" type="number" step="0.01" min="0" inputmode="decimal" /></label>
+          <label class="field"><span>Dimensões</span><input id="edDims" type="text" placeholder="L×P×A (mm)" /></label>
+          <label class="field"><span>Margem (%) <small>vazio = padrão</small></span><input id="edMargem" type="number" step="1" inputmode="decimal" /></label>
+          <label class="field"><span>Preço manual (R$) <small>vazio = automático</small></span><input id="edPreco" type="number" step="0.01" min="0" inputmode="decimal" /></label>
           <label class="field field--switch"><span>Ocultar do vendedor</span><input id="edOculto" type="checkbox" class="switch" /></label>
         </div>
         <datalist id="serieList"></datalist>
@@ -218,6 +243,7 @@
   <!-- Toast -->
   <div id="toast" class="toast" hidden></div>
 
+  <script src="js/products.js"></script>
   <script src="js/seed.js"></script>
   <script src="js/app.js"></script>
 </body>

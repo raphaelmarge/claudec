@@ -27,13 +27,14 @@
   let state = load();
 
   function freshFromSeed() {
-    const seed = window.TORQUE_SEED;
+    const data = window.TORQUE_DATA || window.TORQUE_SEED;
     return {
       mode: 'vendedor',
-      params: { ...seed.params },
-      products: seed.products.map(p => ({
+      params: { ...data.params },
+      products: data.products.map(p => ({
         id: uid(), codigo: p.codigo || '', nome: p.nome || '', serie: p.serie || 'Geral',
-        imagem: p.imagem || '', custo: Number(p.custo) || 0,
+        imagem: p.imagem || '', dims: p.dims || '',
+        fob: Number(p.fob != null ? p.fob : p.custo) || 0,
         margem: null, precoManual: null, oculto: false
       })),
       cart: {},
@@ -41,11 +42,18 @@
     };
   }
 
+  const DATA_VERSION = (window.TORQUE_DATA && window.TORQUE_DATA.products && window.TORQUE_DATA.products.length) || 0;
+
   function load() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const s = JSON.parse(raw);
+        // Se o catálogo embutido cresceu (nova planilha) e o usuário nunca importou
+        // nada por conta própria, adota o catálogo novo automaticamente.
+        if (!s._imported && DATA_VERSION && (!s.products || s.products.length < DATA_VERSION)) {
+          return freshFromSeed();
+        }
         s.filters = s.filters || { serie: 'all', query: '' };
         s.cart = s.cart || {};
         return s;
@@ -61,14 +69,24 @@
   /* ------------------------------------------------------------
      PRECIFICAÇÃO
      ------------------------------------------------------------ */
+  /* Modelo idêntico à aba "Configuracoes" da planilha:
+     CIF(US$)  = FOB + Frete intl + FOB×Seguro%
+     Custo(R$) = CIF × (1+IOF+II+IPI+PIS/COFINS)/(1−ICMS) × Câmbio + Frete nacional
+     Preço(R$) = Custo × (1+Margem) × (1−Desconto)                                   */
   const P = () => state.params;
-  function custoBase(p) { return P().custoEmDolar ? p.custo * (P().cambio || 1) : p.custo; }
-  function custoComCustos(p) { return custoBase(p) * (1 + (P().frete || 0) / 100) * (1 + (P().impostos || 0) / 100); }
-  function margemDe(p) { return (p.margem != null && p.margem !== '') ? Number(p.margem) : Number(P().margemPadrao || 0); }
-  function precoCalculado(p) { return custoComCustos(p) * (1 + margemDe(p) / 100); }
+  const fobDe = p => Number(p.fob != null ? p.fob : p.custo) || 0;
+  function cifUSD(p) { const fob = fobDe(p); return fob + (P().freteIntlUSD || 0) + fob * (P().seguroPct || 0) / 100; }
+  function fatorImposto() {
+    const a = ((P().iof || 0) + (P().ii || 0) + (P().ipi || 0) + (P().pisCofins || 0)) / 100;
+    const icms = (P().icms || 0) / 100;
+    return (1 + a) / (1 - icms);
+  }
+  function custoBRL(p) { return cifUSD(p) * fatorImposto() * (P().cambio || 1) + (P().freteNacionalBRL || 0); }
+  function margemDe(p) { return (p.margem != null && p.margem !== '') ? Number(p.margem) : Number(P().margem || 0); }
+  function precoCalculado(p) { return custoBRL(p) * (1 + margemDe(p) / 100) * (1 - (P().descontoPct || 0) / 100); }
   function precoEfetivo(p) { return (p.precoManual != null && p.precoManual !== '') ? Number(p.precoManual) : precoCalculado(p); }
   function margemEfetivaPct(p) {
-    const c = custoComCustos(p); const v = precoEfetivo(p);
+    const c = custoBRL(p); const v = precoEfetivo(p);
     if (!c) return 0; return ((v - c) / c) * 100;
   }
 
@@ -149,11 +167,13 @@
 
   function renderConfig() {
     const p = P();
-    setVal('#cfgCambio', p.cambio); setVal('#cfgFrete', p.frete);
-    setVal('#cfgImpostos', p.impostos); setVal('#cfgMargem', p.margemPadrao);
+    setVal('#cfgCambio', p.cambio); setVal('#cfgMargem', p.margem);
+    setVal('#cfgDesconto', p.descontoPct);
+    setVal('#cfgII', p.ii); setVal('#cfgIPI', p.ipi); setVal('#cfgPis', p.pisCofins);
+    setVal('#cfgICMS', p.icms); setVal('#cfgIOF', p.iof); setVal('#cfgSeguro', p.seguroPct);
+    setVal('#cfgFreteIntl', p.freteIntlUSD); setVal('#cfgFreteNac', p.freteNacionalBRL);
     setVal('#cfgParcelas', p.parcelasMax); setVal('#cfgJuros', p.juros);
     setVal('#cfgValidade', p.validade);
-    $('#cfgCustoDolar').checked = !!p.custoEmDolar;
     $('#configPanel').hidden = state.mode !== 'admin';
   }
   function setVal(sel, v) { const el = $(sel); if (el && document.activeElement !== el) el.value = v; }
@@ -168,13 +188,12 @@
     }).join('');
   }
 
-  function renderGrid() {
-    const grid = $('#productGrid');
-    const list = visibleProducts();
-    const isAdmin = state.mode === 'admin';
-    $('#emptyState').hidden = list.length !== 0;
+  const PAGE = 60;            // cards renderizados por lote
+  let gridList = [];          // lista filtrada atual
+  let gridShown = 0;          // quantos já estão no DOM
+  let gridObserver = null;
 
-    grid.innerHTML = list.map(p => {
+  function cardHTML(p, isAdmin) {
       const price = precoEfetivo(p);
       const q = qtyOf(p.id);
       const media = p.imagem
@@ -183,8 +202,9 @@
 
       const adminCost = isAdmin ? `
         <div class="card__cost">
-          <span>Custo <b>${money(custoBase(p))}</b></span>
-          <span class="tag-margin">Mrg ${margemEfetivaPct(p).toFixed(0)}%</span>
+          <span>FOB <b>US$ ${fobDe(p).toLocaleString('pt-BR', { minimumFractionDigits: 0 })}</b></span>
+          <span>Custo <b>${money(custoBRL(p))}</b></span>
+          <span class="tag-margin">Mrg ${margemDe(p).toFixed(0)}%</span>
           ${p.precoManual != null && p.precoManual !== '' ? '<span class="tag-manual">manual</span>' : ''}
         </div>` : '';
 
@@ -211,7 +231,37 @@
           ${control}
         </div>
       </article>`;
-    }).join('');
+  }
+
+  function renderGrid() {
+    const grid = $('#productGrid');
+    gridList = visibleProducts();
+    $('#emptyState').hidden = gridList.length !== 0;
+    grid.innerHTML = '';
+    gridShown = 0;
+    appendGridChunk();
+  }
+
+  function appendGridChunk() {
+    const grid = $('#productGrid');
+    const isAdmin = state.mode === 'admin';
+    const next = gridList.slice(gridShown, gridShown + PAGE);
+    if (next.length) {
+      grid.insertAdjacentHTML('beforeend', next.map(p => cardHTML(p, isAdmin)).join(''));
+      gridShown += next.length;
+    }
+    // (re)posiciona a sentinela de scroll infinito
+    let sentinel = $('#gridSentinel');
+    if (gridShown < gridList.length) {
+      if (!sentinel) { sentinel = document.createElement('div'); sentinel.id = 'gridSentinel'; }
+      grid.after(sentinel);
+      if (!gridObserver) {
+        gridObserver = new IntersectionObserver(es => { if (es[0].isIntersecting) appendGridChunk(); }, { rootMargin: '600px' });
+      }
+      gridObserver.observe(sentinel);
+    } else if (sentinel) {
+      gridObserver && gridObserver.unobserve(sentinel); sentinel.remove();
+    }
   }
 
   function renderSerieDatalist() {
@@ -282,21 +332,18 @@
     state.filters.serie = b.dataset.serie; save(); renderChips(); renderGrid();
   });
 
-  // config inputs -> recalcula
-  ['#cfgCambio', '#cfgFrete', '#cfgImpostos', '#cfgMargem', '#cfgParcelas', '#cfgJuros', '#cfgValidade'].forEach(sel => {
-    $(sel).addEventListener('input', () => {
-      const p = P();
-      p.cambio = num($('#cfgCambio').value) || 0;
-      p.frete = num($('#cfgFrete').value) || 0;
-      p.impostos = num($('#cfgImpostos').value) || 0;
-      p.margemPadrao = num($('#cfgMargem').value) || 0;
-      p.parcelasMax = Math.max(1, parseInt($('#cfgParcelas').value, 10) || 1);
-      p.juros = num($('#cfgJuros').value) || 0;
-      p.validade = Math.max(1, parseInt($('#cfgValidade').value, 10) || 1);
-      save(); renderGrid(); renderSummary();
-    });
+  // config inputs -> recalcula (espelha a aba Configuracoes)
+  const CFG_MAP = {
+    '#cfgCambio': 'cambio', '#cfgMargem': 'margem', '#cfgDesconto': 'descontoPct',
+    '#cfgII': 'ii', '#cfgIPI': 'ipi', '#cfgPis': 'pisCofins', '#cfgICMS': 'icms',
+    '#cfgIOF': 'iof', '#cfgSeguro': 'seguroPct', '#cfgFreteIntl': 'freteIntlUSD',
+    '#cfgFreteNac': 'freteNacionalBRL', '#cfgJuros': 'juros'
+  };
+  Object.keys(CFG_MAP).forEach(sel => {
+    $(sel).addEventListener('input', () => { P()[CFG_MAP[sel]] = num($(sel).value) || 0; save(); renderGrid(); renderSummary(); });
   });
-  $('#cfgCustoDolar').addEventListener('change', e => { P().custoEmDolar = e.target.checked; save(); renderGrid(); renderSummary(); });
+  $('#cfgParcelas').addEventListener('input', () => { P().parcelasMax = Math.max(1, parseInt($('#cfgParcelas').value, 10) || 1); save(); renderSummary(); });
+  $('#cfgValidade').addEventListener('input', () => { P().validade = Math.max(1, parseInt($('#cfgValidade').value, 10) || 1); save(); });
 
   // grid interactions (delegation)
   $('#productGrid').addEventListener('click', e => {
@@ -350,7 +397,8 @@
     $('#edSerie').value = p ? p.serie : (state.filters.serie !== 'all' ? state.filters.serie : '');
     $('#edNome').value = p ? p.nome : '';
     $('#edImagem').value = p ? p.imagem : '';
-    $('#edCusto').value = p ? p.custo : '';
+    $('#edCusto').value = p ? fobDe(p) : '';
+    $('#edDims').value = p ? (p.dims || '') : '';
     $('#edMargem').value = (p && p.margem != null) ? p.margem : '';
     $('#edPreco').value = (p && p.precoManual != null) ? p.precoManual : '';
     $('#edOculto').checked = p ? !!p.oculto : false;
@@ -364,7 +412,8 @@
       serie: $('#edSerie').value.trim() || 'Geral',
       nome: $('#edNome').value.trim(),
       imagem: $('#edImagem').value.trim(),
-      custo: num($('#edCusto').value) || 0,
+      dims: $('#edDims').value.trim(),
+      fob: num($('#edCusto').value) || 0,
       margem: $('#edMargem').value === '' ? null : (num($('#edMargem').value) || 0),
       precoManual: $('#edPreco').value === '' ? null : (num($('#edPreco').value) || 0),
       oculto: $('#edOculto').checked
@@ -372,13 +421,12 @@
   }
   function updateEditPreview() {
     const f = readEditForm();
-    const tmp = { ...f };
-    const c = custoComCustos(tmp);
-    const v = precoEfetivo(tmp);
+    const c = custoBRL(f);
+    const v = precoEfetivo(f);
     const mrg = c ? ((v - c) / c * 100) : 0;
     $('#pricePreview').innerHTML =
-      `Custo base: <b>${money(custoBase(tmp))}</b> · com frete/impostos: <b>${money(c)}</b><br>` +
-      `Preço de venda: <b>${money(v)}</b> · margem efetiva: <b>${mrg.toFixed(1)}%</b>` +
+      `CIF: <b>US$ ${cifUSD(f).toFixed(2)}</b> · custo final: <b>${money(c)}</b><br>` +
+      `Preço de venda: <b>${money(v)}</b> · margem efetiva: <b>${mrg.toFixed(0)}%</b>` +
       (f.precoManual != null ? ' (preço manual)' : ' (automático)');
   }
   ['#edCusto', '#edMargem', '#edPreco'].forEach(s => $(s).addEventListener('input', updateEditPreview));
@@ -490,8 +538,9 @@
     { key: 'codigo', label: 'Código', rx: /(c[oó]d|sku|ref|item)/i },
     { key: 'nome',   label: 'Nome / Descrição', rx: /(nome|descri|produto|model)/i },
     { key: 'serie',  label: 'Série / Categoria', rx: /(s[eé]rie|categor|linha|grupo|tipo)/i },
-    { key: 'custo',  label: 'Custo', rx: /(custo|cost|fob|compra)/i },
-    { key: 'preco',  label: 'Preço de venda', rx: /(venda|pre[cç]o|price|valor|varejo)/i },
+    { key: 'custo',  label: 'Custo FOB (US$)', rx: /(fob|custo|cost|compra)/i },
+    { key: 'preco',  label: 'Preço de venda (R$)', rx: /(venda|pre[cç]o|price|valor|varejo)/i },
+    { key: 'dims',   label: 'Dimensões', rx: /(dimens|medida|tamanho|l.?.?p.?.?a)/i },
     { key: 'imagem', label: 'Imagem (URL)', rx: /(imagem|image|foto|url|link|img)/i }
   ];
   function guessColumn(field) {
@@ -534,7 +583,8 @@
         nome,
         serie: (m.serie ? String(r[m.serie] ?? '').trim() : '') || 'Geral',
         imagem: m.imagem ? String(r[m.imagem] ?? '').trim() : '',
-        custo: m.custo ? (num(r[m.custo]) || 0) : 0,
+        dims: m.dims ? String(r[m.dims] ?? '').trim() : '',
+        fob: m.custo ? (num(r[m.custo]) || 0) : 0,
         margem: null,
         precoManual: m.preco ? (num(r[m.preco]) || null) : null,
         oculto: false
@@ -543,6 +593,7 @@
     if (!imported.length) { toast('Nenhuma linha válida encontrada.'); return; }
     if ($('#impReplace').checked) { state.products = imported; state.cart = {}; }
     else state.products = state.products.concat(imported);
+    state._imported = true; // não sobrescrever import do usuário com catálogo embutido
     save(); closeModal('#importModal'); render();
     toast(`${imported.length} produto(s) importado(s).`);
   });

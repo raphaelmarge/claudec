@@ -40,23 +40,34 @@ Use o botão **Vendedor / Admin** no topo para alternar.
   (impressão → salvar como PDF), **exportar como imagem (PNG)** ou
   **compartilhar** (WhatsApp etc. via menu nativo do celular).
 
+## Catálogo
+
+O app já vem com o **catálogo real da planilha comercial** (926 produtos das
+séries HM, K1, K3, K5, K6, K8, A7, A8, A9, P, L, HY, SQ F, Pilates e Cardio),
+com **foto, código, nome, dimensões e custo FOB** de cada equipamento. As fotos
+ficam em `assets/products/`. Você pode reimportar uma planilha nova a qualquer
+momento pelo Modo Admin.
+
 ## Precificação
 
-Para cada produto:
+O cálculo é **idêntico à aba "Configuracoes" da sua planilha**. Para cada
+produto, a partir do custo **FOB (US$)**:
 
 ```
-custo base      = custo × câmbio        (se "Custo em dólar" estiver ligado)
-custo com tudo  = custo base × (1 + frete%) × (1 + impostos%)
-preço de venda  = custo com tudo × (1 + margem%)
+CIF (US$)   = FOB + Frete internacional + FOB × Seguro%
+Custo (R$)  = CIF × (1 + IOF + II + IPI + PIS/COFINS) / (1 − ICMS) × Câmbio
+              + Frete nacional
+Preço (R$)  = Custo × (1 + Margem%) × (1 − Desconto%)
 ```
 
-- A **margem** usada é a do produto, ou a **margem padrão** se o produto não
-  tiver uma própria.
+Todos os parâmetros (câmbio, margem, II, IPI, PIS/COFINS, ICMS, IOF, seguro,
+fretes e desconto) ficam no painel do Admin e, ao mudar qualquer um, **todos os
+preços recalculam sozinhos** — exatamente como na planilha.
+
+- A **margem** usada é a do produto, ou a **margem geral** se o produto não tiver
+  uma própria.
 - Você pode definir um **preço manual** por produto (sobrepõe o cálculo). Deixe
   em branco para voltar ao automático.
-- Se sua planilha já traz o **preço de venda**, ele é importado como preço manual
-  (o orçamento sai idêntico à planilha); depois, se quiser, é só limpar o preço
-  para o produto passar a recalcular pelos parâmetros.
 
 ## Identidade visual
 
