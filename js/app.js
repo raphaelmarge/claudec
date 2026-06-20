@@ -575,9 +575,8 @@
 
     const logo = `<svg class="qd__logo" viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" fill="#1D1D27" stroke="#8B5CF6" stroke-width="4"/><path d="M22 74 A 38 38 0 1 1 78 74" fill="none" stroke="#8B5CF6" stroke-width="6" stroke-linecap="round"/><line x1="50" y1="50" x2="73" y2="33" stroke="#8B5CF6" stroke-width="6" stroke-linecap="round"/><circle cx="50" cy="50" r="7" fill="#8B5CF6"/></svg>`;
 
-    const rows = lines.map((l, i) => `
+    const rows = lines.map(l => `
       <tr>
-        <td class="num">${i + 1}</td>
         <td><div class="qd__pname">${esc(l.p.nome)}</div>${l.p.codigo ? `<div class="qd__pcode">${esc(l.p.codigo)}</div>` : ''}</td>
         <td class="num">${l.q}</td>
         <td class="num">${money(l.unit)}</td>
@@ -601,7 +600,7 @@
         <span>Vendedor: <b>${esc(vendedor || '—')}</b></span>
       </div>
       <table class="qd__table">
-        <thead><tr><th class="num">#</th><th>Produto</th><th class="num">Qtd</th><th class="num">Unitário</th><th class="num">Total</th></tr></thead>
+        <thead><tr><th>Produto</th><th class="num">Qtd</th><th class="num">Unitário</th><th class="num">Total</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
       <div class="qd__totals">
