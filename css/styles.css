@@ -276,6 +276,14 @@ body[data-mode="admin"]    .mode-toggle__opt[data-for="admin"] { color: #fff; }
 .btn--ghost { background: var(--panel); border-color: var(--line-2); color: var(--txt); }
 .btn--ghost:hover { border-color: var(--violet); }
 .btn--danger { background: rgba(248,113,113,.12); border-color: rgba(248,113,113,.45); color: var(--danger); }
+.btn--wpp { background: linear-gradient(135deg, #25D366, #1da851); color: #fff; box-shadow: 0 6px 18px rgba(37,211,102,.3); }
+.btn--wpp:hover { filter: brightness(1.06); }
+
+/* rodapé do orçamento: WhatsApp em destaque + ações menores */
+.modal__foot--quote { flex-direction: column; align-items: stretch; gap: 9px; }
+.modal__foot--quote .btn--wpp { width: 100%; padding: 14px; font-size: .95rem; }
+.quote-actions2 { display: flex; gap: 8px; }
+.quote-actions2 .btn { flex: 1; padding: 11px 6px; }
 
 /* ============================ MODALS ============================ */
 .modal { position: fixed; inset: 0; z-index: 80; display: flex; align-items: flex-end; justify-content: center; }
@@ -367,8 +375,9 @@ body:not(.role-admin) .role-admin-only { display: none !important; }
   radial-gradient(1000px 500px at 80% -10%, rgba(124,58,237,.22), transparent 60%),
   radial-gradient(800px 500px at -10% 110%, rgba(109,40,217,.16), transparent 55%), var(--black); }
 body[data-auth="out"] .login { display: flex; }
-.login__card { width: 100%; max-width: 380px; background: linear-gradient(180deg, var(--panel-2), var(--panel));
+.login__card { width: 100%; max-width: 380px; max-height: 86dvh; overflow-y: auto; background: linear-gradient(180deg, var(--panel-2), var(--panel));
   border: 1px solid var(--line-2); border-radius: 20px; padding: 26px 22px; box-shadow: var(--shadow); }
+#signupExtra .field, #signupExtra .form-grid { margin-bottom: 12px; }
 .login__brand { display: flex; align-items: center; gap: 12px; justify-content: center; margin-bottom: 18px; }
 .login__mark { width: 38px; height: 46px; fill: var(--violet); }
 .login__wordmark strong { font-family: var(--font-title); font-weight: 900; font-size: 1.05rem; letter-spacing: .03em; display: block; line-height: 1; }

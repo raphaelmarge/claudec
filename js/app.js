@@ -946,19 +946,46 @@
     } catch (e) { console.error(e); toast('Não foi possível gerar a imagem.'); }
   });
 
-  $('#btnShareQuote').addEventListener('click', async () => {
+  // Texto-resumo do orçamento (WhatsApp / compartilhar)
+  function resumoTexto() {
     const lines = cartLines();
     const total = totalComDesconto();
     const sinal = sinalReais();
     const saldo = saldoFinanciar();
     const n = Number($('#installSelect').value) || Math.floor(P().parcelasMax || 12);
     const cli = clienteById(Q().clienteId);
+    const vend = currentVendedor();
     let txt = `*Orçamento Torque Fitness*\n`;
     if (cli) txt += `Cliente: ${cli.nome}\n`;
+    if (vend) txt += `Vendedor: ${vend.nome}\n`;
     txt += `\n` + lines.map(l => `• ${l.q}× ${l.p.nome} — ${money(l.total)}`).join('\n') +
       `\n\n*Total: ${money(total)}*`;
     if (sinal > 0) txt += `\nSinal: ${money(sinal)} · Saldo: ${money(saldo)}`;
     txt += `\n${n}× de ${money(parcelaValor(saldo, n))}`;
+    return txt;
+  }
+
+  // Telefone -> formato internacional do WhatsApp (Brasil = 55).
+  function whatsNumero(tel) {
+    let d = String(tel || '').replace(/\D/g, '');
+    if (!d) return '';
+    if (!d.startsWith('55')) d = '55' + d;
+    return d;
+  }
+  $('#btnWppQuote').addEventListener('click', () => {
+    const cli = clienteById(Q().clienteId);
+    const num = whatsNumero(cli && cli.telefone);
+    const txt = encodeURIComponent(resumoTexto());
+    if (!num) {
+      toast('Cliente sem telefone. Edite o cliente e adicione o WhatsApp.');
+      window.open(`https://wa.me/?text=${txt}`, '_blank');   // abre o WhatsApp para escolher contato
+      return;
+    }
+    window.open(`https://wa.me/${num}?text=${txt}`, '_blank');
+  });
+
+  $('#btnShareQuote').addEventListener('click', async () => {
+    const txt = resumoTexto();
     try {
       // tenta compartilhar imagem como arquivo, se suportado
       if (navigator.share) {
@@ -1049,6 +1076,35 @@
     resetToLogin();
   });
 
+  // ---- Meu cadastro (perfil do vendedor) ----
+  $('#umPerfil').addEventListener('click', () => {
+    closeUserMenu();
+    const p = Cloud.profile || {};
+    const cv = state.currentVendedor || {};
+    $('#pfNome').value = p.nome || cv.nome || '';
+    $('#pfCpf').value = p.cpf || '';
+    $('#pfCelular').value = p.celular || p.telefone || '';
+    $('#pfEndereco').value = p.endereco || '';
+    $('#pfCidade').value = p.cidade || '';
+    $('#pfCep').value = p.cep || '';
+    $('#pfEmail').value = cv.email || '';
+    openModal('#perfilModal');
+  });
+  $('#btnSavePerfil').addEventListener('click', async () => {
+    const nome = $('#pfNome').value.trim();
+    if (!nome) { toast('Informe seu nome.'); return; }
+    const celular = $('#pfCelular').value.trim();
+    try {
+      await Cloud.updateMyProfile({
+        nome, cpf: $('#pfCpf').value.trim(), celular, telefone: celular,
+        endereco: $('#pfEndereco').value.trim(), cidade: $('#pfCidade').value.trim(), cep: $('#pfCep').value.trim()
+      });
+      if (state.currentVendedor) state.currentVendedor.nome = nome;
+      setRoleUI(nome); save(); renderSummary();
+      closeModal('#perfilModal'); toast('Cadastro salvo.');
+    } catch (e) { console.error(e); toast('Erro ao salvar cadastro.'); }
+  });
+
   function setRoleUI(nome) {
     const admin = Cloud.isAdmin();
     document.body.classList.toggle('role-admin', admin);
@@ -1083,8 +1139,8 @@
   /* ---------- LOGIN ---------- */
   let signupMode = false;
   function updateLoginMode() {
-    $('#loginNomeField').hidden = !signupMode;
-    $('#loginTitle').textContent = signupMode ? 'Criar conta' : 'Entrar';
+    $('#signupExtra').hidden = !signupMode;
+    $('#loginTitle').textContent = signupMode ? 'Criar conta de vendedor' : 'Entrar';
     $('#btnLoginSubmit').textContent = signupMode ? 'Criar conta' : 'Entrar';
     $('#btnLoginSwitch').innerHTML = signupMode ? 'Já tenho conta. <b>Entrar</b>' : 'Não tem conta? <b>Criar conta</b>';
     $('#loginError').hidden = true;
@@ -1104,14 +1160,29 @@
     const senha = $('#loginSenha').value;
     const nome = $('#loginNome').value.trim();
     if (!email || !senha) { loginError('Preencha e-mail e senha.'); return; }
-    if (signupMode && !nome) { loginError('Informe seu nome.'); return; }
+    if (signupMode && !nome) { loginError('Informe seu nome completo.'); return; }
     const btn = $('#btnLoginSubmit'); btn.disabled = true; btn.textContent = '…';
     try {
-      if (signupMode) { await Cloud.signUp(email, senha, nome); try { await Cloud.signIn(email, senha); } catch (e) {} }
-      else { await Cloud.signIn(email, senha); }
-      const session = await Cloud.getSession();
-      if (session) { await afterAuth(session); }
-      else loginError(signupMode ? 'Conta criada. Confirme o e-mail e faça login.' : 'Não foi possível entrar.');
+      if (signupMode) {
+        await Cloud.signUp(email, senha, nome);
+        try { await Cloud.signIn(email, senha); } catch (e) {}
+        const session = await Cloud.getSession();
+        if (!session) { loginError('Conta criada. Confirme o e-mail e faça login.'); return; }
+        // grava o cadastro completo do vendedor
+        const celular = $('#loginCelular').value.trim();
+        try {
+          await Cloud.updateMyProfile({
+            nome, cpf: $('#loginCpf').value.trim(), celular, telefone: celular,
+            endereco: $('#loginEndereco').value.trim(), cidade: $('#loginCidade').value.trim(), cep: $('#loginCep').value.trim()
+          });
+        } catch (e) { console.error('perfil:', e); }
+        await afterAuth(session);
+      } else {
+        await Cloud.signIn(email, senha);
+        const session = await Cloud.getSession();
+        if (session) await afterAuth(session);
+        else loginError('Não foi possível entrar.');
+      }
     } catch (e) { console.error(e); loginError(traduzErro(e)); }
     finally { btn.disabled = false; btn.textContent = signupMode ? 'Criar conta' : 'Entrar'; }
   }

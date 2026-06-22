@@ -48,7 +48,9 @@ window.Cloud = (function () {
     return profile;
   }
   async function updateMyProfile(fields) {
-    const { data, error } = await sb.from('profiles').update(fields).eq('id', profile.id).select().single();
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user) throw new Error('Sessão expirada.');
+    const { data, error } = await sb.from('profiles').update(fields).eq('id', user.id).select().single();
     if (error) throw error;
     profile = data; return data;
   }

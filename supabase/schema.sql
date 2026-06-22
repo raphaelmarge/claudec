@@ -13,6 +13,14 @@ create table if not exists public.profiles (
   criado_em timestamptz default now()
 );
 
+-- campos completos do vendedor (rode mesmo se a tabela já existir)
+alter table public.profiles
+  add column if not exists cpf      text default '',
+  add column if not exists celular  text default '',
+  add column if not exists endereco text default '',
+  add column if not exists cidade   text default '',
+  add column if not exists cep      text default '';
+
 -- ---------- helper: usuário atual é admin? (evita recursão no RLS) ----------
 -- Criado DEPOIS da tabela profiles, pois referencia ela.
 create or replace function public.is_admin()
