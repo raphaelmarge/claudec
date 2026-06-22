@@ -855,7 +855,7 @@
     const numero = 'ORC-' + new Date().toISOString().slice(2, 10).replace(/-/g, '') + '-' + (state.orcamentos.length + 1);
     lastQuoteNumero = numero;
 
-    const logo = `<svg class="qd__logo" viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" fill="#1D1D27" stroke="#8B5CF6" stroke-width="4"/><path d="M22 74 A 38 38 0 1 1 78 74" fill="none" stroke="#8B5CF6" stroke-width="6" stroke-linecap="round"/><line x1="50" y1="50" x2="73" y2="33" stroke="#8B5CF6" stroke-width="6" stroke-linecap="round"/><circle cx="50" cy="50" r="7" fill="#8B5CF6"/></svg>`;
+    const logo = `<svg class="qd__logo" viewBox="0 0 227 271" fill="#8B5CF6"><g transform="translate(0,271) scale(0.1,-0.1)"><path d="M130 2617 c-50 -26 -50 -19 -50 -685 0 -686 -2 -669 61 -691 34 -12 367 -14 406 -3 12 4 105 84 205 178 533 498 494 463 524 455 38 -10 70 -54 58 -81 -5 -11 -268 -262 -584 -558 -586 -547 -620 -584 -652 -682 -6 -19 -13 -125 -15 -236 -6 -224 -3 -234 62 -234 30 0 96 59 706 630 601 563 677 630 703 628 18 -2 37 -14 50 -31 19 -26 19 -30 5 -55 -8 -15 -289 -283 -624 -597 l-609 -570 887 -3 c609 -1 894 1 908 8 19 11 20 24 17 973 -3 944 -4 963 -24 1023 -88 255 -268 427 -539 511 l-90 27 -690 3 c-546 3 -695 1 -715 -10z"/></g></svg>`;
     const thumb = p => p.imagem
       ? `<img class="qd__thumb" src="${esc(p.imagem)}" alt="" onerror="this.style.visibility='hidden'"/>`
       : `<span class="qd__thumb qd__thumb--ph"></span>`;
