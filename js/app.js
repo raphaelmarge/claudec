@@ -32,6 +32,8 @@
   // que, capturado, resetava o estado salvo e apagava vendedores/clientes ao recarregar).
   const DATA_VERSION = (window.TORQUE_PUBLIC && window.TORQUE_PUBLIC.products && window.TORQUE_PUBLIC.products.length) || 0;
   let state = load();
+  let editingOrcamentoId = null;   // id do orçamento sendo editado (null = novo)
+  let editingNumero = '';          // número do orçamento em edição (preserva o original)
 
   function freshFromSeed() {
     const data = window.TORQUE_PUBLIC || window.TORQUE_DATA || window.TORQUE_SEED;
@@ -386,6 +388,11 @@
     if (document.activeElement !== $('#inpDesconto')) $('#inpDesconto').value = Q().descValue || 0;
     if (document.activeElement !== $('#inpSinal')) $('#inpSinal').value = Q().sinal || 0;
 
+    const editing = !!editingOrcamentoId;
+    $('#editBanner').hidden = !editing;
+    if (editing) $('#editBannerText').textContent = '✎ Editando orçamento — “Gerar” salva por cima';
+    $('#btnExport').textContent = editing ? 'Salvar alterações' : 'Gerar orçamento';
+
     renderPeople();
 
     $('#summaryItems').innerHTML = lines.length ? lines.map(l => `
@@ -499,10 +506,17 @@
       const id = e.target.closest('.sitem').dataset.id; setQty(id, 0); refreshCard(id); renderSummary();
     }
   });
+  function novoOrcamento() {
+    state.cart = {}; state.quote.descValue = 0; state.quote.sinal = 0;
+    state.quote.clienteId = null; editingOrcamentoId = null;
+    save(); render();
+  }
   $('#btnClearCart').addEventListener('click', () => {
-    if (!cartCount() || confirm('Limpar todos os itens do orçamento?')) {
-      state.cart = {}; state.quote.descValue = 0; state.quote.sinal = 0; save(); render();
-    }
+    if (!cartCount() && !editingOrcamentoId) return;
+    if (confirm('Limpar e começar um novo orçamento?')) novoOrcamento();
+  });
+  $('#btnNovoOrc').addEventListener('click', () => {
+    if (!cartCount() || confirm('Descartar edições e começar um novo orçamento?')) novoOrcamento();
   });
 
   // desconto / sinal (vendedor)
@@ -814,7 +828,9 @@
     const parc = parcelaValor(saldo, n);
     const cli = clienteById(Q().clienteId);
     const vend = currentVendedor();
-    const numero = 'ORC-' + new Date().toISOString().slice(2, 10).replace(/-/g, '') + '-' + (state.orcamentos.length + 1);
+    const numero = editingOrcamentoId && editingNumero
+      ? editingNumero
+      : 'ORC-' + new Date().toISOString().slice(2, 10).replace(/-/g, '') + '-' + Date.now().toString(36).slice(-4).toUpperCase();
     lastQuoteNumero = numero;
 
     const logo = `<svg class="qd__logo" viewBox="0 0 227 271" fill="#8B5CF6"><g transform="translate(0,271) scale(0.1,-0.1)"><path d="M130 2617 c-50 -26 -50 -19 -50 -685 0 -686 -2 -669 61 -691 34 -12 367 -14 406 -3 12 4 105 84 205 178 533 498 494 463 524 455 38 -10 70 -54 58 -81 -5 -11 -268 -262 -584 -558 -586 -547 -620 -584 -652 -682 -6 -19 -13 -125 -15 -236 -6 -224 -3 -234 62 -234 30 0 96 59 706 630 601 563 677 630 703 628 18 -2 37 -14 50 -31 19 -26 19 -30 5 -55 -8 -15 -289 -283 -624 -597 l-609 -570 887 -3 c609 -1 894 1 908 8 19 11 20 24 17 973 -3 944 -4 963 -24 1023 -88 255 -268 427 -539 511 l-90 27 -690 3 c-546 3 -695 1 -715 -10z"/></g></svg>`;
@@ -901,11 +917,20 @@
       sinal: sinalReais(),
       saldo,
       parcelas: n,
-      valor_parcela: saldo > 0 ? parcelaValor(saldo, n) : 0,
-      status: 'enviado'
+      valor_parcela: saldo > 0 ? parcelaValor(saldo, n) : 0
     };
-    try { await Cloud.saveOrcamento(row); toast('Orçamento salvo na nuvem.'); }
-    catch (e) { console.error(e); toast('Falhou salvar na nuvem (verifique conexão).'); }
+    try {
+      if (editingOrcamentoId) {
+        await Cloud.updateOrcamento(editingOrcamentoId, row);   // preserva a fase do funil
+        toast('Orçamento atualizado.');
+      } else {
+        row.status = 'novo';                                    // entra no topo do funil
+        const saved = await Cloud.saveOrcamento(row);
+        if (saved && saved.id) { editingOrcamentoId = saved.id; editingNumero = saved.numero || lastQuoteNumero; }
+        toast('Orçamento salvo na nuvem.');
+      }
+      renderSummary();   // atualiza o aviso de edição / rótulo do botão
+    } catch (e) { console.error(e); toast('Falhou salvar na nuvem (verifique conexão).'); }
   }
 
   $('#btnPdfQuote').addEventListener('click', () => window.print());
@@ -1094,12 +1119,39 @@
   $('#btnLoginSubmit').addEventListener('click', doLogin);
   $('#loginSenha').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 
-  /* ---------- DASHBOARD ---------- */
+  /* ---------- DASHBOARD + FUNIL DE VENDAS ---------- */
+  // Fases do funil (boas práticas: do topo até ganho/perdido).
+  const STAGES = [
+    { key: 'novo',        label: 'Aguardando contato', short: 'Aguardando' },
+    { key: 'negociacao',  label: 'Em negociação',      short: 'Negociação' },
+    { key: 'sem_retorno', label: 'Sem retorno',        short: 'Sem retorno' },
+    { key: 'ganho',       label: 'Fechado ✅',          short: 'Fechado' },
+    { key: 'perdido',     label: 'Não fechou ❌',       short: 'Perdido' }
+  ];
+  const STAGE_LABEL = STAGES.reduce((m, s) => (m[s.key] = s.label, m), {});
+  function stageOf(r) { const s = r.status || 'novo'; return (s === 'enviado' || !STAGE_LABEL[s]) ? 'novo' : s; }
+
   let dashData = [];
+  let dashStage = 'all';
   $('#umDashboard').addEventListener('click', openDashboard);
   $('#dashClose').addEventListener('click', () => { $('#dashScreen').hidden = true; document.body.style.overflow = ''; });
   $('#dashSearch').addEventListener('input', renderDashboard);
   $('#dashVendedorFilter').addEventListener('change', renderDashboard);
+  $('#dashFunnel').addEventListener('click', e => {
+    const b = e.target.closest('.fchip'); if (!b) return;
+    dashStage = b.dataset.stage; renderDashboard();
+  });
+  // mudar a fase de um orçamento direto no card
+  $('#dashList').addEventListener('change', async e => {
+    if (e.target.dataset.act !== 'stage') return;
+    const id = e.target.closest('.dcard').dataset.id;
+    const status = e.target.value;
+    try {
+      await Cloud.updateOrcamento(id, { status });
+      const r = dashData.find(x => x.id === id); if (r) r.status = status;
+      renderDashboard(); toast('Fase atualizada.');
+    } catch (err) { console.error(err); toast('Erro ao mudar a fase.'); }
+  });
 
   async function openDashboard() {
     closeUserMenu();
@@ -1119,22 +1171,40 @@
   function renderDashboard() {
     const q = ($('#dashSearch').value || '').toLowerCase().trim();
     const vf = $('#dashVendedorFilter').value;
-    const rows = dashData.filter(r => {
+    // base: aplica busca + filtro de vendedor (o funil reflete esse universo)
+    const base = dashData.filter(r => {
       if (vf && r.vendedor_nome !== vf) return false;
       if (q && !String(r.cliente_nome || '').toLowerCase().includes(q)) return false;
       return true;
     });
-    const totalVal = rows.reduce((s, r) => s + (Number(r.total) || 0), 0);
+
+    // ---- funil: contagem + valor por fase ----
+    const cnt = { all: base.length }, val = { all: 0 };
+    STAGES.forEach(s => { cnt[s.key] = 0; val[s.key] = 0; });
+    base.forEach(r => { const k = stageOf(r); cnt[k]++; const v = Number(r.total) || 0; val[k] += v; val.all += v; });
+    const fchip = (key, label, c, v) =>
+      `<button class="fchip st-${key} ${dashStage === key ? 'active' : ''}" data-stage="${key}">
+        <span class="fchip__n">${c}</span><span class="fchip__l">${label}</span><span class="fchip__v">${money(v)}</span></button>`;
+    $('#dashFunnel').innerHTML =
+      fchip('all', 'Todos', cnt.all, val.all) +
+      STAGES.map(s => fchip(s.key, s.short, cnt[s.key], val[s.key])).join('');
+
+    // ---- métricas (boas práticas: taxa de fechamento) ----
+    const fechados = cnt.ganho + cnt.perdido;
+    const conv = fechados ? Math.round(cnt.ganho / fechados * 100) : 0;
     $('#dashStats').innerHTML =
-      `<div class="dash__stat"><b>${rows.length}</b><span>orçamentos</span></div>` +
-      `<div class="dash__stat"><b>${money(totalVal)}</b><span>em vendas</span></div>`;
-    $('#dashList').innerHTML = rows.length ? rows.map(dcard).join('')
-      : '<p class="dash__empty">Nenhum orçamento ainda.<br>Monte um orçamento e toque em “Gerar orçamento”.</p>';
+      `<div class="dash__stat"><b>${money(val.ganho)}</b><span>vendas fechadas</span></div>` +
+      `<div class="dash__stat"><b>${conv}%</b><span>taxa de fechamento</span></div>`;
+
+    // ---- lista (aplica a fase selecionada) ----
+    const shown = dashStage === 'all' ? base : base.filter(r => stageOf(r) === dashStage);
+    $('#dashList').innerHTML = shown.length ? shown.map(dcard).join('')
+      : '<p class="dash__empty">Nenhum orçamento nesta fase.</p>';
   }
   function dcard(r) {
     const d = r.criado_em ? new Date(r.criado_em).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '';
     const itens = (r.itens || []).map(i => `${i.qtd}× ${esc(i.nome)}`).join(' · ');
-    return `<div class="dcard">
+    return `<div class="dcard" data-id="${r.id}">
       <div class="dcard__top"><span class="dcard__cli">${esc(r.cliente_nome || '—')}</span><span class="dcard__val">${money(r.total)}</span></div>
       <div class="dcard__meta">
         ${r.numero ? `<span>${esc(r.numero)}</span>` : ''}<span>${d}</span>
@@ -1143,7 +1213,47 @@
         <span>${r.parcelas}× ${money(r.valor_parcela)}</span>
       </div>
       ${itens ? `<div class="dcard__items">${itens}</div>` : ''}
+      <select class="dcard__stage st-${stageOf(r)}" data-act="stage" aria-label="Fase da venda">
+        ${STAGES.map(s => `<option value="${s.key}" ${stageOf(r) === s.key ? 'selected' : ''}>${s.label}</option>`).join('')}
+      </select>
+      <div class="dcard__actions">
+        <button class="dc-edit" data-act="edit-orc" type="button">✎ Editar</button>
+        <button class="dc-del" data-act="del-orc" type="button">🗑 Excluir</button>
+      </div>
     </div>`;
+  }
+  $('#dashList').addEventListener('click', async e => {
+    const card = e.target.closest('.dcard'); if (!card) return;
+    const id = card.dataset.id;
+    const o = dashData.find(x => x.id === id); if (!o) return;
+    if (e.target.dataset.act === 'edit-orc') editOrcamento(o);
+    if (e.target.dataset.act === 'del-orc') {
+      if (!confirm(`Excluir o orçamento de ${o.cliente_nome || 'cliente'}?`)) return;
+      try { await Cloud.deleteOrcamento(id); dashData = dashData.filter(x => x.id !== id); renderDashboard(); toast('Orçamento excluído.'); }
+      catch (err) { console.error(err); toast('Erro ao excluir.'); }
+    }
+  });
+
+  // Carrega um orçamento salvo de volta no montador para editar.
+  function editOrcamento(o) {
+    state.cart = {};
+    let faltando = 0;
+    (o.itens || []).forEach(it => {
+      const p = state.products.find(x => x.codigo && x.codigo === it.codigo);
+      if (p) state.cart[p.id] = (state.cart[p.id] || 0) + (Number(it.qtd) || 0);
+      else faltando++;
+    });
+    state.quote.clienteId = o.cliente_id || null;
+    state.quote.descMode = 'brl';
+    state.quote.descValue = Number(o.desconto) || 0;
+    state.quote.sinal = Number(o.sinal) || 0;
+    editingOrcamentoId = o.id;
+    editingNumero = o.numero || '';
+    $('#dashScreen').hidden = true; document.body.style.overflow = '';
+    save(); render();
+    if (o.parcelas) { $('#installSelect').value = String(o.parcelas); updateInstallValue(saldoFinanciar()); }
+    $('#summaryBar').classList.add('open');
+    if (faltando) toast(`${faltando} item(ns) não estão mais no catálogo e foram ignorados.`);
   }
 
   /* ------------------------------------------------------------

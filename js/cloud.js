@@ -81,6 +81,14 @@ window.Cloud = (function () {
     const { data, error } = await sb.from('orcamentos').insert(o).select().single();
     if (error) throw error; return data;
   }
+  async function updateOrcamento(id, fields) {
+    const { data, error } = await sb.from('orcamentos').update(fields).eq('id', id).select().single();
+    if (error) throw error; return data;
+  }
+  async function deleteOrcamento(id) {
+    const { error } = await sb.from('orcamentos').delete().eq('id', id);
+    if (error) throw error;
+  }
   async function listOrcamentos() {
     // RLS: vendedor recebe os seus; admin recebe todos.
     const { data, error } = await sb.from('orcamentos').select('*').order('criado_em', { ascending: false });
@@ -97,7 +105,7 @@ window.Cloud = (function () {
     configured, ready, init, getSession, onAuthChange,
     signIn, signUp, signOut, loadProfile, updateMyProfile,
     listClientes, saveCliente, deleteCliente,
-    saveOrcamento, listOrcamentos, listVendedores,
+    saveOrcamento, updateOrcamento, deleteOrcamento, listOrcamentos, listVendedores,
     get profile() { return profile; },
     isAdmin() { return !!profile && profile.role === 'admin'; }
   };

@@ -46,6 +46,7 @@
       </div>
       <select id="dashVendedorFilter" class="role-admin-only"></select>
     </div>
+    <div class="dash__funnel" id="dashFunnel"></div>
     <div class="dash__stats" id="dashStats"></div>
     <div class="dash__list" id="dashList"></div>
   </div>
@@ -176,6 +177,11 @@
     </button>
     <div class="summary__body" id="summaryBody">
       <h2>Resumo do orçamento</h2>
+
+      <div class="edit-banner" id="editBanner" hidden>
+        <span id="editBannerText">Editando orçamento</span>
+        <button id="btnNovoOrc" type="button">Novo</button>
+      </div>
 
       <div class="quote-people">
         <label class="qp">

@@ -391,6 +391,27 @@ body[data-auth="out"] .login { display: flex; }
 .dash__tools { display: flex; gap: 10px; padding: 12px 16px; }
 .dash__tools .search { flex: 1; }
 .dash__tools select { background: var(--panel); border: 1px solid var(--line-2); color: var(--txt); border-radius: var(--radius-sm); padding: 0 10px; font-size: .82rem; max-width: 45%; }
+/* funil de vendas */
+.dash__funnel { display: flex; gap: 8px; overflow-x: auto; padding: 4px 16px 12px; scrollbar-width: none; }
+.dash__funnel::-webkit-scrollbar { display: none; }
+.fchip { flex: none; min-width: 96px; text-align: left; padding: 9px 12px; border-radius: 12px;
+  background: var(--panel); border: 1px solid var(--line-2); color: var(--txt); display: flex; flex-direction: column; gap: 2px;
+  border-left-width: 3px; }
+.fchip__n { font-family: var(--font-mono); font-weight: 700; font-size: 1.1rem; line-height: 1; }
+.fchip__l { font-size: .64rem; color: var(--txt-dim); text-transform: uppercase; letter-spacing: .03em; }
+.fchip__v { font-family: var(--font-mono); font-size: .68rem; color: var(--txt-mut); }
+.fchip.active { background: var(--panel-2); box-shadow: 0 0 0 2px var(--violet-glow); border-color: var(--violet); }
+/* cores por fase */
+.st-all { border-left-color: var(--txt-mut); }
+.st-novo { border-left-color: #7c8aa5; }
+.st-negociacao { border-left-color: var(--violet); }
+.st-sem_retorno { border-left-color: #F5A524; }
+.st-ganho { border-left-color: var(--ok); }
+.st-perdido { border-left-color: var(--danger); }
+
+.dcard__stage { width: 100%; margin-top: 10px; background: var(--black); color: var(--txt);
+  border: 1px solid var(--line-2); border-left-width: 3px; border-radius: 9px; padding: 9px 10px; font-size: .82rem; font-weight: 600; }
+
 .dash__stats { display: flex; gap: 10px; padding: 0 16px 12px; }
 .dash__stat { flex: 1; background: linear-gradient(180deg, var(--panel-2), var(--panel)); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; }
 .dash__stat b { display: block; font-family: var(--font-mono); font-size: 1.25rem; color: var(--violet); }
@@ -404,6 +425,15 @@ body[data-auth="out"] .login { display: flex; }
 .dcard__meta .vend { color: var(--txt-dim); }
 .dcard__items { margin-top: 8px; font-size: .76rem; color: var(--txt-dim); line-height: 1.5; }
 .dash__empty { text-align: center; color: var(--txt-mut); padding: 50px 20px; }
+
+.edit-banner { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px;
+  padding: 9px 12px; background: rgba(139,92,246,.14); border: 1px solid var(--violet); border-radius: var(--radius-sm); font-size: .8rem; color: var(--txt); }
+.edit-banner button { background: var(--violet-600); color: #fff; border: none; border-radius: 8px; padding: 6px 12px; font-size: .78rem; font-weight: 600; }
+
+.dcard__actions { display: flex; gap: 8px; margin-top: 10px; }
+.dcard__actions button { flex: 1; padding: 8px; border-radius: 9px; border: 1px solid var(--line-2); background: var(--panel-2); color: var(--txt); font-size: .8rem; font-weight: 600; }
+.dcard__actions .dc-edit { border-color: var(--violet); color: var(--violet); }
+.dcard__actions .dc-del { border-color: rgba(248,113,113,.4); color: var(--danger); }
 
 .qp__vendedor { background: var(--black); border: 1px solid var(--line-2); border-radius: var(--radius-sm);
   padding: 10px 12px; font-size: .86rem; font-weight: 600; color: var(--violet); }
