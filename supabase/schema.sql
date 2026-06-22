@@ -1,14 +1,8 @@
 -- ============================================================
 -- TORQUE FITNESS — Banco de dados (Supabase / Postgres)
 -- Cole TODO este conteúdo no SQL Editor do Supabase e clique em "Run".
+-- Pode rodar mais de uma vez sem problema (é idempotente).
 -- ============================================================
-
--- ---------- helper: usuário atual é admin? (evita recursão no RLS) ----------
-create or replace function public.is_admin()
-returns boolean
-language sql security definer stable set search_path = public as $$
-  select exists (select 1 from public.profiles where id = auth.uid() and role = 'admin');
-$$;
 
 -- ---------- PERFIS (vendedores e admin) ----------
 create table if not exists public.profiles (
@@ -18,6 +12,15 @@ create table if not exists public.profiles (
   role      text not null default 'vendedor',   -- 'vendedor' | 'admin'
   criado_em timestamptz default now()
 );
+
+-- ---------- helper: usuário atual é admin? (evita recursão no RLS) ----------
+-- Criado DEPOIS da tabela profiles, pois referencia ela.
+create or replace function public.is_admin()
+returns boolean
+language sql security definer stable set search_path = public as $$
+  select exists (select 1 from public.profiles where id = auth.uid() and role = 'admin');
+$$;
+
 alter table public.profiles enable row level security;
 
 drop policy if exists profiles_select on public.profiles;
