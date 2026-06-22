@@ -28,6 +28,9 @@
   // Campos sigilosos que só existem em memória durante a sessão destrancada.
   const FISCAL_KEYS = ['cambio', 'margem', 'ii', 'ipi', 'pisCofins', 'icms', 'iof', 'seguroPct', 'freteIntlUSD', 'freteNacionalBRL', 'descontoPct'];
   let unlocked = sessionStorage.getItem(UNLOCK_KEY) === '1';
+  // DATA_VERSION precisa existir ANTES de load() ser chamado (evita ReferenceError/TDZ
+  // que, capturado, resetava o estado salvo e apagava vendedores/clientes ao recarregar).
+  const DATA_VERSION = (window.TORQUE_PUBLIC && window.TORQUE_PUBLIC.products && window.TORQUE_PUBLIC.products.length) || 0;
   let state = load();
 
   function freshFromSeed() {
@@ -51,8 +54,6 @@
       quote: { clienteId: null, descMode: 'pct', descValue: 0, sinal: 0 }
     };
   }
-
-  const DATA_VERSION = (window.TORQUE_PUBLIC && window.TORQUE_PUBLIC.products && window.TORQUE_PUBLIC.products.length) || 0;
 
   // Remove qualquer dado sigiloso do estado (custos + parâmetros fiscais).
   function stripSecret(s) {
