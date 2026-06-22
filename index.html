@@ -13,7 +13,42 @@
   <link rel="stylesheet" href="css/styles.css" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20100%20100%27%3E%3Crect%20width%3D%27100%27%20height%3D%27100%27%20rx%3D%2722%27%20fill%3D%27%230B0B0F%27%2F%3E%3Cg%20transform%3D%27translate%2824.0%2C19.0%29%20scale%280.2288%29%27%20fill%3D%27%238B5CF6%27%3E%3Cg%20transform%3D%27translate%280%2C271%29%20scale%280.1%2C-0.1%29%27%3E%3Cpath%20d%3D%22M130%202617%20c-50%20-26%20-50%20-19%20-50%20-685%200%20-686%20-2%20-669%2061%20-691%2034%20-12%20367%20-14%20406%20-3%2012%204%20105%2084%20205%20178%20533%20498%20494%20463%20524%20455%2038%20-10%2070%20-54%2058%20-81%20-5%20-11%20-268%20-262%20-584%20-558%20-586%20-547%20-620%20-584%20-652%20-682%20-6%20-19%20-13%20-125%20-15%20-236%20-6%20-224%20-3%20-234%2062%20-234%2030%200%2096%2059%20706%20630%20601%20563%20677%20630%20703%20628%2018%20-2%2037%20-14%2050%20-31%2019%20-26%2019%20-30%205%20-55%20-8%20-15%20-289%20-283%20-624%20-597%20l-609%20-570%20887%20-3%20c609%20-1%20894%201%20908%208%2019%2011%2020%2024%2017%20973%20-3%20944%20-4%20963%20-24%201023%20-88%20255%20-268%20427%20-539%20511%20l-90%2027%20-690%203%20c-546%203%20-695%201%20-715%20-10z%22%2F%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E" />
 </head>
-<body data-mode="vendedor">
+<body data-mode="vendedor" data-auth="loading">
+
+  <!-- ===================== LOGIN SCREEN ===================== -->
+  <div id="loginScreen" class="login">
+    <div class="login__card">
+      <div class="login__brand">
+        <svg viewBox="0 0 227 271" class="login__mark"><g transform="translate(0,271) scale(0.1,-0.1)"><path d="M130 2617 c-50 -26 -50 -19 -50 -685 0 -686 -2 -669 61 -691 34 -12 367 -14 406 -3 12 4 105 84 205 178 533 498 494 463 524 455 38 -10 70 -54 58 -81 -5 -11 -268 -262 -584 -558 -586 -547 -620 -584 -652 -682 -6 -19 -13 -125 -15 -236 -6 -224 -3 -234 62 -234 30 0 96 59 706 630 601 563 677 630 703 628 18 -2 37 -14 50 -31 19 -26 19 -30 5 -55 -8 -15 -289 -283 -624 -597 l-609 -570 887 -3 c609 -1 894 1 908 8 19 11 20 24 17 973 -3 944 -4 963 -24 1023 -88 255 -268 427 -539 511 l-90 27 -690 3 c-546 3 -695 1 -715 -10z"/></g></svg>
+        <div class="login__wordmark"><strong>TORQUE FITNESS</strong><span>ORÇAMENTOS</span></div>
+      </div>
+      <h1 id="loginTitle">Entrar</h1>
+      <label class="field" id="loginNomeField" hidden><span>Seu nome</span><input id="loginNome" type="text" autocomplete="name" /></label>
+      <label class="field"><span>E-mail</span><input id="loginEmail" type="email" inputmode="email" autocomplete="email" /></label>
+      <label class="field"><span>Senha</span><input id="loginSenha" type="password" autocomplete="current-password" /></label>
+      <p class="login__error" id="loginError" hidden></p>
+      <button class="btn btn--primary login__submit" id="btnLoginSubmit" type="button">Entrar</button>
+      <button class="login__switch" id="btnLoginSwitch" type="button">Não tem conta? <b>Criar conta</b></button>
+    </div>
+    <p class="login__foot">Acesso restrito a vendedores Torque Fitness.</p>
+  </div>
+
+  <!-- ===================== DASHBOARD ===================== -->
+  <div id="dashScreen" class="dash" hidden>
+    <header class="dash__head">
+      <h2 id="dashTitle">Painel de orçamentos</h2>
+      <button class="modal__x" id="dashClose" type="button" aria-label="Fechar">✕</button>
+    </header>
+    <div class="dash__tools">
+      <div class="search">
+        <svg viewBox="0 0 24 24" class="search__icon" aria-hidden="true"><path d="M10 4a6 6 0 104.47 10.03l4.25 4.25 1.41-1.41-4.25-4.25A6 6 0 0010 4zm0 2a4 4 0 110 8 4 4 0 010-8z"/></svg>
+        <input type="search" id="dashSearch" placeholder="Buscar por cliente…" autocomplete="off" />
+      </div>
+      <select id="dashVendedorFilter" class="role-admin-only"></select>
+    </div>
+    <div class="dash__stats" id="dashStats"></div>
+    <div class="dash__list" id="dashList"></div>
+  </div>
 
   <!-- ===================== HEADER ===================== -->
   <header class="topbar">
@@ -29,12 +64,20 @@
       </span>
     </div>
 
-    <button id="modeToggle" class="mode-toggle" type="button" aria-label="Alternar modo">
-      <span class="mode-toggle__opt" data-for="vendedor">Vendedor</span>
-      <span class="mode-toggle__opt" data-for="admin">Admin</span>
-      <span class="mode-toggle__knob"></span>
+    <button id="userBtn" class="user-btn" type="button" aria-label="Menu da conta">
+      <span id="userInitial">·</span>
     </button>
   </header>
+
+  <!-- ===================== USER MENU ===================== -->
+  <div id="userMenu" class="user-menu" hidden>
+    <div class="user-menu__head">
+      <b id="umName">—</b><small id="umRole"></small>
+    </div>
+    <button class="user-menu__item" id="umDashboard" type="button">📊 Painel de orçamentos</button>
+    <button class="user-menu__item role-admin-only" id="umAdmin" type="button">⚙️ Modo Admin (custos)</button>
+    <button class="user-menu__item" id="umLogout" type="button">🚪 Sair</button>
+  </div>
 
   <!-- ===================== ADMIN CONFIG PANEL ===================== -->
   <section id="configPanel" class="config admin-only" hidden>
@@ -104,7 +147,6 @@
       <button class="btn btn--primary" id="btnImport" type="button">Importar planilha</button>
       <button class="btn btn--ghost" id="btnAddProduct" type="button">+ Novo produto</button>
       <button class="btn btn--ghost" id="btnResetData" type="button">Restaurar catálogo</button>
-      <button class="btn btn--ghost" id="btnExportBase" type="button">Exportar base (JSON)</button>
       <button class="btn btn--ghost" id="btnLock" type="button">🔒 Bloquear</button>
       <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" hidden />
     </div>
@@ -138,11 +180,7 @@
       <div class="quote-people">
         <label class="qp">
           <span>Vendedor</span>
-          <div class="qp__row">
-            <select id="selVendedor"></select>
-            <button class="qp__icon" id="btnEditVendedor" type="button" aria-label="Editar vendedor">✎</button>
-            <button class="qp__add" id="btnNovoVendedor" type="button" aria-label="Novo vendedor">＋</button>
-          </div>
+          <div class="qp__vendedor" id="qpVendedor">—</div>
         </label>
         <label class="qp">
           <span>Cliente</span>
@@ -300,31 +338,6 @@
     </div>
   </div>
 
-  <!-- ===================== VENDEDOR MODAL ===================== -->
-  <div class="modal" id="vendedorModal" hidden>
-    <div class="modal__backdrop" data-close></div>
-    <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="vendedorTitle">
-      <header class="modal__head">
-        <h2 id="vendedorTitle">Novo vendedor</h2>
-        <button class="modal__x" data-close type="button" aria-label="Fechar">✕</button>
-      </header>
-      <div class="modal__body">
-        <input type="hidden" id="vdId" />
-        <div class="form-grid">
-          <label class="field field--wide"><span>Nome *</span><input id="vdNome" type="text" required /></label>
-          <label class="field"><span>Telefone / WhatsApp</span><input id="vdTelefone" type="tel" inputmode="tel" /></label>
-          <label class="field"><span>E-mail</span><input id="vdEmail" type="email" inputmode="email" /></label>
-        </div>
-      </div>
-      <footer class="modal__foot">
-        <button class="btn btn--danger" id="btnDeleteVendedor" type="button">Remover</button>
-        <span class="spacer"></span>
-        <button class="btn btn--ghost" data-close type="button">Cancelar</button>
-        <button class="btn btn--primary" id="btnSaveVendedor" type="button">Salvar</button>
-      </footer>
-    </div>
-  </div>
-
   <!-- ===================== PASSWORD MODAL (acesso Admin) ===================== -->
   <div class="modal" id="pwModal" hidden>
     <div class="modal__backdrop" data-close></div>
@@ -352,6 +365,9 @@
   <!-- Toast -->
   <div id="toast" class="toast" hidden></div>
 
+  <script src="js/config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/cloud.js"></script>
   <script src="js/products.js"></script>
   <script src="js/secure.js"></script>
   <script src="js/app.js"></script>

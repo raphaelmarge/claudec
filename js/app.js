@@ -206,9 +206,8 @@
   /* ------------------------------------------------------------
      CADASTROS — vendedores e clientes
      ------------------------------------------------------------ */
-  const vendedorById = id => state.vendedores.find(v => v.id === id) || null;
   const clienteById = id => state.clientes.find(c => c.id === id) || null;
-  function currentVendedor() { return vendedorById(state.currentVendedorId); }
+  function currentVendedor() { return state.currentVendedor || null; }
 
   /* ------------------------------------------------------------
      FILTROS
@@ -360,13 +359,11 @@
   }
 
   function renderPeople() {
-    const vSel = $('#selVendedor');
-    vSel.innerHTML = '<option value="">— selecione —</option>' +
-      state.vendedores.map(v => `<option value="${v.id}" ${v.id === state.currentVendedorId ? 'selected' : ''}>${esc(v.nome)}</option>`).join('');
+    const v = currentVendedor();
+    $('#qpVendedor').textContent = v ? v.nome : '—';
     const cSel = $('#selCliente');
     cSel.innerHTML = '<option value="">— selecione —</option>' +
       state.clientes.map(c => `<option value="${c.id}" ${c.id === Q().clienteId ? 'selected' : ''}>${esc(c.nome)}${c.empresa ? ' · ' + esc(c.empresa) : ''}</option>`).join('');
-    $('#btnEditVendedor').disabled = !state.currentVendedorId;
     $('#btnEditCliente').disabled = !Q().clienteId;
   }
 
@@ -428,12 +425,13 @@
      ------------------------------------------------------------ */
   window.__PLATE = plateSVG;
 
-  $('#modeToggle').addEventListener('click', () => {
+  function toggleAdminMode() {
+    closeUserMenu();
     if (state.mode === 'admin') { state.mode = 'vendedor'; save(); render(); return; }
-    // ir para Admin exige destravar com senha
     if (unlocked) { state.mode = 'admin'; save(); render(); }
     else openPasswordModal();
-  });
+  }
+  $('#umAdmin').addEventListener('click', toggleAdminMode);
 
   $('#configCollapse').addEventListener('click', e => {
     const panel = $('#configPanel'); panel.classList.toggle('collapsed');
@@ -515,45 +513,14 @@
     save(); renderSummary();
   });
 
-  // seleção de vendedor / cliente
-  $('#selVendedor').addEventListener('change', e => { state.currentVendedorId = e.target.value || null; save(); renderSummary(); });
+  // seleção de cliente
   $('#selCliente').addEventListener('change', e => { state.quote.clienteId = e.target.value || null; save(); renderSummary(); });
-  $('#btnNovoVendedor').addEventListener('click', () => openVendedor(null));
-  $('#btnEditVendedor').addEventListener('click', () => state.currentVendedorId && openVendedor(state.currentVendedorId));
   $('#btnNovoCliente').addEventListener('click', () => openCliente(null));
   $('#btnEditCliente').addEventListener('click', () => Q().clienteId && openCliente(Q().clienteId));
 
   /* ------------------------------------------------------------
-     CADASTRO — vendedores e clientes (modais)
+     CADASTRO — clientes (na nuvem, por vendedor)
      ------------------------------------------------------------ */
-  let editVendedorId = null;
-  function openVendedor(id) {
-    const v = id ? vendedorById(id) : null;
-    editVendedorId = id || null;
-    $('#vendedorTitle').textContent = v ? 'Editar vendedor' : 'Novo vendedor';
-    $('#vdNome').value = v ? v.nome : '';
-    $('#vdTelefone').value = v ? (v.telefone || '') : '';
-    $('#vdEmail').value = v ? (v.email || '') : '';
-    $('#btnDeleteVendedor').style.display = v ? '' : 'none';
-    openModal('#vendedorModal');
-  }
-  $('#btnSaveVendedor').addEventListener('click', () => {
-    const nome = $('#vdNome').value.trim();
-    if (!nome) { toast('Informe o nome do vendedor.'); return; }
-    const dados = { nome, telefone: $('#vdTelefone').value.trim(), email: $('#vdEmail').value.trim() };
-    if (editVendedorId) Object.assign(vendedorById(editVendedorId), dados);
-    else { const v = { id: uid(), ...dados, criadoEm: Date.now() }; state.vendedores.push(v); state.currentVendedorId = v.id; }
-    save(); closeModal('#vendedorModal'); renderSummary(); toast('Vendedor salvo.');
-  });
-  $('#btnDeleteVendedor').addEventListener('click', () => {
-    if (!editVendedorId) return;
-    if (confirm('Remover este vendedor?')) {
-      state.vendedores = state.vendedores.filter(v => v.id !== editVendedorId);
-      if (state.currentVendedorId === editVendedorId) state.currentVendedorId = null;
-      save(); closeModal('#vendedorModal'); renderSummary(); toast('Vendedor removido.');
-    }
-  });
-
   let editClienteId = null;
   function openCliente(id) {
     const c = id ? clienteById(id) : null;
@@ -569,43 +536,36 @@
     $('#btnDeleteCliente').style.display = c ? '' : 'none';
     openModal('#clienteModal');
   }
-  $('#btnSaveCliente').addEventListener('click', () => {
+  $('#btnSaveCliente').addEventListener('click', async () => {
     const nome = $('#clNome').value.trim();
     if (!nome) { toast('Informe o nome do cliente.'); return; }
     const dados = {
+      id: editClienteId || undefined,
       nome, empresa: $('#clEmpresa').value.trim(), telefone: $('#clTelefone').value.trim(),
       email: $('#clEmail').value.trim(), doc: $('#clDoc').value.trim(),
       cidade: $('#clCidade').value.trim(), obs: $('#clObs').value.trim()
     };
-    if (editClienteId) Object.assign(clienteById(editClienteId), dados);
-    else { const c = { id: uid(), ...dados, criadoEm: Date.now() }; state.clientes.push(c); state.quote.clienteId = c.id; }
-    save(); closeModal('#clienteModal'); renderSummary(); toast('Cliente salvo.');
+    try {
+      const saved = await Cloud.saveCliente(dados);
+      await reloadClientes();
+      if (!editClienteId && saved) state.quote.clienteId = saved.id;
+      save(); closeModal('#clienteModal'); renderSummary(); toast('Cliente salvo.');
+    } catch (e) { console.error(e); toast('Erro ao salvar cliente.'); }
   });
-  $('#btnDeleteCliente').addEventListener('click', () => {
+  $('#btnDeleteCliente').addEventListener('click', async () => {
     if (!editClienteId) return;
-    if (confirm('Remover este cliente?')) {
-      state.clientes = state.clientes.filter(c => c.id !== editClienteId);
+    if (!confirm('Remover este cliente?')) return;
+    try {
+      await Cloud.deleteCliente(editClienteId);
       if (state.quote.clienteId === editClienteId) state.quote.clienteId = null;
+      await reloadClientes();
       save(); closeModal('#clienteModal'); renderSummary(); toast('Cliente removido.');
-    }
+    } catch (e) { console.error(e); toast('Erro ao remover cliente.'); }
   });
 
-  // exportar base (admin) — ponte para um futuro banco de dados
-  $('#btnExportBase').addEventListener('click', () => {
-    const base = {
-      exportadoEm: new Date().toISOString(),
-      empresa: P().empresa || 'Torque Fitness',
-      vendedores: state.vendedores,
-      clientes: state.clientes,
-      orcamentos: state.orcamentos
-    };
-    const blob = new Blob([JSON.stringify(base, null, 2)], { type: 'application/json' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'torque-base-' + new Date().toISOString().slice(0, 10) + '.json';
-    a.click(); URL.revokeObjectURL(a.href);
-    toast(`Base exportada: ${state.clientes.length} clientes, ${state.vendedores.length} vendedores, ${state.orcamentos.length} orçamentos.`);
-  });
+  async function reloadClientes() {
+    try { state.clientes = await Cloud.listClientes(); } catch (e) { console.error(e); }
+  }
 
   /* ------------------------------------------------------------
      EDIT / ADD PRODUCT (admin)
@@ -831,7 +791,8 @@
      ------------------------------------------------------------ */
   $('#btnExport').addEventListener('click', () => {
     if (!cartCount()) { toast('Adicione produtos ao orçamento primeiro.'); return; }
-    buildQuoteDoc(); registrarOrcamento(); openModal('#quoteModal');
+    if (!Q().clienteId) { toast('Selecione (ou cadastre) o cliente antes de gerar.'); return; }
+    buildQuoteDoc(); openModal('#quoteModal'); registrarOrcamento();
   });
 
   function todayStr() {
@@ -920,31 +881,31 @@
       </div>`;
   }
 
-  // Salva o orçamento no histórico (base para um futuro banco de dados).
-  function registrarOrcamento() {
+  // Salva o orçamento na nuvem (no nome do cliente + vendedor logado).
+  async function registrarOrcamento() {
     const lines = cartLines();
     const subtotal = cartTotal();
     const n = Number($('#installSelect').value) || Math.floor(P().parcelasMax || 12);
     const saldo = saldoFinanciar();
-    state.orcamentos.push({
-      id: uid(),
+    const cli = clienteById(Q().clienteId);
+    const vend = currentVendedor();
+    const row = {
       numero: lastQuoteNumero,
-      criadoEm: Date.now(),
-      vendedorId: state.currentVendedorId || null,
-      vendedorNome: currentVendedor() ? currentVendedor().nome : '',
-      clienteId: Q().clienteId || null,
-      clienteNome: clienteById(Q().clienteId) ? clienteById(Q().clienteId).nome : '',
+      cliente_id: Q().clienteId || null,
+      cliente_nome: cli ? cli.nome : '',
+      vendedor_nome: vend ? vend.nome : '',
       itens: lines.map(l => ({ codigo: l.p.codigo, nome: l.p.nome, qtd: l.q, unitario: l.unit, total: l.total })),
       subtotal,
-      descMode: Q().descMode, descValue: Q().descValue,
       desconto: descontoReais(subtotal),
       total: totalComDesconto(),
       sinal: sinalReais(),
       saldo,
       parcelas: n,
-      valorParcela: saldo > 0 ? parcelaValor(saldo, n) : 0
-    });
-    save();
+      valor_parcela: saldo > 0 ? parcelaValor(saldo, n) : 0,
+      status: 'enviado'
+    };
+    try { await Cloud.saveOrcamento(row); toast('Orçamento salvo na nuvem.'); }
+    catch (e) { console.error(e); toast('Falhou salvar na nuvem (verifique conexão).'); }
   }
 
   $('#btnPdfQuote').addEventListener('click', () => window.print());
@@ -1049,7 +1010,159 @@
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
   /* ------------------------------------------------------------
+     AUTENTICAÇÃO (Supabase) + MENU DO USUÁRIO
+     ------------------------------------------------------------ */
+  function toggleUserMenu() { const m = $('#userMenu'); m.hidden = !m.hidden; }
+  function closeUserMenu() { $('#userMenu').hidden = true; }
+  $('#userBtn').addEventListener('click', e => { e.stopPropagation(); toggleUserMenu(); });
+  document.addEventListener('click', e => {
+    if (!e.target.closest('#userMenu') && !e.target.closest('#userBtn')) closeUserMenu();
+  });
+  $('#umLogout').addEventListener('click', async () => {
+    closeUserMenu();
+    try { await Cloud.signOut(); } catch (e) {}
+    resetToLogin();
+  });
+
+  function setRoleUI(nome) {
+    const admin = Cloud.isAdmin();
+    document.body.classList.toggle('role-admin', admin);
+    $('#userInitial').textContent = (String(nome || '?').trim().charAt(0) || '·').toUpperCase();
+    $('#umName').textContent = nome || '—';
+    $('#umRole').textContent = admin ? 'Administrador' : 'Vendedor';
+  }
+
+  async function afterAuth(session) {
+    let prof = null;
+    try { prof = await Cloud.loadProfile(session.user.id); } catch (e) { console.error(e); }
+    const nome = (prof && prof.nome) || session.user.email || 'Vendedor';
+    state.currentVendedor = { id: session.user.id, nome, email: session.user.email };
+    if (!Cloud.isAdmin()) { state.mode = 'vendedor'; }
+    setRoleUI(nome);
+    await reloadClientes();
+    save();
+    document.body.dataset.auth = 'in';
+    render();
+  }
+
+  function resetToLogin() {
+    state.currentVendedor = null; state.clientes = []; state.cart = {};
+    state.quote = { clienteId: null, descMode: 'pct', descValue: 0, sinal: 0 };
+    document.body.classList.remove('role-admin');
+    $('#dashScreen').hidden = true; document.body.style.overflow = '';
+    document.body.dataset.auth = 'out';
+    $('#loginSenha').value = '';
+    signupMode = false; updateLoginMode();
+  }
+
+  /* ---------- LOGIN ---------- */
+  let signupMode = false;
+  function updateLoginMode() {
+    $('#loginNomeField').hidden = !signupMode;
+    $('#loginTitle').textContent = signupMode ? 'Criar conta' : 'Entrar';
+    $('#btnLoginSubmit').textContent = signupMode ? 'Criar conta' : 'Entrar';
+    $('#btnLoginSwitch').innerHTML = signupMode ? 'Já tenho conta. <b>Entrar</b>' : 'Não tem conta? <b>Criar conta</b>';
+    $('#loginError').hidden = true;
+  }
+  function loginError(msg) { const e = $('#loginError'); e.textContent = msg; e.hidden = false; }
+  function traduzErro(e) {
+    const m = (e && e.message) || '';
+    if (/Invalid login credentials/i.test(m)) return 'E-mail ou senha incorretos.';
+    if (/already registered|already exists/i.test(m)) return 'Esse e-mail já tem conta. Faça login.';
+    if (/Password should be at least/i.test(m)) return 'A senha precisa ter pelo menos 6 caracteres.';
+    if (/Email not confirmed/i.test(m)) return 'E-mail ainda não confirmado.';
+    if (/fetch|network|Failed/i.test(m)) return 'Sem conexão com o servidor. Verifique a internet.';
+    return m || 'Não foi possível entrar.';
+  }
+  async function doLogin() {
+    const email = $('#loginEmail').value.trim();
+    const senha = $('#loginSenha').value;
+    const nome = $('#loginNome').value.trim();
+    if (!email || !senha) { loginError('Preencha e-mail e senha.'); return; }
+    if (signupMode && !nome) { loginError('Informe seu nome.'); return; }
+    const btn = $('#btnLoginSubmit'); btn.disabled = true; btn.textContent = '…';
+    try {
+      if (signupMode) { await Cloud.signUp(email, senha, nome); try { await Cloud.signIn(email, senha); } catch (e) {} }
+      else { await Cloud.signIn(email, senha); }
+      const session = await Cloud.getSession();
+      if (session) { await afterAuth(session); }
+      else loginError(signupMode ? 'Conta criada. Confirme o e-mail e faça login.' : 'Não foi possível entrar.');
+    } catch (e) { console.error(e); loginError(traduzErro(e)); }
+    finally { btn.disabled = false; btn.textContent = signupMode ? 'Criar conta' : 'Entrar'; }
+  }
+  $('#btnLoginSwitch').addEventListener('click', () => { signupMode = !signupMode; updateLoginMode(); });
+  $('#btnLoginSubmit').addEventListener('click', doLogin);
+  $('#loginSenha').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+  /* ---------- DASHBOARD ---------- */
+  let dashData = [];
+  $('#umDashboard').addEventListener('click', openDashboard);
+  $('#dashClose').addEventListener('click', () => { $('#dashScreen').hidden = true; document.body.style.overflow = ''; });
+  $('#dashSearch').addEventListener('input', renderDashboard);
+  $('#dashVendedorFilter').addEventListener('change', renderDashboard);
+
+  async function openDashboard() {
+    closeUserMenu();
+    $('#dashTitle').textContent = Cloud.isAdmin() ? 'Todos os orçamentos' : 'Meus orçamentos';
+    $('#dashScreen').hidden = false; document.body.style.overflow = 'hidden';
+    $('#dashList').innerHTML = '<p class="dash__empty">Carregando…</p>';
+    $('#dashStats').innerHTML = '';
+    try {
+      dashData = await Cloud.listOrcamentos();
+      if (Cloud.isAdmin()) {
+        const names = Array.from(new Set(dashData.map(r => r.vendedor_nome).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+        $('#dashVendedorFilter').innerHTML = '<option value="">Todos vendedores</option>' + names.map(n => `<option>${esc(n)}</option>`).join('');
+      }
+      renderDashboard();
+    } catch (e) { console.error(e); $('#dashList').innerHTML = '<p class="dash__empty">Erro ao carregar os orçamentos.</p>'; }
+  }
+  function renderDashboard() {
+    const q = ($('#dashSearch').value || '').toLowerCase().trim();
+    const vf = $('#dashVendedorFilter').value;
+    const rows = dashData.filter(r => {
+      if (vf && r.vendedor_nome !== vf) return false;
+      if (q && !String(r.cliente_nome || '').toLowerCase().includes(q)) return false;
+      return true;
+    });
+    const totalVal = rows.reduce((s, r) => s + (Number(r.total) || 0), 0);
+    $('#dashStats').innerHTML =
+      `<div class="dash__stat"><b>${rows.length}</b><span>orçamentos</span></div>` +
+      `<div class="dash__stat"><b>${money(totalVal)}</b><span>em vendas</span></div>`;
+    $('#dashList').innerHTML = rows.length ? rows.map(dcard).join('')
+      : '<p class="dash__empty">Nenhum orçamento ainda.<br>Monte um orçamento e toque em “Gerar orçamento”.</p>';
+  }
+  function dcard(r) {
+    const d = r.criado_em ? new Date(r.criado_em).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '';
+    const itens = (r.itens || []).map(i => `${i.qtd}× ${esc(i.nome)}`).join(' · ');
+    return `<div class="dcard">
+      <div class="dcard__top"><span class="dcard__cli">${esc(r.cliente_nome || '—')}</span><span class="dcard__val">${money(r.total)}</span></div>
+      <div class="dcard__meta">
+        ${r.numero ? `<span>${esc(r.numero)}</span>` : ''}<span>${d}</span>
+        <span class="vend">${esc(r.vendedor_nome || '')}</span>
+        ${r.sinal > 0 ? `<span>sinal ${money(r.sinal)}</span>` : ''}
+        <span>${r.parcelas}× ${money(r.valor_parcela)}</span>
+      </div>
+      ${itens ? `<div class="dcard__items">${itens}</div>` : ''}
+    </div>`;
+  }
+
+  /* ------------------------------------------------------------
      INIT
      ------------------------------------------------------------ */
-  render();
+  updateLoginMode();
+  render();                       // monta o app (fica oculto até autenticar)
+
+  (async function bootstrapAuth() {
+    const sb = Cloud.init();
+    if (!sb) {
+      document.body.dataset.auth = 'out';
+      loginError('Não foi possível conectar ao servidor. Recarregue a página.');
+      return;
+    }
+    Cloud.onAuthChange(session => { if (!session) resetToLogin(); });
+    let session = null;
+    try { session = await Cloud.getSession(); } catch (e) { console.error(e); }
+    if (session) await afterAuth(session);
+    else document.body.dataset.auth = 'out';
+  })();
 })();
