@@ -24,42 +24,52 @@
   /* ------------------------------------------------------------
      ESTADO
      ------------------------------------------------------------ */
+  const UNLOCK_KEY = 'torque_unlocked';
+  // Campos sigilosos que só existem em memória durante a sessão destrancada.
+  const FISCAL_KEYS = ['cambio', 'margem', 'ii', 'ipi', 'pisCofins', 'icms', 'iof', 'seguroPct', 'freteIntlUSD', 'freteNacionalBRL', 'descontoPct'];
+  let unlocked = sessionStorage.getItem(UNLOCK_KEY) === '1';
   let state = load();
 
   function freshFromSeed() {
-    const data = window.TORQUE_DATA || window.TORQUE_SEED;
+    const data = window.TORQUE_PUBLIC || window.TORQUE_DATA || window.TORQUE_SEED;
     return {
       mode: 'vendedor',
-      params: { ...data.params },
+      params: { ...data.params },                 // só parâmetros públicos (parcelas, juros, validade)
       products: data.products.map(p => ({
         id: uid(), codigo: p.codigo || '', nome: p.nome || '', serie: p.serie || 'Geral',
         imagem: p.imagem || '', dims: p.dims || '',
-        fob: Number(p.fob != null ? p.fob : p.custo) || 0,
-        margem: null, precoManual: null, oculto: false
+        preco: Number(p.preco != null ? p.preco : p.custo) || 0,  // preço de venda (público)
+        margem: null, travado: false, oculto: false
+        // fob (custo) NÃO entra aqui — só após destravar com senha
       })),
       cart: {},
       filters: { serie: 'all', query: '' }
     };
   }
 
-  const DATA_VERSION = (window.TORQUE_DATA && window.TORQUE_DATA.products && window.TORQUE_DATA.products.length) || 0;
+  const DATA_VERSION = (window.TORQUE_PUBLIC && window.TORQUE_PUBLIC.products && window.TORQUE_PUBLIC.products.length) || 0;
+
+  // Remove qualquer dado sigiloso do estado (custos + parâmetros fiscais).
+  function stripSecret(s) {
+    if (s.products) s.products.forEach(p => { delete p.fob; });
+    if (s.params) FISCAL_KEYS.forEach(k => { delete s.params[k]; });
+  }
 
   function load() {
+    let s = null;
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
-        const s = JSON.parse(raw);
-        // Se o catálogo embutido cresceu (nova planilha) e o usuário nunca importou
-        // nada por conta própria, adota o catálogo novo automaticamente.
-        if (!s._imported && DATA_VERSION && (!s.products || s.products.length < DATA_VERSION)) {
-          return freshFromSeed();
-        }
-        s.filters = s.filters || { serie: 'all', query: '' };
-        s.cart = s.cart || {};
-        return s;
+        s = JSON.parse(raw);
+        if (!s._imported && DATA_VERSION && (!s.products || s.products.length < DATA_VERSION)) s = null;
       }
-    } catch (e) { /* corrupt -> reseed */ }
-    return freshFromSeed();
+    } catch (e) { s = null; }
+    if (!s) s = freshFromSeed();
+    s.filters = s.filters || { serie: 'all', query: '' };
+    s.cart = s.cart || {};
+    // Se a sessão não está destrancada, garante que nenhum custo fique em disco.
+    if (!unlocked) { stripSecret(s); s.mode = 'vendedor'; }
+    return s;
   }
 
   function save() {
@@ -67,14 +77,53 @@
   }
 
   /* ------------------------------------------------------------
+     SENHA / DESTRAVAR (AES-256-GCM via Web Crypto)
+     ------------------------------------------------------------ */
+  const b64d = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+  async function decryptSecure(password) {
+    const blob = window.TORQUE_SECURE;
+    if (!blob) throw new Error('sem dados');
+    const baseKey = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']);
+    const key = await crypto.subtle.deriveKey(
+      { name: 'PBKDF2', salt: b64d(blob.salt), iterations: blob.iter || 150000, hash: 'SHA-256' },
+      baseKey, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+    const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64d(blob.iv) }, key, b64d(blob.data));
+    return JSON.parse(new TextDecoder().decode(pt));
+  }
+  let secretCache = null;   // segredo descriptografado, só em memória
+  function mergeSecret() {
+    if (!secretCache) return;
+    FISCAL_KEYS.forEach(k => { if (state.params[k] == null) state.params[k] = secretCache.params[k]; });
+    const byCode = {};
+    secretCache.items.forEach(it => { byCode[it.codigo] = it.fob; });
+    state.products.forEach(p => { if (byCode[p.codigo] != null) p.fob = byCode[p.codigo]; });
+  }
+  async function unlock(password) {
+    secretCache = await decryptSecure(password);   // lança se a senha estiver errada
+    mergeSecret();
+    unlocked = true;
+    sessionStorage.setItem(UNLOCK_KEY, '1');
+    save();
+  }
+  function lock() {
+    unlocked = false;
+    sessionStorage.removeItem(UNLOCK_KEY);
+    stripSecret(state);
+    state.mode = 'vendedor';
+    save(); render();
+  }
+
+  /* ------------------------------------------------------------
      PRECIFICAÇÃO
      ------------------------------------------------------------ */
-  /* Modelo idêntico à aba "Configuracoes" da planilha:
+  /* Preço de venda público fica em p.preco. No modo admin (destravado),
+     o preço é recalculado a partir do custo FOB com o modelo da planilha:
      CIF(US$)  = FOB + Frete intl + FOB×Seguro%
      Custo(R$) = CIF × (1+IOF+II+IPI+PIS/COFINS)/(1−ICMS) × Câmbio + Frete nacional
      Preço(R$) = Custo × (1+Margem) × (1−Desconto)                                   */
   const P = () => state.params;
-  const fobDe = p => Number(p.fob != null ? p.fob : p.custo) || 0;
+  const fobDe = p => Number(p.fob) || 0;
+  const temCusto = p => p.fob != null && p.fob !== '';
   function cifUSD(p) { const fob = fobDe(p); return fob + (P().freteIntlUSD || 0) + fob * (P().seguroPct || 0) / 100; }
   function fatorImposto() {
     const a = ((P().iof || 0) + (P().ii || 0) + (P().ipi || 0) + (P().pisCofins || 0)) / 100;
@@ -84,10 +133,19 @@
   function custoBRL(p) { return cifUSD(p) * fatorImposto() * (P().cambio || 1) + (P().freteNacionalBRL || 0); }
   function margemDe(p) { return (p.margem != null && p.margem !== '') ? Number(p.margem) : Number(P().margem || 0); }
   function precoCalculado(p) { return custoBRL(p) * (1 + margemDe(p) / 100) * (1 - (P().descontoPct || 0) / 100); }
-  function precoEfetivo(p) { return (p.precoManual != null && p.precoManual !== '') ? Number(p.precoManual) : precoCalculado(p); }
+  const r2 = n => Math.round(n * 100) / 100;
+  // Preço efetivo (o que todos veem) = preço de venda armazenado.
+  function precoEfetivo(p) { return Number(p.preco) || 0; }
   function margemEfetivaPct(p) {
+    if (!temCusto(p)) return 0;
     const c = custoBRL(p); const v = precoEfetivo(p);
     if (!c) return 0; return ((v - c) / c) * 100;
+  }
+  // Recalcula os preços de venda a partir dos custos (só destravado).
+  function recalcAll() {
+    if (!unlocked) return;
+    state.products.forEach(p => { if (temCusto(p) && !p.travado) p.preco = r2(precoCalculado(p)); });
+    save();
   }
 
   /* ------------------------------------------------------------
@@ -200,12 +258,12 @@
         ? `<img src="${esc(p.imagem)}" alt="${esc(p.nome)}" loading="lazy" onerror="this.replaceWith(document.createRange().createContextualFragment(window.__PLATE))"/>`
         : plateSVG;
 
-      const adminCost = isAdmin ? `
+      const adminCost = (isAdmin && temCusto(p)) ? `
         <div class="card__cost">
           <span>FOB <b>US$ ${fobDe(p).toLocaleString('pt-BR', { minimumFractionDigits: 0 })}</b></span>
           <span>Custo <b>${money(custoBRL(p))}</b></span>
-          <span class="tag-margin">Mrg ${margemDe(p).toFixed(0)}%</span>
-          ${p.precoManual != null && p.precoManual !== '' ? '<span class="tag-manual">manual</span>' : ''}
+          <span class="tag-margin">Mrg ${margemEfetivaPct(p).toFixed(0)}%</span>
+          ${p.travado ? '<span class="tag-manual">travado</span>' : ''}
         </div>` : '';
 
       const control = isAdmin ? '' : `
@@ -314,8 +372,10 @@
   window.__PLATE = plateSVG;
 
   $('#modeToggle').addEventListener('click', () => {
-    state.mode = state.mode === 'admin' ? 'vendedor' : 'admin';
-    save(); render();
+    if (state.mode === 'admin') { state.mode = 'vendedor'; save(); render(); return; }
+    // ir para Admin exige destravar com senha
+    if (unlocked) { state.mode = 'admin'; save(); render(); }
+    else openPasswordModal();
   });
 
   $('#configCollapse').addEventListener('click', e => {
@@ -340,7 +400,11 @@
     '#cfgFreteNac': 'freteNacionalBRL', '#cfgJuros': 'juros'
   };
   Object.keys(CFG_MAP).forEach(sel => {
-    $(sel).addEventListener('input', () => { P()[CFG_MAP[sel]] = num($(sel).value) || 0; save(); renderGrid(); renderSummary(); });
+    $(sel).addEventListener('input', () => {
+      P()[CFG_MAP[sel]] = num($(sel).value) || 0;
+      if (sel !== '#cfgJuros') recalcAll();   // juros não altera preço, só parcela
+      save(); renderGrid(); renderSummary();
+    });
   });
   $('#cfgParcelas').addEventListener('input', () => { P().parcelasMax = Math.max(1, parseInt($('#cfgParcelas').value, 10) || 1); save(); renderSummary(); });
   $('#cfgValidade').addEventListener('input', () => { P().validade = Math.max(1, parseInt($('#cfgValidade').value, 10) || 1); save(); });
@@ -397,10 +461,10 @@
     $('#edSerie').value = p ? p.serie : (state.filters.serie !== 'all' ? state.filters.serie : '');
     $('#edNome').value = p ? p.nome : '';
     $('#edImagem').value = p ? p.imagem : '';
-    $('#edCusto').value = p ? fobDe(p) : '';
+    $('#edCusto').value = (p && temCusto(p)) ? fobDe(p) : '';
     $('#edDims').value = p ? (p.dims || '') : '';
     $('#edMargem').value = (p && p.margem != null) ? p.margem : '';
-    $('#edPreco').value = (p && p.precoManual != null) ? p.precoManual : '';
+    $('#edPreco').value = (p && p.travado) ? p.preco : '';
     $('#edOculto').checked = p ? !!p.oculto : false;
     $('#btnDeleteProduct').style.display = p ? '' : 'none';
     updateEditPreview();
@@ -415,31 +479,31 @@
       dims: $('#edDims').value.trim(),
       fob: num($('#edCusto').value) || 0,
       margem: $('#edMargem').value === '' ? null : (num($('#edMargem').value) || 0),
-      precoManual: $('#edPreco').value === '' ? null : (num($('#edPreco').value) || 0),
+      precoInput: $('#edPreco').value === '' ? null : (num($('#edPreco').value) || 0),
       oculto: $('#edOculto').checked
     };
   }
   function updateEditPreview() {
     const f = readEditForm();
     const c = custoBRL(f);
-    const v = precoEfetivo(f);
+    const v = f.precoInput != null ? f.precoInput : precoCalculado(f);
     const mrg = c ? ((v - c) / c * 100) : 0;
     $('#pricePreview').innerHTML =
       `CIF: <b>US$ ${cifUSD(f).toFixed(2)}</b> · custo final: <b>${money(c)}</b><br>` +
       `Preço de venda: <b>${money(v)}</b> · margem efetiva: <b>${mrg.toFixed(0)}%</b>` +
-      (f.precoManual != null ? ' (preço manual)' : ' (automático)');
+      (f.precoInput != null ? ' (preço travado)' : ' (automático)');
   }
   ['#edCusto', '#edMargem', '#edPreco'].forEach(s => $(s).addEventListener('input', updateEditPreview));
 
   $('#btnSaveProduct').addEventListener('click', () => {
     const f = readEditForm();
     if (!f.nome) { toast('Informe o nome do produto.'); return; }
-    if (editingId) {
-      const p = state.products.find(x => x.id === editingId);
-      Object.assign(p, f);
-    } else {
-      state.products.push({ id: uid(), ...f });
-    }
+    const p = editingId ? state.products.find(x => x.id === editingId) : { id: uid() };
+    p.codigo = f.codigo; p.serie = f.serie; p.nome = f.nome; p.imagem = f.imagem;
+    p.dims = f.dims; p.fob = f.fob; p.margem = f.margem; p.oculto = f.oculto;
+    if (f.precoInput != null) { p.preco = f.precoInput; p.travado = true; }   // preço travado manual
+    else { p.travado = false; p.preco = r2(precoCalculado(p)); }              // volta ao automático
+    if (!editingId) state.products.push(p);
     save(); closeModal('#editModal'); render(); toast('Produto salvo.');
   });
   $('#btnDeleteProduct').addEventListener('click', () => {
@@ -453,8 +517,10 @@
   $('#btnAddProduct').addEventListener('click', () => openEdit(null));
 
   $('#btnResetData').addEventListener('click', () => {
-    if (confirm('Restaurar os dados de exemplo? Isso substitui o catálogo atual.')) {
-      state = freshFromSeed(); state.mode = 'admin'; save(); render(); toast('Dados de exemplo restaurados.');
+    if (confirm('Restaurar o catálogo original? Isso desfaz suas edições.')) {
+      state = freshFromSeed(); state.mode = 'admin';
+      mergeSecret();            // recupera custos do segredo já destravado
+      save(); render(); toast('Catálogo original restaurado.');
     }
   });
 
@@ -577,18 +643,21 @@
     const imported = importRows.map(r => {
       const nome = String(r[m.nome] ?? '').trim();
       if (!nome) return null;
-      return {
+      const fob = m.custo ? (num(r[m.custo]) || 0) : 0;
+      const precoCol = m.preco ? num(r[m.preco]) : NaN;
+      const p = {
         id: uid(),
         codigo: m.codigo ? String(r[m.codigo] ?? '').trim() : '',
         nome,
         serie: (m.serie ? String(r[m.serie] ?? '').trim() : '') || 'Geral',
         imagem: m.imagem ? String(r[m.imagem] ?? '').trim() : '',
         dims: m.dims ? String(r[m.dims] ?? '').trim() : '',
-        fob: m.custo ? (num(r[m.custo]) || 0) : 0,
-        margem: null,
-        precoManual: m.preco ? (num(r[m.preco]) || null) : null,
-        oculto: false
+        fob, margem: null, travado: false, oculto: false, preco: 0
       };
+      // se a planilha trouxe preço de venda, trava nele; senão calcula do custo
+      if (Number.isFinite(precoCol)) { p.preco = precoCol; p.travado = true; }
+      else p.preco = r2(precoCalculado(p));
+      return p;
     }).filter(Boolean);
     if (!imported.length) { toast('Nenhuma linha válida encontrada.'); return; }
     if ($('#impReplace').checked) { state.products = imported; state.cart = {}; }
@@ -719,6 +788,33 @@
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') $$('.modal:not([hidden])').forEach(m => closeModal('#' + m.id));
   });
+
+  /* ------------------------------------------------------------
+     SENHA — modal de acesso ao Admin
+     ------------------------------------------------------------ */
+  function openPasswordModal() {
+    $('#pwInput').value = '';
+    $('#pwError').hidden = true;
+    openModal('#pwModal');
+    setTimeout(() => $('#pwInput').focus(), 80);
+  }
+  async function tryUnlock() {
+    const pw = $('#pwInput').value;
+    if (!pw) return;
+    const btn = $('#btnPwOk'); btn.disabled = true; btn.textContent = 'Verificando…';
+    try {
+      await unlock(pw);
+      closeModal('#pwModal');
+      state.mode = 'admin'; save(); render();
+      toast('Acesso liberado.');
+    } catch (e) {
+      $('#pwError').hidden = false;
+      $('#pwInput').select();
+    } finally { btn.disabled = false; btn.textContent = 'Entrar'; }
+  }
+  $('#btnPwOk').addEventListener('click', tryUnlock);
+  $('#pwInput').addEventListener('keydown', e => { if (e.key === 'Enter') tryUnlock(); });
+  $('#btnLock') && $('#btnLock').addEventListener('click', lock);
 
   /* ------------------------------------------------------------
      TOAST

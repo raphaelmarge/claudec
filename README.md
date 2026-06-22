@@ -66,8 +66,26 @@ preços recalculam sozinhos** — exatamente como na planilha.
 
 - A **margem** usada é a do produto, ou a **margem geral** se o produto não tiver
   uma própria.
-- Você pode definir um **preço manual** por produto (sobrepõe o cálculo). Deixe
-  em branco para voltar ao automático.
+- Você pode **travar** um preço por produto (sobrepõe o cálculo). Deixe em branco
+  para voltar ao automático.
+
+## Acesso protegido por senha 🔒
+
+O site é público (qualquer um abre o link e vê os **preços de venda**), mas os
+**custos e a configuração** são protegidos:
+
+- O arquivo público (`js/products.js`) contém **apenas o preço de venda** — não
+  expõe custo FOB, margem nem impostos.
+- Os dados sensíveis (custos + parâmetros fiscais) ficam **criptografados**
+  (`AES-256-GCM`, chave derivada da senha via PBKDF2) em `js/secure.js`. Sem a
+  senha, o arquivo é ilegível mesmo que alguém o baixe.
+- Ao tocar em **Admin**, o app pede a **senha**. Com a senha correta, os custos
+  são descriptografados **no próprio navegador** e o painel de configuração é
+  liberado. O botão **🔒 Bloquear** tranca de novo e apaga os custos do
+  dispositivo.
+
+> A senha é definida na geração do `js/secure.js`. Para trocá-la, basta gerar o
+> arquivo novamente com a nova senha.
 
 ## Identidade visual
 

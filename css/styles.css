@@ -319,6 +319,11 @@ body[data-mode="admin"]    .mode-toggle__opt[data-for="admin"] { color: #fff; }
 .qd__install small { color: #777; font-size: .7rem; }
 .qd__foot { padding: 14px 20px 20px; font-size: .66rem; color: #8a8597; border-top: 1px solid #eee; }
 
+/* ============================ PASSWORD MODAL ============================ */
+.modal__card--pw { max-width: 380px; }
+.pw-error { color: var(--danger); font-size: .8rem; margin: 10px 0 0; }
+@media (min-width: 600px) { .modal__card--pw { border-radius: 20px; } }
+
 /* ============================ TOAST ============================ */
 .toast { position: fixed; left: 50%; bottom: calc(90px + var(--safe-b)); transform: translateX(-50%);
   z-index: 100; background: var(--panel-2); border: 1px solid var(--violet); color: var(--txt);
