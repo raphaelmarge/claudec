@@ -108,6 +108,7 @@
       <button class="btn btn--primary" id="btnImport" type="button">Importar planilha</button>
       <button class="btn btn--ghost" id="btnAddProduct" type="button">+ Novo produto</button>
       <button class="btn btn--ghost" id="btnResetData" type="button">Restaurar catálogo</button>
+      <button class="btn btn--ghost" id="btnExportBase" type="button">Exportar base (JSON)</button>
       <button class="btn btn--ghost" id="btnLock" type="button">🔒 Bloquear</button>
       <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" hidden />
     </div>
@@ -137,14 +138,52 @@
     </button>
     <div class="summary__body" id="summaryBody">
       <h2>Resumo do orçamento</h2>
+
+      <div class="quote-people">
+        <label class="qp">
+          <span>Vendedor</span>
+          <div class="qp__row">
+            <select id="selVendedor"></select>
+            <button class="qp__icon" id="btnEditVendedor" type="button" aria-label="Editar vendedor">✎</button>
+            <button class="qp__add" id="btnNovoVendedor" type="button" aria-label="Novo vendedor">＋</button>
+          </div>
+        </label>
+        <label class="qp">
+          <span>Cliente</span>
+          <div class="qp__row">
+            <select id="selCliente"></select>
+            <button class="qp__icon" id="btnEditCliente" type="button" aria-label="Editar cliente">✎</button>
+            <button class="qp__add" id="btnNovoCliente" type="button" aria-label="Novo cliente">＋</button>
+          </div>
+        </label>
+      </div>
+
       <div id="summaryItems" class="summary__items"></div>
+
       <div class="summary__totals">
         <div class="row"><span>Subtotal</span><b id="sumSubtotal">R$ 0,00</b></div>
-        <div class="row row--grand"><span>Total geral</span><b id="sumTotal">R$ 0,00</b></div>
+        <div class="row row--field">
+          <span>Desconto</span>
+          <span class="disc">
+            <input type="number" id="inpDesconto" min="0" step="0.01" inputmode="decimal" value="0" />
+            <button id="discToggle" type="button" class="disc__unit">%</button>
+          </span>
+        </div>
+        <div class="row"><span>Desconto aplicado</span><b id="sumDescAplicado">− R$ 0,00</b></div>
+        <div class="row row--grand"><span>Total</span><b id="sumTotal">R$ 0,00</b></div>
+        <div class="row row--field">
+          <span>Sinal / entrada</span>
+          <span class="disc">
+            <span class="disc__unit disc__unit--static">R$</span>
+            <input type="number" id="inpSinal" min="0" step="0.01" inputmode="decimal" value="0" />
+          </span>
+        </div>
+        <div class="row"><span>Saldo a financiar</span><b id="sumSaldo">R$ 0,00</b></div>
       </div>
+
       <div class="installments">
         <div class="installments__head">
-          <span>Parcelamento</span>
+          <span>Parcelamento do saldo</span>
           <select id="installSelect" aria-label="Número de parcelas"></select>
         </div>
         <div class="installments__value" id="installValue">—</div>
@@ -224,11 +263,6 @@
         <button class="modal__x" data-close type="button" aria-label="Fechar">✕</button>
       </header>
       <div class="modal__body modal__body--quote">
-        <div class="quote-meta no-print">
-          <label class="field"><span>Cliente</span><input id="qCliente" type="text" placeholder="Nome do cliente" /></label>
-          <label class="field"><span>Vendedor</span><input id="qVendedor" type="text" placeholder="Seu nome" /></label>
-        </div>
-
         <!-- Printable / capturable area -->
         <div id="quoteDoc" class="quote-doc"></div>
       </div>
@@ -237,6 +271,60 @@
         <span class="spacer"></span>
         <button class="btn btn--ghost" id="btnImageQuote" type="button">Imagem (PNG)</button>
         <button class="btn btn--primary" id="btnPdfQuote" type="button">Salvar PDF</button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- ===================== CLIENTE MODAL ===================== -->
+  <div class="modal" id="clienteModal" hidden>
+    <div class="modal__backdrop" data-close></div>
+    <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="clienteTitle">
+      <header class="modal__head">
+        <h2 id="clienteTitle">Novo cliente</h2>
+        <button class="modal__x" data-close type="button" aria-label="Fechar">✕</button>
+      </header>
+      <div class="modal__body">
+        <input type="hidden" id="clId" />
+        <div class="form-grid">
+          <label class="field field--wide"><span>Nome *</span><input id="clNome" type="text" required /></label>
+          <label class="field field--wide"><span>Empresa / Academia</span><input id="clEmpresa" type="text" /></label>
+          <label class="field"><span>Telefone / WhatsApp</span><input id="clTelefone" type="tel" inputmode="tel" /></label>
+          <label class="field"><span>E-mail</span><input id="clEmail" type="email" inputmode="email" /></label>
+          <label class="field"><span>CNPJ / CPF</span><input id="clDoc" type="text" /></label>
+          <label class="field"><span>Cidade / UF</span><input id="clCidade" type="text" /></label>
+          <label class="field field--wide"><span>Observações</span><input id="clObs" type="text" /></label>
+        </div>
+      </div>
+      <footer class="modal__foot">
+        <button class="btn btn--danger" id="btnDeleteCliente" type="button">Remover</button>
+        <span class="spacer"></span>
+        <button class="btn btn--ghost" data-close type="button">Cancelar</button>
+        <button class="btn btn--primary" id="btnSaveCliente" type="button">Salvar</button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- ===================== VENDEDOR MODAL ===================== -->
+  <div class="modal" id="vendedorModal" hidden>
+    <div class="modal__backdrop" data-close></div>
+    <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="vendedorTitle">
+      <header class="modal__head">
+        <h2 id="vendedorTitle">Novo vendedor</h2>
+        <button class="modal__x" data-close type="button" aria-label="Fechar">✕</button>
+      </header>
+      <div class="modal__body">
+        <input type="hidden" id="vdId" />
+        <div class="form-grid">
+          <label class="field field--wide"><span>Nome *</span><input id="vdNome" type="text" required /></label>
+          <label class="field"><span>Telefone / WhatsApp</span><input id="vdTelefone" type="tel" inputmode="tel" /></label>
+          <label class="field"><span>E-mail</span><input id="vdEmail" type="email" inputmode="email" /></label>
+        </div>
+      </div>
+      <footer class="modal__foot">
+        <button class="btn btn--danger" id="btnDeleteVendedor" type="button">Remover</button>
+        <span class="spacer"></span>
+        <button class="btn btn--ghost" data-close type="button">Cancelar</button>
+        <button class="btn btn--primary" id="btnSaveVendedor" type="button">Salvar</button>
       </footer>
     </div>
   </div>

@@ -33,12 +33,23 @@ Use o botão **Vendedor / Admin** no topo para alternar.
 ### 🟣 Modo Vendedor (versão para enviar)
 - **Não mostra** custo, margem nem nenhum parâmetro. Só o preço final.
 - O vendedor escolhe os produtos e define a **quantidade** de cada um.
-- Resumo mostra só os itens com quantidade > 0: subtotal, total geral e
-  **simulação de parcelamento** (ex.: até 48×, com o valor da parcela).
-- Botão **Gerar orçamento** cria um documento pronto para o cliente, com itens,
-  quantidades, valor unitário, total e parcelas. Dá para **salvar em PDF**
-  (impressão → salvar como PDF), **exportar como imagem (PNG)** ou
-  **compartilhar** (WhatsApp etc. via menu nativo do celular).
+- Resumo mostra só os itens com quantidade > 0: subtotal, **desconto** (em % ou
+  R$), total, **sinal/entrada** e **saldo a financiar**, com a **simulação de
+  parcelamento sobre o saldo** (ex.: até 48×, com o valor da parcela).
+- **Vendedor** e **cliente** são selecionados/cadastrados na hora (nome,
+  empresa, telefone, e-mail, cidade, CNPJ/CPF).
+- Botão **Gerar orçamento** cria um documento pronto para o cliente, com **foto**
+  de cada equipamento, dados do cliente e do vendedor, itens, quantidades, valor
+  unitário, total, desconto, sinal, saldo e parcelas. Dá para **salvar em PDF**,
+  **exportar como imagem (PNG)** ou **compartilhar** (WhatsApp etc.).
+
+## Cadastros e base de dados
+
+- **Vendedores** e **clientes** ficam cadastrados localmente (no aparelho).
+- Cada orçamento gerado é **salvo num histórico** (`orcamentos`), ligando
+  vendedor + cliente + itens + totais.
+- No Modo Admin, **Exportar base (JSON)** baixa vendedores, clientes e
+  orçamentos num arquivo — pronto para alimentar um futuro banco de dados.
 
 ## Catálogo
 

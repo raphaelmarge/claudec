@@ -43,7 +43,12 @@
         // fob (custo) NÃO entra aqui — só após destravar com senha
       })),
       cart: {},
-      filters: { serie: 'all', query: '' }
+      filters: { serie: 'all', query: '' },
+      vendedores: [],
+      clientes: [],
+      orcamentos: [],
+      currentVendedorId: null,
+      quote: { clienteId: null, descMode: 'pct', descValue: 0, sinal: 0 }
     };
   }
 
@@ -67,6 +72,12 @@
     if (!s) s = freshFromSeed();
     s.filters = s.filters || { serie: 'all', query: '' };
     s.cart = s.cart || {};
+    // backfill de cadastros / orçamento (compatibilidade com versões anteriores)
+    s.vendedores = s.vendedores || [];
+    s.clientes = s.clientes || [];
+    s.orcamentos = s.orcamentos || [];
+    if (!('currentVendedorId' in s)) s.currentVendedorId = null;
+    s.quote = s.quote || { clienteId: null, descMode: 'pct', descValue: 0, sinal: 0 };
     // Se a sessão não está destrancada, garante que nenhum custo fique em disco.
     if (!unlocked) { stripSecret(s); s.mode = 'vendedor'; }
     return s;
@@ -176,6 +187,27 @@
   }
   const cartTotal = () => cartLines().reduce((s, l) => s + l.total, 0);
   const cartCount = () => cartLines().reduce((s, l) => s + l.q, 0);
+
+  /* ------------------------------------------------------------
+     ORÇAMENTO — desconto (vendedor), sinal/entrada, saldo
+     ------------------------------------------------------------ */
+  const Q = () => state.quote;
+  function descontoReais(subtotal) {
+    const q = Q();
+    const v = Number(q.descValue) || 0;
+    if (q.descMode === 'brl') return Math.min(Math.max(v, 0), subtotal);
+    return subtotal * Math.min(Math.max(v, 0), 100) / 100;   // %
+  }
+  function totalComDesconto() { const sub = cartTotal(); return Math.max(0, sub - descontoReais(sub)); }
+  function sinalReais() { return Math.min(Math.max(Number(Q().sinal) || 0, 0), totalComDesconto()); }
+  function saldoFinanciar() { return Math.max(0, totalComDesconto() - sinalReais()); }
+
+  /* ------------------------------------------------------------
+     CADASTROS — vendedores e clientes
+     ------------------------------------------------------------ */
+  const vendedorById = id => state.vendedores.find(v => v.id === id) || null;
+  const clienteById = id => state.clientes.find(c => c.id === id) || null;
+  function currentVendedor() { return vendedorById(state.currentVendedorId); }
 
   /* ------------------------------------------------------------
      FILTROS
@@ -326,13 +358,37 @@
     $('#serieList').innerHTML = series().map(s => `<option value="${esc(s)}">`).join('');
   }
 
+  function renderPeople() {
+    const vSel = $('#selVendedor');
+    vSel.innerHTML = '<option value="">— selecione —</option>' +
+      state.vendedores.map(v => `<option value="${v.id}" ${v.id === state.currentVendedorId ? 'selected' : ''}>${esc(v.nome)}</option>`).join('');
+    const cSel = $('#selCliente');
+    cSel.innerHTML = '<option value="">— selecione —</option>' +
+      state.clientes.map(c => `<option value="${c.id}" ${c.id === Q().clienteId ? 'selected' : ''}>${esc(c.nome)}${c.empresa ? ' · ' + esc(c.empresa) : ''}</option>`).join('');
+    $('#btnEditVendedor').disabled = !state.currentVendedorId;
+    $('#btnEditCliente').disabled = !Q().clienteId;
+  }
+
   function renderSummary() {
     const lines = cartLines();
-    const total = cartTotal();
+    const subtotal = cartTotal();
+    const desc = descontoReais(subtotal);
+    const total = totalComDesconto();
+    const sinal = sinalReais();
+    const saldo = saldoFinanciar();
+
     $('#cartCount').textContent = cartCount();
     $('#cartTotalMini').textContent = money(total);
-    $('#sumSubtotal').textContent = money(total);
+    $('#sumSubtotal').textContent = money(subtotal);
+    $('#sumDescAplicado').textContent = '− ' + money(desc);
     $('#sumTotal').textContent = money(total);
+    $('#sumSaldo').textContent = money(saldo);
+
+    $('#discToggle').textContent = Q().descMode === 'brl' ? 'R$' : '%';
+    if (document.activeElement !== $('#inpDesconto')) $('#inpDesconto').value = Q().descValue || 0;
+    if (document.activeElement !== $('#inpSinal')) $('#inpSinal').value = Q().sinal || 0;
+
+    renderPeople();
 
     $('#summaryItems').innerHTML = lines.length ? lines.map(l => `
       <div class="sitem" data-id="${l.p.id}">
@@ -343,10 +399,10 @@
       </div>`).join('')
       : `<p class="empty" style="padding:18px 0">Escolha produtos para montar o orçamento.</p>`;
 
-    renderInstallSelect(total);
+    renderInstallSelect(saldo);
   }
 
-  function renderInstallSelect(total) {
+  function renderInstallSelect(saldo) {
     const sel = $('#installSelect');
     const maxN = Math.max(1, Math.floor(P().parcelasMax || 12));
     const opts = [];
@@ -354,15 +410,15 @@
     if (!opts.includes(maxN)) opts.push(maxN);
     const current = Number(sel.value) || maxN;
     sel.innerHTML = opts.map(n => `<option value="${n}" ${n === current ? 'selected' : ''}>${n}x</option>`).join('');
-    updateInstallValue(total);
+    updateInstallValue(saldo);
   }
-  function updateInstallValue(total) {
+  function updateInstallValue(saldo) {
     const n = Number($('#installSelect').value) || 1;
-    const v = total > 0 ? parcelaValor(total, n) : 0;
-    $('#installValue').textContent = total > 0 ? `${n}× de ${money(v)}` : '—';
+    const v = saldo > 0 ? parcelaValor(saldo, n) : 0;
+    $('#installValue').textContent = saldo > 0 ? `${n}× de ${money(v)}` : '—';
     const juros = P().juros || 0;
-    $('#installNote').textContent = total > 0
-      ? (juros > 0 ? `Com juros de ${juros}% a.m. · total ${money(v * n)}` : 'Sem juros')
+    $('#installNote').textContent = saldo > 0
+      ? (juros > 0 ? `Sobre o saldo · juros ${juros}% a.m. · total ${money(v * n)}` : 'Sobre o saldo · sem juros')
       : '';
   }
 
@@ -438,14 +494,116 @@
      SUMMARY (vendor) — abrir/fechar, itens, parcelas, ações
      ------------------------------------------------------------ */
   $('#summaryHandle').addEventListener('click', () => $('#summaryBar').classList.toggle('open'));
-  $('#installSelect').addEventListener('change', () => updateInstallValue(cartTotal()));
+  $('#installSelect').addEventListener('change', () => updateInstallValue(saldoFinanciar()));
   $('#summaryItems').addEventListener('click', e => {
     if (e.target.dataset.act === 'rm') {
       const id = e.target.closest('.sitem').dataset.id; setQty(id, 0); refreshCard(id); renderSummary();
     }
   });
   $('#btnClearCart').addEventListener('click', () => {
-    if (!cartCount() || confirm('Limpar todos os itens do orçamento?')) { state.cart = {}; save(); render(); }
+    if (!cartCount() || confirm('Limpar todos os itens do orçamento?')) {
+      state.cart = {}; state.quote.descValue = 0; state.quote.sinal = 0; save(); render();
+    }
+  });
+
+  // desconto / sinal (vendedor)
+  $('#inpDesconto').addEventListener('input', e => { state.quote.descValue = num(e.target.value) || 0; save(); renderSummary(); });
+  $('#inpSinal').addEventListener('input', e => { state.quote.sinal = num(e.target.value) || 0; save(); renderSummary(); });
+  $('#discToggle').addEventListener('click', () => {
+    state.quote.descMode = state.quote.descMode === 'brl' ? 'pct' : 'brl';
+    save(); renderSummary();
+  });
+
+  // seleção de vendedor / cliente
+  $('#selVendedor').addEventListener('change', e => { state.currentVendedorId = e.target.value || null; save(); renderSummary(); });
+  $('#selCliente').addEventListener('change', e => { state.quote.clienteId = e.target.value || null; save(); renderSummary(); });
+  $('#btnNovoVendedor').addEventListener('click', () => openVendedor(null));
+  $('#btnEditVendedor').addEventListener('click', () => state.currentVendedorId && openVendedor(state.currentVendedorId));
+  $('#btnNovoCliente').addEventListener('click', () => openCliente(null));
+  $('#btnEditCliente').addEventListener('click', () => Q().clienteId && openCliente(Q().clienteId));
+
+  /* ------------------------------------------------------------
+     CADASTRO — vendedores e clientes (modais)
+     ------------------------------------------------------------ */
+  let editVendedorId = null;
+  function openVendedor(id) {
+    const v = id ? vendedorById(id) : null;
+    editVendedorId = id || null;
+    $('#vendedorTitle').textContent = v ? 'Editar vendedor' : 'Novo vendedor';
+    $('#vdNome').value = v ? v.nome : '';
+    $('#vdTelefone').value = v ? (v.telefone || '') : '';
+    $('#vdEmail').value = v ? (v.email || '') : '';
+    $('#btnDeleteVendedor').style.display = v ? '' : 'none';
+    openModal('#vendedorModal');
+  }
+  $('#btnSaveVendedor').addEventListener('click', () => {
+    const nome = $('#vdNome').value.trim();
+    if (!nome) { toast('Informe o nome do vendedor.'); return; }
+    const dados = { nome, telefone: $('#vdTelefone').value.trim(), email: $('#vdEmail').value.trim() };
+    if (editVendedorId) Object.assign(vendedorById(editVendedorId), dados);
+    else { const v = { id: uid(), ...dados, criadoEm: Date.now() }; state.vendedores.push(v); state.currentVendedorId = v.id; }
+    save(); closeModal('#vendedorModal'); renderSummary(); toast('Vendedor salvo.');
+  });
+  $('#btnDeleteVendedor').addEventListener('click', () => {
+    if (!editVendedorId) return;
+    if (confirm('Remover este vendedor?')) {
+      state.vendedores = state.vendedores.filter(v => v.id !== editVendedorId);
+      if (state.currentVendedorId === editVendedorId) state.currentVendedorId = null;
+      save(); closeModal('#vendedorModal'); renderSummary(); toast('Vendedor removido.');
+    }
+  });
+
+  let editClienteId = null;
+  function openCliente(id) {
+    const c = id ? clienteById(id) : null;
+    editClienteId = id || null;
+    $('#clienteTitle').textContent = c ? 'Editar cliente' : 'Novo cliente';
+    $('#clNome').value = c ? c.nome : '';
+    $('#clEmpresa').value = c ? (c.empresa || '') : '';
+    $('#clTelefone').value = c ? (c.telefone || '') : '';
+    $('#clEmail').value = c ? (c.email || '') : '';
+    $('#clDoc').value = c ? (c.doc || '') : '';
+    $('#clCidade').value = c ? (c.cidade || '') : '';
+    $('#clObs').value = c ? (c.obs || '') : '';
+    $('#btnDeleteCliente').style.display = c ? '' : 'none';
+    openModal('#clienteModal');
+  }
+  $('#btnSaveCliente').addEventListener('click', () => {
+    const nome = $('#clNome').value.trim();
+    if (!nome) { toast('Informe o nome do cliente.'); return; }
+    const dados = {
+      nome, empresa: $('#clEmpresa').value.trim(), telefone: $('#clTelefone').value.trim(),
+      email: $('#clEmail').value.trim(), doc: $('#clDoc').value.trim(),
+      cidade: $('#clCidade').value.trim(), obs: $('#clObs').value.trim()
+    };
+    if (editClienteId) Object.assign(clienteById(editClienteId), dados);
+    else { const c = { id: uid(), ...dados, criadoEm: Date.now() }; state.clientes.push(c); state.quote.clienteId = c.id; }
+    save(); closeModal('#clienteModal'); renderSummary(); toast('Cliente salvo.');
+  });
+  $('#btnDeleteCliente').addEventListener('click', () => {
+    if (!editClienteId) return;
+    if (confirm('Remover este cliente?')) {
+      state.clientes = state.clientes.filter(c => c.id !== editClienteId);
+      if (state.quote.clienteId === editClienteId) state.quote.clienteId = null;
+      save(); closeModal('#clienteModal'); renderSummary(); toast('Cliente removido.');
+    }
+  });
+
+  // exportar base (admin) — ponte para um futuro banco de dados
+  $('#btnExportBase').addEventListener('click', () => {
+    const base = {
+      exportadoEm: new Date().toISOString(),
+      empresa: P().empresa || 'Torque Fitness',
+      vendedores: state.vendedores,
+      clientes: state.clientes,
+      orcamentos: state.orcamentos
+    };
+    const blob = new Blob([JSON.stringify(base, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'torque-base-' + new Date().toISOString().slice(0, 10) + '.json';
+    a.click(); URL.revokeObjectURL(a.href);
+    toast(`Base exportada: ${state.clientes.length} clientes, ${state.vendedores.length} vendedores, ${state.orcamentos.length} orçamentos.`);
   });
 
   /* ------------------------------------------------------------
@@ -672,10 +830,8 @@
      ------------------------------------------------------------ */
   $('#btnExport').addEventListener('click', () => {
     if (!cartCount()) { toast('Adicione produtos ao orçamento primeiro.'); return; }
-    buildQuoteDoc(); openModal('#quoteModal');
+    buildQuoteDoc(); registrarOrcamento(); openModal('#quoteModal');
   });
-  $('#qCliente').addEventListener('input', buildQuoteDoc);
-  $('#qVendedor').addEventListener('input', buildQuoteDoc);
 
   function todayStr() {
     return new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -684,26 +840,53 @@
     const d = new Date(); d.setDate(d.getDate() + (P().validade || 7));
     return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
   }
+  let lastQuoteNumero = '';
   function buildQuoteDoc() {
     const lines = cartLines();
-    const total = cartTotal();
+    const subtotal = cartTotal();
+    const desc = descontoReais(subtotal);
+    const total = totalComDesconto();
+    const sinal = sinalReais();
+    const saldo = saldoFinanciar();
     const n = Number($('#installSelect').value) || Math.floor(P().parcelasMax || 12);
-    const parc = parcelaValor(total, n);
-    const cliente = $('#qCliente').value.trim();
-    const vendedor = $('#qVendedor').value.trim();
-    const numero = 'ORC-' + new Date().toISOString().slice(2, 10).replace(/-/g, '');
+    const parc = parcelaValor(saldo, n);
+    const cli = clienteById(Q().clienteId);
+    const vend = currentVendedor();
+    const numero = 'ORC-' + new Date().toISOString().slice(2, 10).replace(/-/g, '') + '-' + (state.orcamentos.length + 1);
+    lastQuoteNumero = numero;
 
     const logo = `<svg class="qd__logo" viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" fill="#1D1D27" stroke="#8B5CF6" stroke-width="4"/><path d="M22 74 A 38 38 0 1 1 78 74" fill="none" stroke="#8B5CF6" stroke-width="6" stroke-linecap="round"/><line x1="50" y1="50" x2="73" y2="33" stroke="#8B5CF6" stroke-width="6" stroke-linecap="round"/><circle cx="50" cy="50" r="7" fill="#8B5CF6"/></svg>`;
+    const thumb = p => p.imagem
+      ? `<img class="qd__thumb" src="${esc(p.imagem)}" alt="" onerror="this.style.visibility='hidden'"/>`
+      : `<span class="qd__thumb qd__thumb--ph"></span>`;
 
     const rows = lines.map(l => `
       <tr>
+        <td class="qd__imgcell">${thumb(l.p)}</td>
         <td><div class="qd__pname">${esc(l.p.nome)}</div>${l.p.codigo ? `<div class="qd__pcode">${esc(l.p.codigo)}</div>` : ''}</td>
         <td class="num">${l.q}</td>
         <td class="num">${money(l.unit)}</td>
         <td class="num">${money(l.total)}</td>
       </tr>`).join('');
 
-    const jurosTxt = (P().juros || 0) > 0 ? `em ${n}× com juros de ${P().juros}% a.m.` : `em até ${n}× sem juros`;
+    const jurosTxt = (P().juros || 0) > 0 ? `${n}× com juros de ${P().juros}% a.m.` : `em até ${n}× sem juros`;
+
+    const clienteLinhas = cli ? [
+      `<b>${esc(cli.nome)}</b>${cli.empresa ? ' · ' + esc(cli.empresa) : ''}`,
+      [cli.telefone, cli.email].filter(Boolean).map(esc).join(' · '),
+      [cli.cidade, cli.doc].filter(Boolean).map(esc).join(' · ')
+    ].filter(Boolean).join('<br>') : '—';
+
+    const extraTotais = [];
+    if (desc > 0) extraTotais.push(`<div class="qrow"><span>Desconto</span><b>− ${money(desc)}</b></div>`);
+    const totalRow = `<div class="qrow ${sinal > 0 ? '' : 'qd__grand'}"><span>${sinal > 0 ? 'Total' : 'Total geral'}</span><b>${money(total)}</b></div>`;
+    if (sinal > 0) {
+      extraTotais.push(totalRow);
+      extraTotais.push(`<div class="qrow"><span>Sinal / entrada</span><b>− ${money(sinal)}</b></div>`);
+      extraTotais.push(`<div class="qrow qd__grand"><span>Saldo a financiar</span><b>${money(saldo)}</b></div>`);
+    } else {
+      extraTotais.push(totalRow);
+    }
 
     $('#quoteDoc').innerHTML = `
       <div class="qd__head">
@@ -716,24 +899,51 @@
         </div>
       </div>
       <div class="qd__client">
-        <span>Cliente: <b>${esc(cliente || '—')}</b></span>
-        <span>Vendedor: <b>${esc(vendedor || '—')}</b></span>
+        <span class="qd__cli">Cliente:<br>${clienteLinhas}</span>
+        <span class="qd__vend">Vendedor:<br><b>${vend ? esc(vend.nome) : '—'}</b>${vend && vend.telefone ? '<br>' + esc(vend.telefone) : ''}</span>
       </div>
       <table class="qd__table">
-        <thead><tr><th>Produto</th><th class="num">Qtd</th><th class="num">Unitário</th><th class="num">Total</th></tr></thead>
+        <thead><tr><th colspan="2">Produto</th><th class="num">Qtd</th><th class="num">Unitário</th><th class="num">Total</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
       <div class="qd__totals">
-        <div class="qrow"><span>Subtotal</span><b>${money(total)}</b></div>
-        <div class="qrow qd__grand"><span>Total geral</span><b>${money(total)}</b></div>
+        <div class="qrow"><span>Subtotal</span><b>${money(subtotal)}</b></div>
+        ${extraTotais.join('')}
       </div>
       <div class="qd__install">
         <div class="big">${n}× de ${money(parc)}</div>
-        <small>Parcelamento ${jurosTxt}${(P().juros||0)>0 ? ` · total ${money(parc*n)}` : ''}.</small>
+        <small>${sinal > 0 ? 'Saldo parcelado ' : 'Parcelamento '}${jurosTxt}${(P().juros||0)>0 ? ` · total ${money(parc*n)}` : ''}.</small>
       </div>
       <div class="qd__foot">
         Orçamento gerado em ${todayStr()} · ${P().empresa || 'Torque Fitness'} · Valores sujeitos a alteração sem aviso prévio.
       </div>`;
+  }
+
+  // Salva o orçamento no histórico (base para um futuro banco de dados).
+  function registrarOrcamento() {
+    const lines = cartLines();
+    const subtotal = cartTotal();
+    const n = Number($('#installSelect').value) || Math.floor(P().parcelasMax || 12);
+    const saldo = saldoFinanciar();
+    state.orcamentos.push({
+      id: uid(),
+      numero: lastQuoteNumero,
+      criadoEm: Date.now(),
+      vendedorId: state.currentVendedorId || null,
+      vendedorNome: currentVendedor() ? currentVendedor().nome : '',
+      clienteId: Q().clienteId || null,
+      clienteNome: clienteById(Q().clienteId) ? clienteById(Q().clienteId).nome : '',
+      itens: lines.map(l => ({ codigo: l.p.codigo, nome: l.p.nome, qtd: l.q, unitario: l.unit, total: l.total })),
+      subtotal,
+      descMode: Q().descMode, descValue: Q().descValue,
+      desconto: descontoReais(subtotal),
+      total: totalComDesconto(),
+      sinal: sinalReais(),
+      saldo,
+      parcelas: n,
+      valorParcela: saldo > 0 ? parcelaValor(saldo, n) : 0
+    });
+    save();
   }
 
   $('#btnPdfQuote').addEventListener('click', () => window.print());
@@ -750,11 +960,18 @@
   });
 
   $('#btnShareQuote').addEventListener('click', async () => {
-    const total = cartTotal();
     const lines = cartLines();
-    const txt = `*Orçamento Torque Fitness*\n\n` +
-      lines.map(l => `• ${l.q}× ${l.p.nome} — ${money(l.total)}`).join('\n') +
+    const total = totalComDesconto();
+    const sinal = sinalReais();
+    const saldo = saldoFinanciar();
+    const n = Number($('#installSelect').value) || Math.floor(P().parcelasMax || 12);
+    const cli = clienteById(Q().clienteId);
+    let txt = `*Orçamento Torque Fitness*\n`;
+    if (cli) txt += `Cliente: ${cli.nome}\n`;
+    txt += `\n` + lines.map(l => `• ${l.q}× ${l.p.nome} — ${money(l.total)}`).join('\n') +
       `\n\n*Total: ${money(total)}*`;
+    if (sinal > 0) txt += `\nSinal: ${money(sinal)} · Saldo: ${money(saldo)}`;
+    txt += `\n${n}× de ${money(parcelaValor(saldo, n))}`;
     try {
       // tenta compartilhar imagem como arquivo, se suportado
       if (navigator.share) {
