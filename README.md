@@ -39,7 +39,23 @@ ambiente.
 | `EVO_DNS`         | ⬜ | `evo` | DNS da conta (usuário do Basic Auth). |
 | `EVO_BASE_URL`    | ⬜ | `https://evo-integracao.w12app.com.br` | Base URL da API. |
 | `EVO_HTTP_TIMEOUT`| ⬜ | `60` | Timeout HTTP em segundos. |
+| `MCP_SECRET`      | ⬜ | — | Se definido, protege o MCP em `/mcp/<MCP_SECRET>` (veja abaixo). |
 | `PORT`            | ⬜ | `8000` | Porta HTTP (o Railway injeta automaticamente). |
+
+### Protegendo o endpoint (`MCP_SECRET`)
+
+Sem proteção, qualquer pessoa com a URL acessaria os dados da academia. O
+conector personalizado do Claude **não** permite enviar um header
+`Authorization` manual (quando um MCP remoto exige token, o Claude tenta um
+fluxo **OAuth** completo, que exigiria um provedor de identidade).
+
+A solução simples que funciona de imediato é **colocar um segredo no caminho da
+URL**. Defina `MCP_SECRET` com um valor longo e aleatório e o endpoint passa a
+ser `/mcp/<MCP_SECRET>` — só quem tem a URL completa consegue conectar. Sem a
+variável, o endpoint fica público em `/mcp`.
+
+> Há também um endpoint `GET /health` (sempre público, sem dados sensíveis) que
+> o Railway usa para monitorar o serviço.
 
 ---
 
@@ -75,33 +91,32 @@ curl -sL -X POST http://localhost:8000/mcp \
 2. **Adicione as variáveis de ambiente** (aba **Variables** do serviço):
 
    ```
-   EVO_TOKEN = <seu_token_da_api_do_evo>
-   EVO_DNS   = evo
+   EVO_TOKEN  = <seu_token_da_api_do_evo>
+   EVO_DNS    = evo
+   MCP_SECRET = <um_valor_longo_e_aleatorio>   # recomendado, protege o endpoint
    ```
 
    - Em *Variables* clique em **+ New Variable**, cole `EVO_TOKEN` e o valor do
-     token, salve. Repita para `EVO_DNS`.
+     token, salve. Repita para `EVO_DNS` e (recomendado) `MCP_SECRET`.
    - **Não** defina `PORT` — o Railway injeta sozinho. O `server.py` já lê `$PORT`.
    - O token fica só no Railway (criptografado), nunca no Git.
 
 3. **Gere a URL pública**: aba **Settings → Networking → Generate Domain**.
    O Railway dará algo como `https://seu-app.up.railway.app`.
 
-4. **Endpoint MCP** = essa URL + `/mcp`:
-
-   ```
-   https://seu-app.up.railway.app/mcp
-   ```
+4. **Endpoint MCP** = essa URL + o caminho:
+   - Com `MCP_SECRET` definido: `https://seu-app.up.railway.app/mcp/<MCP_SECRET>`
+   - Sem `MCP_SECRET`: `https://seu-app.up.railway.app/mcp`
 
 ---
 
 ## Conectar no Claude
 
 No Claude (web/desktop): **Settings → Connectors → Add custom connector**, e cole
-a URL do endpoint MCP:
+a URL do endpoint MCP (incluindo o `MCP_SECRET`, se você definiu um):
 
 ```
-https://seu-app.up.railway.app/mcp
+https://seu-app.up.railway.app/mcp/<MCP_SECRET>
 ```
 
 Depois é só pedir no chat, ex.:

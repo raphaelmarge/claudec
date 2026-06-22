@@ -24,6 +24,8 @@ from typing import Any, Optional
 
 import httpx
 from fastmcp import FastMCP
+from starlette.requests import Request
+from starlette.responses import JSONResponse
 
 # --------------------------------------------------------------------------- #
 # Configuração
@@ -37,6 +39,12 @@ EVO_TOKEN = os.environ.get("EVO_TOKEN", "")
 
 # Timeout generoso: alguns relatórios do EVO demoram a responder.
 HTTP_TIMEOUT = float(os.environ.get("EVO_HTTP_TIMEOUT", "60"))
+
+# Segredo opcional no caminho da URL. Se definido, o endpoint MCP passa a ser
+# /mcp/<MCP_SECRET> — assim só quem tem a URL completa consegue conectar.
+# Vazio = endpoint público em /mcp (sem proteção).
+MCP_SECRET = os.environ.get("MCP_SECRET", "").strip("/")
+MCP_PATH = f"/mcp/{MCP_SECRET}" if MCP_SECRET else "/mcp"
 
 mcp = FastMCP(
     name="EVO (W12) — Gestão de Academia",
@@ -273,9 +281,25 @@ def leads(
 
 
 # --------------------------------------------------------------------------- #
+# Health-check (usado pelo Railway para monitorar o serviço)
+# --------------------------------------------------------------------------- #
+
+@mcp.custom_route("/health", methods=["GET"])
+async def health(_request: Request) -> JSONResponse:
+    return JSONResponse(
+        {
+            "status": "ok",
+            "service": "mcp-evo",
+            "evo_token_configurado": bool(EVO_TOKEN),
+            "endpoint_protegido": bool(MCP_SECRET),
+        }
+    )
+
+
+# --------------------------------------------------------------------------- #
 # Entrypoint — Streamable HTTP (compatível com Railway / conector remoto)
 # --------------------------------------------------------------------------- #
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "8000"))
-    mcp.run(transport="http", host="0.0.0.0", port=port)
+    mcp.run(transport="http", host="0.0.0.0", port=port, path=MCP_PATH)
