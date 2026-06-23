@@ -34,6 +34,7 @@
   let state = load();
   let editingOrcamentoId = null;   // id do orçamento sendo editado (null = novo)
   let editingNumero = '';          // número do orçamento em edição (preserva o original)
+  let editingObs = '';             // observação do orçamento em edição (vai pro PDF)
 
   function freshFromSeed() {
     const data = window.TORQUE_PUBLIC || window.TORQUE_DATA || window.TORQUE_SEED;
@@ -508,7 +509,7 @@
   });
   function novoOrcamento() {
     state.cart = {}; state.quote.descValue = 0; state.quote.sinal = 0;
-    state.quote.clienteId = null; editingOrcamentoId = null;
+    state.quote.clienteId = null; editingOrcamentoId = null; editingNumero = ''; editingObs = '';
     save(); render();
   }
   $('#btnClearCart').addEventListener('click', () => {
@@ -841,18 +842,22 @@
     const rows = lines.map(l => `
       <tr>
         <td class="qd__imgcell">${thumb(l.p)}</td>
-        <td><div class="qd__pname">${esc(l.p.nome)}</div>${l.p.codigo ? `<div class="qd__pcode">${esc(l.p.codigo)}</div>` : ''}</td>
+        <td><div class="qd__pname">${esc(l.p.nome)}</div>${l.p.codigo ? `<div class="qd__pcode">${esc(l.p.codigo)}</div>` : ''}${l.p.dims ? `<div class="qd__dims">${esc(l.p.dims)} mm</div>` : ''}</td>
         <td class="num">${l.q}</td>
         <td class="num">${money(l.unit)}</td>
         <td class="num">${money(l.total)}</td>
       </tr>`).join('');
 
     const jurosTxt = (P().juros || 0) > 0 ? `${n}× com juros de ${P().juros}% a.m.` : `em até ${n}× sem juros`;
-
-    const clienteLinhas = cli ? [
-      `<b>${esc(cli.nome)}</b>${cli.empresa ? ' · ' + esc(cli.empresa) : ''}`,
-      [cli.telefone, cli.email].filter(Boolean).map(esc).join(' · '),
+    const prof = Cloud.profile || {};
+    const cliLinhas = cli ? [
+      `<b>${esc(cli.nome)}</b>${cli.empresa ? ' — ' + esc(cli.empresa) : ''}`,
+      cli.telefone ? esc(cli.telefone) : '', cli.email ? esc(cli.email) : '',
       [cli.cidade, cli.doc].filter(Boolean).map(esc).join(' · ')
+    ].filter(Boolean).join('<br>') : '—';
+    const vendLinhas = vend ? [
+      `<b>${esc(vend.nome)}</b>`,
+      prof.celular ? esc(prof.celular) : '', vend.email ? esc(vend.email) : ''
     ].filter(Boolean).join('<br>') : '—';
 
     const extraTotais = [];
@@ -865,6 +870,7 @@
     } else {
       extraTotais.push(totalRow);
     }
+    const obs = (editingOrcamentoId && editingObs) ? editingObs : '';
 
     $('#quoteDoc').innerHTML = `
       <div class="qd__head">
@@ -876,9 +882,9 @@
           <div>Validade: ${validadeStr()}</div>
         </div>
       </div>
-      <div class="qd__client">
-        <span class="qd__cli">Cliente:<br>${clienteLinhas}</span>
-        <span class="qd__vend">Vendedor:<br><b>${vend ? esc(vend.nome) : '—'}</b>${vend && vend.telefone ? '<br>' + esc(vend.telefone) : ''}</span>
+      <div class="qd__parties">
+        <div class="qd__party"><h4>Cliente</h4>${cliLinhas}</div>
+        <div class="qd__party"><h4>Vendedor</h4>${vendLinhas}</div>
       </div>
       <table class="qd__table">
         <thead><tr><th colspan="2">Produto</th><th class="num">Qtd</th><th class="num">Unitário</th><th class="num">Total</th></tr></thead>
@@ -892,8 +898,15 @@
         <div class="big">${n}× de ${money(parc)}</div>
         <small>${sinal > 0 ? 'Saldo parcelado ' : 'Parcelamento '}${jurosTxt}${(P().juros||0)>0 ? ` · total ${money(parc*n)}` : ''}.</small>
       </div>
+      <div class="qd__cond">
+        <h4>Condições</h4>
+        Pagamento: ${sinal > 0 ? `entrada de ${money(sinal)} + ` : ''}${jurosTxt}.<br>
+        Validade da proposta: <b>${validadeStr()}</b> (${P().validade || 7} dias).<br>
+        Frete e instalação a combinar. Prazo de entrega sujeito à disponibilidade de estoque.
+        ${obs ? `<br><br><b>Observações:</b> ${esc(obs)}` : ''}
+      </div>
       <div class="qd__foot">
-        Orçamento gerado em ${todayStr()} · ${P().empresa || 'Torque Fitness'} · Valores sujeitos a alteração sem aviso prévio.
+        ${esc(P().empresa || 'Torque Fitness')} · Orçamento gerado em ${todayStr()}${vend ? ' por ' + esc(vend.nome) : ''} · Valores sujeitos a alteração sem aviso prévio.
       </div>`;
   }
 
@@ -1201,6 +1214,26 @@
   ];
   const STAGE_LABEL = STAGES.reduce((m, s) => (m[s.key] = s.label, m), {});
   function stageOf(r) { const s = r.status || 'novo'; return (s === 'enviado' || !STAGE_LABEL[s]) ? 'novo' : s; }
+  const DAY = 86400000;
+  function diasDesde(iso) { if (!iso) return 0; return Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / DAY)); }
+  function emAberto(r) { const k = stageOf(r); return k === 'novo' || k === 'negociacao' || k === 'sem_retorno'; }
+  function retornoInfo(r) {
+    if (!r.retorno_em) return null;
+    const t = new Date(); t.setHours(0, 0, 0, 0);
+    const dt = new Date(r.retorno_em + 'T00:00:00');
+    const diff = Math.round((dt - t) / DAY);
+    return { dt, diff, atrasado: diff < 0 && emAberto(r) };
+  }
+  // prioridade no funil (maior = mais urgente, vai pro topo da lista)
+  function prioridade(r) {
+    if (!emAberto(r)) return 0;
+    const ri = retornoInfo(r);
+    if (ri && ri.atrasado) return 1000 + (-ri.diff);
+    if (ri && ri.diff === 0) return 900;
+    const d = diasDesde(r.criado_em);
+    if (!ri && d >= 5) return 500 + d;
+    return ri ? Math.max(1, 100 - ri.diff) : 50;
+  }
 
   let dashData = [];
   let dashStage = 'all';
@@ -1260,34 +1293,53 @@
       fchip('all', 'Todos', cnt.all, val.all) +
       STAGES.map(s => fchip(s.key, s.short, cnt[s.key], val[s.key])).join('');
 
-    // ---- métricas (boas práticas: taxa de fechamento) ----
+    // ---- métricas (boas práticas: pipeline aberto, fechado, conversão) ----
+    const emAbertoVal = val.novo + val.negociacao + val.sem_retorno;
     const fechados = cnt.ganho + cnt.perdido;
     const conv = fechados ? Math.round(cnt.ganho / fechados * 100) : 0;
     $('#dashStats').innerHTML =
-      `<div class="dash__stat"><b>${money(val.ganho)}</b><span>vendas fechadas</span></div>` +
-      `<div class="dash__stat"><b>${conv}%</b><span>taxa de fechamento</span></div>`;
+      `<div class="dash__stat"><b>${money(emAbertoVal)}</b><span>em aberto</span></div>` +
+      `<div class="dash__stat"><b>${money(val.ganho)}</b><span>fechadas</span></div>` +
+      `<div class="dash__stat"><b>${conv}%</b><span>conversão</span></div>`;
 
-    // ---- lista (aplica a fase selecionada) ----
-    const shown = dashStage === 'all' ? base : base.filter(r => stageOf(r) === dashStage);
+    // ---- lista (aplica a fase + ordena por prioridade/follow-up) ----
+    const shown = (dashStage === 'all' ? base : base.filter(r => stageOf(r) === dashStage))
+      .slice().sort((a, b) => (prioridade(b) - prioridade(a)) || (new Date(b.criado_em) - new Date(a.criado_em)));
     $('#dashList').innerHTML = shown.length ? shown.map(dcard).join('')
       : '<p class="dash__empty">Nenhum orçamento nesta fase.</p>';
   }
+  const dmy = iso => new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' });
   function dcard(r) {
-    const d = r.criado_em ? new Date(r.criado_em).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '';
+    const d = r.criado_em ? dmy(r.criado_em) : '';
+    const dias = diasDesde(r.criado_em);
     const itens = (r.itens || []).map(i => `${i.qtd}× ${esc(i.nome)}`).join(' · ');
-    return `<div class="dcard" data-id="${r.id}">
+    const ri = retornoInfo(r);
+    const ativo = emAberto(r);
+
+    const flags = [];
+    if (ri && ri.atrasado) flags.push(`<span class="dflag late">⏰ retorno atrasado (${dmy(r.retorno_em)})</span>`);
+    else if (ri && ri.diff === 0) flags.push(`<span class="dflag warn">📞 retornar hoje</span>`);
+    else if (ri && ri.diff > 0 && ativo) flags.push(`<span class="dflag">📅 retorno ${dmy(r.retorno_em)}</span>`);
+    if (ativo && !ri && dias >= 5) flags.push(`<span class="dflag warn">⏳ parado há ${dias}d</span>`);
+    if (stageOf(r) === 'ganho') flags.push(`<span class="dflag ok">✅ venda fechada</span>`);
+
+    const cardCls = (ri && ri.atrasado) ? 'overdue' : ((ativo && !ri && dias >= 5) ? 'attn' : '');
+    return `<div class="dcard ${cardCls}" data-id="${r.id}">
       <div class="dcard__top"><span class="dcard__cli">${esc(r.cliente_nome || '—')}</span><span class="dcard__val">${money(r.total)}</span></div>
       <div class="dcard__meta">
-        ${r.numero ? `<span>${esc(r.numero)}</span>` : ''}<span>${d}</span>
+        ${r.numero ? `<span>${esc(r.numero)}</span>` : ''}<span>${d}${dias > 0 ? ` · há ${dias}d` : ''}</span>
         <span class="vend">${esc(r.vendedor_nome || '')}</span>
         ${r.sinal > 0 ? `<span>sinal ${money(r.sinal)}</span>` : ''}
         <span>${r.parcelas}× ${money(r.valor_parcela)}</span>
       </div>
+      ${flags.length ? `<div class="dcard__flags">${flags.join('')}</div>` : ''}
       ${itens ? `<div class="dcard__items">${itens}</div>` : ''}
+      ${r.obs ? `<div class="dcard__note"><b>Nota:</b> ${esc(r.obs)}</div>` : ''}
       <select class="dcard__stage st-${stageOf(r)}" data-act="stage" aria-label="Fase da venda">
         ${STAGES.map(s => `<option value="${s.key}" ${stageOf(r) === s.key ? 'selected' : ''}>${s.label}</option>`).join('')}
       </select>
       <div class="dcard__actions">
+        <button class="dc-note" data-act="note-orc" type="button">🗒 Nota</button>
         <button class="dc-edit" data-act="edit-orc" type="button">✎ Editar</button>
         <button class="dc-del" data-act="del-orc" type="button">🗑 Excluir</button>
       </div>
@@ -1298,11 +1350,32 @@
     const id = card.dataset.id;
     const o = dashData.find(x => x.id === id); if (!o) return;
     if (e.target.dataset.act === 'edit-orc') editOrcamento(o);
+    if (e.target.dataset.act === 'note-orc') openOrc(o);
     if (e.target.dataset.act === 'del-orc') {
       if (!confirm(`Excluir o orçamento de ${o.cliente_nome || 'cliente'}?`)) return;
       try { await Cloud.deleteOrcamento(id); dashData = dashData.filter(x => x.id !== id); renderDashboard(); toast('Orçamento excluído.'); }
       catch (err) { console.error(err); toast('Erro ao excluir.'); }
     }
+  });
+
+  // ---- acompanhamento (nota + data de retorno) ----
+  let orcEditId = null;
+  function openOrc(o) {
+    orcEditId = o.id;
+    $('#orcCliente').textContent = (o.cliente_nome || 'Cliente') + (o.numero ? ' · ' + o.numero : '');
+    $('#orcObs').value = o.obs || '';
+    $('#orcRetorno').value = o.retorno_em || '';
+    openModal('#orcModal');
+  }
+  $('#btnSaveOrc').addEventListener('click', async () => {
+    if (!orcEditId) return;
+    const fields = { obs: $('#orcObs').value.trim(), retorno_em: $('#orcRetorno').value || null };
+    try {
+      await Cloud.updateOrcamento(orcEditId, fields);
+      const r = dashData.find(x => x.id === orcEditId); if (r) Object.assign(r, fields);
+      if (editingOrcamentoId === orcEditId) editingObs = fields.obs;
+      closeModal('#orcModal'); renderDashboard(); toast('Acompanhamento salvo.');
+    } catch (e) { console.error(e); toast('Erro ao salvar.'); }
   });
 
   // Carrega um orçamento salvo de volta no montador para editar.
@@ -1320,6 +1393,7 @@
     state.quote.sinal = Number(o.sinal) || 0;
     editingOrcamentoId = o.id;
     editingNumero = o.numero || '';
+    editingObs = o.obs || '';
     $('#dashScreen').hidden = true; document.body.style.overflow = '';
     save(); render();
     if (o.parcelas) { $('#installSelect').value = String(o.parcelas); updateInstallValue(saldoFinanciar()); }
