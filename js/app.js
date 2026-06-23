@@ -1316,12 +1316,15 @@
     const ri = retornoInfo(r);
     const ativo = emAberto(r);
 
+    const lead = r.origem === 'site';
     const flags = [];
+    if (lead) flags.push(`<span class="dflag site">🌐 Lead do site</span>`);
     if (ri && ri.atrasado) flags.push(`<span class="dflag late">⏰ retorno atrasado (${dmy(r.retorno_em)})</span>`);
     else if (ri && ri.diff === 0) flags.push(`<span class="dflag warn">📞 retornar hoje</span>`);
     else if (ri && ri.diff > 0 && ativo) flags.push(`<span class="dflag">📅 retorno ${dmy(r.retorno_em)}</span>`);
     if (ativo && !ri && dias >= 5) flags.push(`<span class="dflag warn">⏳ parado há ${dias}d</span>`);
     if (stageOf(r) === 'ganho') flags.push(`<span class="dflag ok">✅ venda fechada</span>`);
+    const contato = lead ? [r.contato_telefone, r.contato_email].filter(Boolean).map(esc).join(' · ') : '';
 
     const cardCls = (ri && ri.atrasado) ? 'overdue' : ((ativo && !ri && dias >= 5) ? 'attn' : '');
     return `<div class="dcard ${cardCls}" data-id="${r.id}">
@@ -1333,12 +1336,14 @@
         <span>${r.parcelas}× ${money(r.valor_parcela)}</span>
       </div>
       ${flags.length ? `<div class="dcard__flags">${flags.join('')}</div>` : ''}
+      ${contato ? `<div class="dcard__contato">📞 ${contato}</div>` : ''}
       ${itens ? `<div class="dcard__items">${itens}</div>` : ''}
       ${r.obs ? `<div class="dcard__note"><b>Nota:</b> ${esc(r.obs)}</div>` : ''}
       <select class="dcard__stage st-${stageOf(r)}" data-act="stage" aria-label="Fase da venda">
         ${STAGES.map(s => `<option value="${s.key}" ${stageOf(r) === s.key ? 'selected' : ''}>${s.label}</option>`).join('')}
       </select>
       <div class="dcard__actions">
+        ${lead && r.contato_telefone ? `<button class="dc-wpp" data-act="wpp-lead" type="button">📱 WhatsApp</button>` : ''}
         <button class="dc-note" data-act="note-orc" type="button">🗒 Nota</button>
         <button class="dc-edit" data-act="edit-orc" type="button">✎ Editar</button>
         <button class="dc-del" data-act="del-orc" type="button">🗑 Excluir</button>
@@ -1351,6 +1356,12 @@
     const o = dashData.find(x => x.id === id); if (!o) return;
     if (e.target.dataset.act === 'edit-orc') editOrcamento(o);
     if (e.target.dataset.act === 'note-orc') openOrc(o);
+    if (e.target.dataset.act === 'wpp-lead') {
+      const num = whatsNumero(o.contato_telefone);
+      const itens = (o.itens || []).map(i => `• ${i.qtd}× ${i.nome}`).join('\n');
+      const txt = encodeURIComponent(`Olá ${o.cliente_nome || ''}! Sou consultor da Torque Fitness. Recebi seu pedido de orçamento:\n\n${itens}\n\nVamos conversar?`);
+      window.open(num ? `https://wa.me/${num}?text=${txt}` : `https://wa.me/?text=${txt}`, '_blank');
+    }
     if (e.target.dataset.act === 'del-orc') {
       if (!confirm(`Excluir o orçamento de ${o.cliente_nome || 'cliente'}?`)) return;
       try { await Cloud.deleteOrcamento(id); dashData = dashData.filter(x => x.id !== id); renderDashboard(); toast('Orçamento excluído.'); }

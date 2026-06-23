@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0B0B0F" />
+  <title>Torque Fitness · Orçamentos</title>
+  <meta name="description" content="Ferramenta de orçamento Torque Fitness — modo Admin e modo Vendedor." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20100%20100%27%3E%3Crect%20width%3D%27100%27%20height%3D%27100%27%20rx%3D%2722%27%20fill%3D%27%230B0B0F%27%2F%3E%3Cg%20transform%3D%27translate%2824.0%2C19.0%29%20scale%280.2288%29%27%20fill%3D%27%238B5CF6%27%3E%3Cg%20transform%3D%27translate%280%2C271%29%20scale%280.1%2C-0.1%29%27%3E%3Cpath%20d%3D%22M130%202617%20c-50%20-26%20-50%20-19%20-50%20-685%200%20-686%20-2%20-669%2061%20-691%2034%20-12%20367%20-14%20406%20-3%2012%204%20105%2084%20205%20178%20533%20498%20494%20463%20524%20455%2038%20-10%2070%20-54%2058%20-81%20-5%20-11%20-268%20-262%20-584%20-558%20-586%20-547%20-620%20-584%20-652%20-682%20-6%20-19%20-13%20-125%20-15%20-236%20-6%20-224%20-3%20-234%2062%20-234%2030%200%2096%2059%20706%20630%20601%20563%20677%20630%20703%20628%2018%20-2%2037%20-14%2050%20-31%2019%20-26%2019%20-30%205%20-55%20-8%20-15%20-289%20-283%20-624%20-597%20l-609%20-570%20887%20-3%20c609%20-1%20894%201%20908%208%2019%2011%2020%2024%2017%20973%20-3%20944%20-4%20963%20-24%201023%20-88%20255%20-268%20427%20-539%20511%20l-90%2027%20-690%203%20c-546%203%20-695%201%20-715%20-10z%22%2F%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E" />
+</head>
+<body data-mode="vendedor" data-auth="loading">
+
+  <!-- ===================== LOGIN SCREEN ===================== -->
+  <div id="loginScreen" class="login">
+    <div class="login__card">
+      <div class="login__brand">
+        <svg viewBox="0 0 227 271" class="login__mark"><g transform="translate(0,271) scale(0.1,-0.1)"><path d="M130 2617 c-50 -26 -50 -19 -50 -685 0 -686 -2 -669 61 -691 34 -12 367 -14 406 -3 12 4 105 84 205 178 533 498 494 463 524 455 38 -10 70 -54 58 -81 -5 -11 -268 -262 -584 -558 -586 -547 -620 -584 -652 -682 -6 -19 -13 -125 -15 -236 -6 -224 -3 -234 62 -234 30 0 96 59 706 630 601 563 677 630 703 628 18 -2 37 -14 50 -31 19 -26 19 -30 5 -55 -8 -15 -289 -283 -624 -597 l-609 -570 887 -3 c609 -1 894 1 908 8 19 11 20 24 17 973 -3 944 -4 963 -24 1023 -88 255 -268 427 -539 511 l-90 27 -690 3 c-546 3 -695 1 -715 -10z"/></g></svg>
+        <div class="login__wordmark"><strong>TORQUE FITNESS</strong><span>ORÇAMENTOS</span></div>
+      </div>
+      <h1 id="loginTitle">Entrar</h1>
+      <div id="signupExtra" hidden>
+        <label class="field"><span>Nome completo</span><input id="loginNome" type="text" autocomplete="name" /></label>
+        <div class="form-grid">
+          <label class="field"><span>CPF</span><input id="loginCpf" type="text" inputmode="numeric" /></label>
+          <label class="field"><span>Celular / WhatsApp</span><input id="loginCelular" type="tel" inputmode="tel" /></label>
+        </div>
+        <label class="field"><span>Endereço</span><input id="loginEndereco" type="text" /></label>
+        <div class="form-grid">
+          <label class="field"><span>Cidade / UF</span><input id="loginCidade" type="text" /></label>
+          <label class="field"><span>CEP</span><input id="loginCep" type="text" inputmode="numeric" /></label>
+        </div>
+      </div>
+      <label class="field"><span>E-mail</span><input id="loginEmail" type="email" inputmode="email" autocomplete="email" /></label>
+      <label class="field"><span>Senha</span><input id="loginSenha" type="password" autocomplete="current-password" /></label>
+      <p class="login__error" id="loginError" hidden></p>
+      <button class="btn btn--primary login__submit" id="btnLoginSubmit" type="button">Entrar</button>
+      <button class="login__switch" id="btnLoginSwitch" type="button">Não tem conta? <b>Criar conta</b></button>
+    </div>
+    <p class="login__foot">Acesso restrito a vendedores Torque Fitness.</p>
+  </div>
+
+  <!-- ===================== DASHBOARD ===================== -->
+  <div id="dashScreen" class="dash" hidden>
+    <header class="dash__head">
+      <h2 id="dashTitle">Painel de orçamentos</h2>
+      <button class="modal__x" id="dashClose" type="button" aria-label="Fechar">✕</button>
+    </header>
+    <div class="dash__tools">
+      <div class="search">
+        <svg viewBox="0 0 24 24" class="search__icon" aria-hidden="true"><path d="M10 4a6 6 0 104.47 10.03l4.25 4.25 1.41-1.41-4.25-4.25A6 6 0 0010 4zm0 2a4 4 0 110 8 4 4 0 010-8z"/></svg>
+        <input type="search" id="dashSearch" placeholder="Buscar por cliente…" autocomplete="off" />
+      </div>
+      <select id="dashVendedorFilter" class="role-admin-only"></select>
+    </div>
+    <div class="dash__funnel" id="dashFunnel"></div>
+    <div class="dash__stats" id="dashStats"></div>
+    <div class="dash__list" id="dashList"></div>
+  </div>
+
+  <!-- ===================== HEADER ===================== -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand__mark" aria-hidden="true">
+        <svg viewBox="0 0 227 271" class="logo-mark">
+          <g transform="translate(0,271) scale(0.1,-0.1)"><path d="M130 2617 c-50 -26 -50 -19 -50 -685 0 -686 -2 -669 61 -691 34 -12 367 -14 406 -3 12 4 105 84 205 178 533 498 494 463 524 455 38 -10 70 -54 58 -81 -5 -11 -268 -262 -584 -558 -586 -547 -620 -584 -652 -682 -6 -19 -13 -125 -15 -236 -6 -224 -3 -234 62 -234 30 0 96 59 706 630 601 563 677 630 703 628 18 -2 37 -14 50 -31 19 -26 19 -30 5 -55 -8 -15 -289 -283 -624 -597 l-609 -570 887 -3 c609 -1 894 1 908 8 19 11 20 24 17 973 -3 944 -4 963 -24 1023 -88 255 -268 427 -539 511 l-90 27 -690 3 c-546 3 -695 1 -715 -10z"/></g>
+        </svg>
+      </span>
+      <span class="brand__text">
+        <strong>TORQUE</strong><em>FITNESS</em>
+        <small>Orçamentos</small>
+      </span>
+    </div>
+
+    <button id="userBtn" class="user-btn" type="button" aria-label="Menu da conta">
+      <span id="userInitial">·</span>
+    </button>
+  </header>
+
+  <!-- ===================== USER MENU ===================== -->
+  <div id="userMenu" class="user-menu" hidden>
+    <div class="user-menu__head">
+      <b id="umName">—</b><small id="umRole"></small>
+    </div>
+    <button class="user-menu__item" id="umDashboard" type="button">📊 Painel de orçamentos</button>
+    <button class="user-menu__item" id="umPerfil" type="button">👤 Meu cadastro</button>
+    <button class="user-menu__item role-admin-only" id="umAdmin" type="button">⚙️ Modo Admin (custos)</button>
+    <button class="user-menu__item" id="umLogout" type="button">🚪 Sair</button>
+  </div>
+
+  <!-- ===================== ADMIN CONFIG PANEL ===================== -->
+  <section id="configPanel" class="config admin-only" hidden>
+    <div class="config__head">
+      <h2>Parâmetros gerais</h2>
+      <button class="btn btn--ghost config__collapse" id="configCollapse" type="button">Recolher</button>
+    </div>
+    <div class="config__grid" id="configGrid">
+      <label class="field">
+        <span>Câmbio (US$ → R$)</span>
+        <input type="number" step="0.01" min="0" id="cfgCambio" inputmode="decimal" />
+      </label>
+      <label class="field">
+        <span>Margem de lucro (%)</span>
+        <input type="number" step="1" min="0" id="cfgMargem" inputmode="decimal" />
+      </label>
+      <label class="field">
+        <span>Desconto geral (%)</span>
+        <input type="number" step="0.5" min="0" id="cfgDesconto" inputmode="decimal" />
+      </label>
+      <label class="field">
+        <span>II — Imp. Importação (%)</span>
+        <input type="number" step="0.1" min="0" id="cfgII" inputmode="decimal" />
+      </label>
+      <label class="field">
+        <span>IPI (%)</span>
+        <input type="number" step="0.1" min="0" id="cfgIPI" inputmode="decimal" />
+      </label>
+      <label class="field">
+        <span>PIS/COFINS (%)</span>
+        <input type="number" step="0.01" min="0" id="cfgPis" inputmode="decimal" />
+      </label>
+      <label class="field">
+        <span>ICMS (%)</span>
+        <input type="number" step="0.1" min="0" id="cfgICMS" inputmode="decimal" />
+      </label>
+      <label class="field">
+        <span>IOF (%)</span>
+        <input type="number" step="0.01" min="0" id="cfgIOF" inputmode="decimal" />
+      </label>
+      <label class="field">
+        <span>Seguro intl. (%)</span>
+        <input type="number" step="0.1" min="0" id="cfgSeguro" inputmode="decimal" />
+      </label>
+      <label class="field">
+        <span>Frete intl. (US$/un)</span>
+        <input type="number" step="1" min="0" id="cfgFreteIntl" inputmode="decimal" />
+      </label>
+      <label class="field">
+        <span>Frete nacional (R$/un)</span>
+        <input type="number" step="1" min="0" id="cfgFreteNac" inputmode="decimal" />
+      </label>
+      <label class="field">
+        <span>Parcelas máx.</span>
+        <input type="number" step="1" min="1" max="96" id="cfgParcelas" inputmode="numeric" />
+      </label>
+      <label class="field">
+        <span>Juros a.m. (%) <small>0 = sem juros</small></span>
+        <input type="number" step="0.01" min="0" id="cfgJuros" inputmode="decimal" />
+      </label>
+      <label class="field">
+        <span>Validade (dias)</span>
+        <input type="number" step="1" min="1" id="cfgValidade" inputmode="numeric" />
+      </label>
+    </div>
+    <div class="config__actions">
+      <button class="btn btn--primary" id="btnImport" type="button">Importar planilha</button>
+      <button class="btn btn--ghost" id="btnAddProduct" type="button">+ Novo produto</button>
+      <button class="btn btn--ghost" id="btnResetData" type="button">Restaurar catálogo</button>
+      <button class="btn btn--ghost" id="btnLock" type="button">🔒 Bloquear</button>
+      <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" hidden />
+    </div>
+  </section>
+
+  <!-- ===================== TOOLBAR (filters/search) ===================== -->
+  <section class="toolbar">
+    <div class="search">
+      <svg viewBox="0 0 24 24" class="search__icon" aria-hidden="true"><path d="M10 4a6 6 0 104.47 10.03l4.25 4.25 1.41-1.41-4.25-4.25A6 6 0 0010 4zm0 2a4 4 0 110 8 4 4 0 010-8z"/></svg>
+      <input type="search" id="searchInput" placeholder="Buscar por nome ou código…" autocomplete="off" />
+    </div>
+    <div class="chips" id="serieChips" role="tablist" aria-label="Categorias"></div>
+  </section>
+
+  <!-- ===================== PRODUCT LIST ===================== -->
+  <main class="catalog">
+    <div id="productGrid" class="grid"></div>
+    <p id="emptyState" class="empty" hidden>Nenhum produto encontrado.</p>
+  </main>
+
+  <!-- ===================== VENDOR SUMMARY (cart) ===================== -->
+  <aside id="summaryBar" class="summary vendor-only">
+    <button class="summary__handle" id="summaryHandle" type="button">
+      <span class="summary__count"><b id="cartCount">0</b> itens</span>
+      <span class="summary__total" id="cartTotalMini">R$ 0,00</span>
+      <span class="summary__chev">▲</span>
+    </button>
+    <div class="summary__body" id="summaryBody">
+      <h2>Resumo do orçamento</h2>
+
+      <div class="edit-banner" id="editBanner" hidden>
+        <span id="editBannerText">Editando orçamento</span>
+        <button id="btnNovoOrc" type="button">Novo</button>
+      </div>
+
+      <div class="quote-people">
+        <label class="qp">
+          <span>Vendedor</span>
+          <div class="qp__vendedor" id="qpVendedor">—</div>
+        </label>
+        <label class="qp">
+          <span>Cliente</span>
+          <div class="qp__row">
+            <select id="selCliente"></select>
+            <button class="qp__icon" id="btnEditCliente" type="button" aria-label="Editar cliente">✎</button>
+            <button class="qp__add" id="btnNovoCliente" type="button" aria-label="Novo cliente">＋</button>
+          </div>
+        </label>
+      </div>
+
+      <div id="summaryItems" class="summary__items"></div>
+
+      <div class="summary__totals">
+        <div class="row"><span>Subtotal</span><b id="sumSubtotal">R$ 0,00</b></div>
+        <div class="row row--field">
+          <span>Desconto</span>
+          <span class="disc">
+            <input type="number" id="inpDesconto" min="0" step="0.01" inputmode="decimal" value="0" />
+            <button id="discToggle" type="button" class="disc__unit">%</button>
+          </span>
+        </div>
+        <div class="row"><span>Desconto aplicado</span><b id="sumDescAplicado">− R$ 0,00</b></div>
+        <div class="row row--grand"><span>Total</span><b id="sumTotal">R$ 0,00</b></div>
+        <div class="row row--field">
+          <span>Sinal / entrada</span>
+          <span class="disc">
+            <span class="disc__unit disc__unit--static">R$</span>
+            <input type="number" id="inpSinal" min="0" step="0.01" inputmode="decimal" value="0" />
+          </span>
+        </div>
+        <div class="row"><span>Saldo a financiar</span><b id="sumSaldo">R$ 0,00</b></div>
+      </div>
+
+      <div class="installments">
+        <div class="installments__head">
+          <span>Parcelamento do saldo</span>
+          <select id="installSelect" aria-label="Número de parcelas"></select>
+        </div>
+        <div class="installments__value" id="installValue">—</div>
+        <small id="installNote" class="installments__note"></small>
+      </div>
+      <div class="summary__actions">
+        <button class="btn btn--ghost" id="btnClearCart" type="button">Limpar</button>
+        <button class="btn btn--primary" id="btnExport" type="button">Gerar orçamento</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ===================== PRODUCT EDIT MODAL (admin) ===================== -->
+  <div class="modal" id="editModal" hidden>
+    <div class="modal__backdrop" data-close></div>
+    <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="editTitle">
+      <header class="modal__head">
+        <h2 id="editTitle">Editar produto</h2>
+        <button class="modal__x" data-close type="button" aria-label="Fechar">✕</button>
+      </header>
+      <form id="editForm" class="modal__body">
+        <input type="hidden" id="edId" />
+        <div class="form-grid">
+          <label class="field"><span>Código</span><input id="edCodigo" type="text" /></label>
+          <label class="field"><span>Série / Categoria</span><input id="edSerie" type="text" list="serieList" /></label>
+          <label class="field field--wide"><span>Nome</span><input id="edNome" type="text" required /></label>
+          <label class="field field--wide"><span>Imagem (URL)</span><input id="edImagem" type="text" placeholder="https://… ou assets/products/…" /></label>
+          <label class="field"><span>Custo FOB (US$)</span><input id="edCusto" type="number" step="0.01" min="0" inputmode="decimal" /></label>
+          <label class="field"><span>Dimensões</span><input id="edDims" type="text" placeholder="L×P×A (mm)" /></label>
+          <label class="field"><span>Margem (%) <small>vazio = padrão</small></span><input id="edMargem" type="number" step="1" inputmode="decimal" /></label>
+          <label class="field"><span>Preço manual (R$) <small>vazio = automático</small></span><input id="edPreco" type="number" step="0.01" min="0" inputmode="decimal" /></label>
+          <label class="field field--switch"><span>Ocultar do vendedor</span><input id="edOculto" type="checkbox" class="switch" /></label>
+        </div>
+        <datalist id="serieList"></datalist>
+        <div class="price-preview" id="pricePreview"></div>
+      </form>
+      <footer class="modal__foot">
+        <button class="btn btn--danger" id="btnDeleteProduct" type="button">Remover</button>
+        <span class="spacer"></span>
+        <button class="btn btn--ghost" data-close type="button">Cancelar</button>
+        <button class="btn btn--primary" id="btnSaveProduct" type="button">Salvar</button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- ===================== IMPORT MAPPING MODAL (admin) ===================== -->
+  <div class="modal" id="importModal" hidden>
+    <div class="modal__backdrop" data-close></div>
+    <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="importTitle">
+      <header class="modal__head">
+        <h2 id="importTitle">Importar planilha</h2>
+        <button class="modal__x" data-close type="button" aria-label="Fechar">✕</button>
+      </header>
+      <div class="modal__body">
+        <p class="hint">Detectamos as colunas abaixo. Confirme o mapeamento e importe.</p>
+        <div class="form-grid" id="mapGrid"></div>
+        <label class="field field--switch" style="margin-top:14px">
+          <span>Substituir catálogo atual <small>(desmarcado = adicionar)</small></span>
+          <input id="impReplace" type="checkbox" class="switch" checked />
+        </label>
+        <div class="import-preview" id="importPreview"></div>
+      </div>
+      <footer class="modal__foot">
+        <span class="spacer"></span>
+        <button class="btn btn--ghost" data-close type="button">Cancelar</button>
+        <button class="btn btn--primary" id="btnDoImport" type="button">Importar produtos</button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- ===================== QUOTE / EXPORT MODAL ===================== -->
+  <div class="modal modal--quote" id="quoteModal" hidden>
+    <div class="modal__backdrop" data-close></div>
+    <div class="modal__card modal__card--quote" role="dialog" aria-modal="true">
+      <header class="modal__head no-print">
+        <h2>Orçamento</h2>
+        <button class="modal__x" data-close type="button" aria-label="Fechar">✕</button>
+      </header>
+      <div class="modal__body modal__body--quote">
+        <!-- Printable / capturable area -->
+        <div id="quoteDoc" class="quote-doc"></div>
+      </div>
+      <footer class="modal__foot modal__foot--quote no-print">
+        <button class="btn btn--wpp" id="btnWppQuote" type="button">📱 Enviar no WhatsApp</button>
+        <div class="quote-actions2">
+          <button class="btn btn--ghost" id="btnShareQuote" type="button">Compartilhar</button>
+          <button class="btn btn--ghost" id="btnImageQuote" type="button">Imagem</button>
+          <button class="btn btn--ghost" id="btnPdfQuote" type="button">PDF</button>
+        </div>
+      </footer>
+    </div>
+  </div>
+
+  <!-- ===================== CLIENTE MODAL ===================== -->
+  <div class="modal" id="clienteModal" hidden>
+    <div class="modal__backdrop" data-close></div>
+    <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="clienteTitle">
+      <header class="modal__head">
+        <h2 id="clienteTitle">Novo cliente</h2>
+        <button class="modal__x" data-close type="button" aria-label="Fechar">✕</button>
+      </header>
+      <div class="modal__body">
+        <input type="hidden" id="clId" />
+        <div class="form-grid">
+          <label class="field field--wide"><span>Nome *</span><input id="clNome" type="text" required /></label>
+          <label class="field field--wide"><span>Empresa / Academia</span><input id="clEmpresa" type="text" /></label>
+          <label class="field"><span>Telefone / WhatsApp</span><input id="clTelefone" type="tel" inputmode="tel" /></label>
+          <label class="field"><span>E-mail</span><input id="clEmail" type="email" inputmode="email" /></label>
+          <label class="field"><span>CNPJ / CPF</span><input id="clDoc" type="text" /></label>
+          <label class="field"><span>Cidade / UF</span><input id="clCidade" type="text" /></label>
+          <label class="field field--wide"><span>Observações</span><input id="clObs" type="text" /></label>
+        </div>
+      </div>
+      <footer class="modal__foot">
+        <button class="btn btn--danger" id="btnDeleteCliente" type="button">Remover</button>
+        <span class="spacer"></span>
+        <button class="btn btn--ghost" data-close type="button">Cancelar</button>
+        <button class="btn btn--primary" id="btnSaveCliente" type="button">Salvar</button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- ===================== ACOMPANHAMENTO (follow-up) MODAL ===================== -->
+  <div class="modal" id="orcModal" hidden>
+    <div class="modal__backdrop" data-close></div>
+    <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="orcTitle">
+      <header class="modal__head">
+        <h2 id="orcTitle">Acompanhamento</h2>
+        <button class="modal__x" data-close type="button" aria-label="Fechar">✕</button>
+      </header>
+      <div class="modal__body">
+        <p class="hint" id="orcCliente">—</p>
+        <label class="field"><span>Anotação / próximo passo</span><textarea id="orcObs" rows="3"></textarea></label>
+        <label class="field"><span>Data de retorno</span><input id="orcRetorno" type="date" /></label>
+      </div>
+      <footer class="modal__foot">
+        <span class="spacer"></span>
+        <button class="btn btn--ghost" data-close type="button">Cancelar</button>
+        <button class="btn btn--primary" id="btnSaveOrc" type="button">Salvar</button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- ===================== PERFIL DO VENDEDOR MODAL ===================== -->
+  <div class="modal" id="perfilModal" hidden>
+    <div class="modal__backdrop" data-close></div>
+    <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="perfilTitle">
+      <header class="modal__head">
+        <h2 id="perfilTitle">Meu cadastro</h2>
+        <button class="modal__x" data-close type="button" aria-label="Fechar">✕</button>
+      </header>
+      <div class="modal__body">
+        <div class="form-grid">
+          <label class="field field--wide"><span>Nome completo *</span><input id="pfNome" type="text" /></label>
+          <label class="field"><span>CPF</span><input id="pfCpf" type="text" inputmode="numeric" /></label>
+          <label class="field"><span>Celular / WhatsApp</span><input id="pfCelular" type="tel" inputmode="tel" /></label>
+          <label class="field field--wide"><span>Endereço</span><input id="pfEndereco" type="text" /></label>
+          <label class="field"><span>Cidade / UF</span><input id="pfCidade" type="text" /></label>
+          <label class="field"><span>CEP</span><input id="pfCep" type="text" inputmode="numeric" /></label>
+          <label class="field field--wide"><span>E-mail</span><input id="pfEmail" type="email" disabled /></label>
+        </div>
+      </div>
+      <footer class="modal__foot">
+        <span class="spacer"></span>
+        <button class="btn btn--ghost" data-close type="button">Cancelar</button>
+        <button class="btn btn--primary" id="btnSavePerfil" type="button">Salvar</button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- ===================== PASSWORD MODAL (acesso Admin) ===================== -->
+  <div class="modal" id="pwModal" hidden>
+    <div class="modal__backdrop" data-close></div>
+    <div class="modal__card modal__card--pw" role="dialog" aria-modal="true" aria-labelledby="pwTitle">
+      <header class="modal__head">
+        <h2 id="pwTitle">🔒 Acesso Admin</h2>
+        <button class="modal__x" data-close type="button" aria-label="Fechar">✕</button>
+      </header>
+      <div class="modal__body">
+        <p class="hint">Digite a senha para liberar custos, margem e configurações.</p>
+        <label class="field">
+          <span>Senha</span>
+          <input type="password" id="pwInput" autocomplete="current-password" placeholder="••••••••" />
+        </label>
+        <p class="pw-error" id="pwError" hidden>Senha incorreta. Tente novamente.</p>
+      </div>
+      <footer class="modal__foot">
+        <span class="spacer"></span>
+        <button class="btn btn--ghost" data-close type="button">Cancelar</button>
+        <button class="btn btn--primary" id="btnPwOk" type="button">Entrar</button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="js/config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/cloud.js"></script>
+  <script src="js/products.js"></script>
+  <script src="js/secure.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

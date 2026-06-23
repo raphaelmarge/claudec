@@ -94,24 +94,37 @@ create table if not exists public.orcamentos (
   status        text default 'enviado',
   criado_em     timestamptz default now()
 );
--- acompanhamento (funil): anotação e data de retorno (rode mesmo se já existir)
+-- acompanhamento (funil) + leads do site (rode mesmo se a tabela já existir)
 alter table public.orcamentos
-  add column if not exists obs        text default '',
-  add column if not exists retorno_em date;
+  add column if not exists obs              text default '',
+  add column if not exists retorno_em       date,
+  add column if not exists origem           text default 'app',   -- 'app' | 'site'
+  add column if not exists contato_telefone text default '',
+  add column if not exists contato_email    text default '';
+-- leads do site não têm vendedor ainda -> precisa permitir nulo
+alter table public.orcamentos alter column vendedor_id drop not null;
 
 alter table public.orcamentos enable row level security;
 
+-- vendedor vê os seus + leads do site (sem dono); admin vê tudo
 drop policy if exists orcamentos_select on public.orcamentos;
 create policy orcamentos_select on public.orcamentos
-  for select using (vendedor_id = auth.uid() or public.is_admin());
+  for select using (vendedor_id = auth.uid() or vendedor_id is null or public.is_admin());
 
+-- vendedor logado insere os seus
 drop policy if exists orcamentos_insert on public.orcamentos;
 create policy orcamentos_insert on public.orcamentos
-  for insert with check (vendedor_id = auth.uid());
+  for insert to authenticated with check (vendedor_id = auth.uid());
 
+-- o SITE (anônimo) insere leads (sem dono, origem 'site')
+drop policy if exists orcamentos_insert_lead on public.orcamentos;
+create policy orcamentos_insert_lead on public.orcamentos
+  for insert to anon with check (vendedor_id is null and origem = 'site' and status = 'novo');
+
+-- vendedor atualiza os seus e pode assumir um lead; admin atualiza tudo
 drop policy if exists orcamentos_update on public.orcamentos;
 create policy orcamentos_update on public.orcamentos
-  for update using (vendedor_id = auth.uid() or public.is_admin());
+  for update using (vendedor_id = auth.uid() or vendedor_id is null or public.is_admin());
 
 -- índices úteis
 create index if not exists idx_orc_vendedor on public.orcamentos (vendedor_id);
