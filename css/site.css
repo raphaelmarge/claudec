@@ -175,6 +175,66 @@ img{max-width:100%;display:block}
 .lead-ok h3{font-size:1.2rem}
 .lead-ok p{color:var(--txt-dim);margin-top:8px}
 
+/* ---------------- MENU MOBILE ---------------- */
+.nav__burger{display:none;flex-direction:column;justify-content:center;gap:5px;width:42px;height:42px;border:1px solid var(--line-2);border-radius:11px;background:var(--panel);cursor:pointer}
+.nav__burger span{display:block;width:18px;height:2px;background:var(--txt);margin:0 auto;border-radius:2px;transition:.2s}
+.nav__burger.open span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+.nav__burger.open span:nth-child(2){opacity:0}
+.nav__burger.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+.mmenu{position:fixed;top:calc(64px + env(safe-area-inset-top,0px));left:0;right:0;z-index:49;background:rgba(11,11,15,.97);backdrop-filter:blur(14px);border-bottom:1px solid var(--line-2);display:flex;flex-direction:column;padding:8px 0;animation:slideIn .2s ease}
+.mmenu a{padding:15px 22px;color:var(--txt);font-weight:600;border-bottom:1px solid var(--line)}
+.mmenu a:last-child{border-bottom:none;color:var(--violet)}
+@media(max-width:780px){ .nav__burger{display:flex} }
+
+/* ---------------- FLOATING WHATSAPP ---------------- */
+.wpp-float{position:fixed;right:18px;bottom:calc(18px + var(--safe-b));z-index:70;width:56px;height:56px;border-radius:50%;
+  background:linear-gradient(135deg,#25D366,#1da851);display:flex;align-items:center;justify-content:center;
+  box-shadow:0 10px 26px rgba(37,211,102,.45);animation:wppPulse 2.6s infinite}
+.wpp-float svg{width:32px;height:32px;fill:#fff}
+.wpp-float:hover{filter:brightness(1.07)}
+@keyframes wppPulse{0%,100%{box-shadow:0 10px 26px rgba(37,211,102,.45)}50%{box-shadow:0 10px 26px rgba(37,211,102,.75)}}
+
+/* ---------------- PROVA SOCIAL ---------------- */
+.proof{max-width:1200px;margin:10px auto;padding:30px 20px}
+.proof__strip{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;text-align:center}
+.proof__item{background:linear-gradient(180deg,var(--panel-2),var(--panel));border:1px solid var(--line);border-radius:16px;padding:18px 10px}
+.proof__item b{display:block;font-family:var(--font-mono);font-size:1.6rem;color:var(--violet)}
+.proof__item span{font-size:.7rem;color:var(--txt-dim);text-transform:uppercase;letter-spacing:.04em}
+@media(max-width:560px){ .proof__strip{grid-template-columns:repeat(2,1fr)} .proof__item b{font-size:1.3rem} }
+.proof__quotes{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px;margin-top:16px}
+.qcard{margin:0;background:linear-gradient(180deg,var(--panel-2),var(--panel));border:1px solid var(--line);border-radius:16px;padding:20px}
+.qcard blockquote{margin:0;font-size:.92rem;line-height:1.55;color:var(--txt)}
+.qcard blockquote::before{content:'“';color:var(--violet);font-size:1.6rem;font-family:var(--font-title);margin-right:2px}
+.qcard figcaption{margin-top:12px;color:var(--txt-mut);font-size:.78rem}
+
+/* ---------------- PRODUCT MODAL ---------------- */
+.pmodal{position:fixed;inset:0;z-index:85;display:flex;align-items:flex-end;justify-content:center}
+.pmodal__backdrop{position:absolute;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(3px)}
+.pmodal__card{position:relative;width:100%;max-width:760px;max-height:92dvh;overflow-y:auto;display:flex;flex-direction:column;
+  background:linear-gradient(180deg,var(--panel-2),var(--panel));border:1px solid var(--line-2);border-radius:20px 20px 0 0;animation:slideIn .25s ease}
+@media(min-width:680px){ .pmodal{align-items:center} .pmodal__card{flex-direction:row;border-radius:20px} }
+.pmodal__x{position:absolute;top:12px;right:12px;z-index:2;width:34px;height:34px;border-radius:10px;background:rgba(11,11,15,.7);border:1px solid var(--line-2);color:var(--txt);cursor:pointer}
+.pmodal__media{flex:1;min-height:240px;background:radial-gradient(180px 120px at 50% 35%,rgba(124,58,237,.18),transparent 70%),var(--black);display:flex;align-items:center;justify-content:center;padding:18px}
+.pmodal__media img{width:100%;height:100%;max-height:360px;object-fit:contain}
+.pmodal__info{flex:1;padding:22px 22px calc(22px + var(--safe-b))}
+.pmodal__serie{font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;color:var(--violet);font-weight:700}
+.pmodal__info h2{font-size:1.4rem;margin:8px 0}
+.pmodal__dims{font-family:var(--font-mono);font-size:.76rem;color:var(--txt-mut);margin-bottom:10px}
+.pmodal__desc{color:var(--txt-dim);font-size:.9rem;line-height:1.55}
+.pmodal__price{margin:16px 0;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.pmodal__price small{display:block;width:100%;font-size:.66rem;color:var(--txt-mut)}
+.pmodal__price b{font-family:var(--font-mono);font-size:1.5rem;color:var(--txt)}
+.pmodal__price em{font-style:normal;color:var(--txt-mut);font-size:.82rem}
+.pmodal__add{width:100%;border:1px solid var(--violet);background:linear-gradient(135deg,var(--violet),var(--violet-700));color:#fff;border-radius:12px;padding:14px;font-weight:700;cursor:pointer}
+.pmodal__stepper{display:flex;align-items:center;border:1px solid var(--violet);border-radius:12px;overflow:hidden;max-width:180px}
+.pmodal__stepper button{width:46px;height:46px;border:none;background:transparent;color:var(--violet);font-size:1.3rem;font-weight:700;cursor:pointer}
+.pmodal__stepper input{flex:1;min-width:0;text-align:center;border:none;background:transparent;color:var(--txt);font-family:var(--font-mono);font-weight:700;font-size:1rem}
+
+/* ---------------- REVEAL ANIM ---------------- */
+.reveal{opacity:0;transform:translateY(18px);transition:opacity .6s ease,transform .6s ease}
+.reveal.in{opacity:1;transform:none}
+@media(prefers-reduced-motion:reduce){ .reveal{opacity:1;transform:none;transition:none} .wpp-float{animation:none} }
+
 /* ---------------- TOAST ---------------- */
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:100;background:var(--panel-2);border:1px solid var(--violet);color:var(--txt);padding:11px 18px;border-radius:999px;font-size:.86rem;box-shadow:0 10px 30px rgba(0,0,0,.45)}
 .toast[hidden]{display:none}

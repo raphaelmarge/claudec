@@ -5,7 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#0B0B0F" />
   <title>Torque Fitness · Equipamentos de Musculação de Alta Performance</title>
-  <meta name="description" content="Equipamentos profissionais de musculação e fitness Torque. Monte seu orçamento online e fale com um consultor." />
+  <meta name="description" content="Equipamentos profissionais de musculação, funcionais, cardio e acessórios Torque Fitness. Monte seu orçamento online e fale com um consultor." />
+  <link rel="canonical" href="https://raphaelmarge.github.io/claudec/" />
+
+  <!-- Open Graph / compartilhamento -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Torque Fitness" />
+  <meta property="og:title" content="Torque Fitness · Equipamentos de Alta Performance" />
+  <meta property="og:description" content="Racks, máquinas de força, funcionais e cardio. Monte seu orçamento online e fale com um consultor." />
+  <meta property="og:url" content="https://raphaelmarge.github.io/claudec/" />
+  <meta property="og:image" content="https://raphaelmarge.github.io/claudec/assets/og.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Torque Fitness · Equipamentos de Alta Performance" />
+  <meta name="twitter:description" content="Monte seu orçamento de equipamentos de musculação online." />
+  <meta name="twitter:image" content="https://raphaelmarge.github.io/claudec/assets/og.png" />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -33,8 +48,18 @@
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18a2 2 0 100 4 2 2 0 000-4zm10 0a2 2 0 100 4 2 2 0 000-4zM2 2v2h2l3.6 7.6-1.35 2.45A2 2 0 008 17h11v-2H8.42a.25.25 0 01-.22-.37L9 13h7a2 2 0 001.8-1.1l3.58-6.49A1 1 0 0020.5 4H6.21l-.94-2z"/></svg>
         Orçamento <b id="cartCount">0</b>
       </button>
+      <button class="nav__burger" id="navBurger" type="button" aria-label="Menu"><span></span><span></span><span></span></button>
     </div>
   </header>
+
+  <!-- mobile menu -->
+  <div class="mmenu" id="mmenu" hidden>
+    <a href="#produtos" data-mclose>Produtos</a>
+    <a href="#series" data-mclose>Linhas</a>
+    <a href="#sobre" data-mclose>Sobre</a>
+    <a href="#contato" data-mclose>Contato</a>
+    <a href="app.html">Área do vendedor</a>
+  </div>
 
   <!-- ===================== HERO ===================== -->
   <section class="hero" id="topo">
@@ -56,7 +81,7 @@
   </section>
 
   <!-- ===================== SÉRIES ===================== -->
-  <section class="series" id="series">
+  <section class="series reveal" id="series">
     <h2 class="sec-title">Nossas linhas</h2>
     <p class="sec-sub">Selecione uma linha para filtrar os equipamentos.</p>
     <div class="series__grid" id="seriesGrid"></div>
@@ -80,7 +105,7 @@
   </section>
 
   <!-- ===================== SOBRE ===================== -->
-  <section class="about" id="sobre">
+  <section class="about reveal" id="sobre">
     <div class="about__grid">
       <div class="about__item"><span>🏋️</span><h3>Linha completa</h3><p>Força, funcional, cardio, pesos livres e acessórios — tudo para montar sua academia.</p></div>
       <div class="about__item"><span>🛠️</span><h3>Padrão comercial</h3><p>Equipamentos robustos, pensados para uso intenso em academias e studios.</p></div>
@@ -89,8 +114,23 @@
     </div>
   </section>
 
+  <!-- ===================== PROVA SOCIAL ===================== -->
+  <section class="proof reveal">
+    <div class="proof__strip">
+      <div class="proof__item"><b>+10</b><span>anos de mercado</span></div>
+      <div class="proof__item"><b>+500</b><span>academias atendidas</span></div>
+      <div class="proof__item"><b>926</b><span>produtos no catálogo</span></div>
+      <div class="proof__item"><b>48×</b><span>parcelamento</span></div>
+    </div>
+    <div class="proof__quotes">
+      <figure class="qcard"><blockquote>“Montamos toda a sala de musculação com a Torque. Equipamento robusto e atendimento direto no WhatsApp.”</blockquote><figcaption>— Studio fictício, São Paulo/SP</figcaption></figure>
+      <figure class="qcard"><blockquote>“Pedi o orçamento pelo site de madrugada e no dia seguinte um consultor já tinha me chamado.”</blockquote><figcaption>— Box de CrossFit, Campinas/SP</figcaption></figure>
+      <figure class="qcard"><blockquote>“Linha completa, do rack ao cardio. Facilitou muito montar a academia do zero.”</blockquote><figcaption>— Academia, Rio de Janeiro/RJ</figcaption></figure>
+    </div>
+  </section>
+
   <!-- ===================== CONTATO / CTA ===================== -->
-  <section class="cta" id="contato">
+  <section class="cta reveal" id="contato">
     <h2>Pronto para montar sua academia?</h2>
     <p>Selecione os equipamentos, monte seu orçamento e receba o contato de um consultor Torque Fitness.</p>
     <button class="btn btn--primary" id="ctaOrc" type="button">Montar meu orçamento</button>
@@ -149,6 +189,28 @@
       </footer>
     </div>
   </div>
+
+  <!-- ===================== PRODUCT DETAIL MODAL ===================== -->
+  <div class="pmodal" id="prodModal" hidden>
+    <div class="pmodal__backdrop" data-pclose></div>
+    <div class="pmodal__card">
+      <button class="pmodal__x" data-pclose type="button" aria-label="Fechar">✕</button>
+      <div class="pmodal__media" id="pmMedia"></div>
+      <div class="pmodal__info">
+        <span class="pmodal__serie" id="pmSerie"></span>
+        <h2 id="pmNome"></h2>
+        <div class="pmodal__dims" id="pmDims"></div>
+        <p class="pmodal__desc" id="pmDesc"></p>
+        <div class="pmodal__price"><small>a partir de</small><b id="pmPrice"></b><em id="pmParc"></em></div>
+        <div id="pmCtrl"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- floating WhatsApp -->
+  <a class="wpp-float" id="wppFloat" target="_blank" rel="noopener" aria-label="Falar no WhatsApp">
+    <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3C9.4 3 4 8.3 4 14.9c0 2.3.6 4.4 1.8 6.3L4 29l8-2.1c1.8 1 3.9 1.5 6 1.5 6.6 0 12-5.3 12-11.9C30 8.3 24.6 3 16 3zm0 21.8c-1.9 0-3.7-.5-5.3-1.5l-.4-.2-4 1 1.1-3.9-.3-.4a9.6 9.6 0 01-1.5-5C5.6 9.2 10.3 4.7 16 4.7c5.7 0 10.4 4.5 10.4 10.2 0 5.6-4.7 9.9-10.4 9.9zm5.7-7.4c-.3-.2-1.8-.9-2.1-1-.3-.1-.5-.2-.7.2-.2.3-.8 1-.9 1.1-.2.2-.3.2-.6.1-.3-.2-1.3-.5-2.5-1.5-.9-.8-1.5-1.8-1.7-2.1-.2-.3 0-.5.1-.6l.5-.5c.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5l-.9-2.2c-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.4s1.1 2.8 1.2 3c.2.2 2.1 3.3 5.2 4.6.7.3 1.3.5 1.7.6.7.2 1.4.2 1.9.1.6-.1 1.8-.7 2-1.4.3-.7.3-1.3.2-1.4-.1-.2-.3-.2-.6-.4z"/></svg>
+  </a>
 
   <div id="toast" class="toast" hidden></div>
 

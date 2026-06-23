@@ -13,7 +13,9 @@
   const DATA = window.TORQUE_PUBLIC || { products: [], params: {} };
   const PARAMS = DATA.params || {};
   const PRODUCTS = (DATA.products || []).filter(p => p.preco > 0);
+  const SITE = window.TORQUE_SITE || {};
   const PAGE = 24;
+  const byCode = code => PRODUCTS.find(x => x.codigo === code);
 
   let cart = load();
   let filterSerie = 'all';
@@ -128,6 +130,11 @@
     if (sc) { filterSerie = sc.dataset.serie; shown = PAGE; renderSeries(); renderChips(); renderGrid(); if (sc.classList.contains('scard')) document.getElementById('produtos').scrollIntoView({ behavior: 'smooth' }); return; }
     if (e.target.closest('[data-dclose]')) closeDrawer();
     if (e.target.closest('[data-lclose]')) closeLead();
+    if (e.target.closest('[data-pclose]')) closeProd();
+    if (e.target.closest('[data-mclose]')) closeMenu();
+    // abrir detalhe do produto (clique no card, fora dos botões)
+    const pc = e.target.closest('.pcard');
+    if (pc && !e.target.closest('button') && !e.target.closest('input')) openProd(pc.dataset.code);
   });
   $('#search').addEventListener('input', e => { query = e.target.value; shown = PAGE; renderGrid(); });
   $('#loadMore').addEventListener('click', () => { shown += PAGE; renderGrid(); });
@@ -221,6 +228,61 @@
       btn.disabled = false; btn.textContent = 'Enviar pedido';
     }
   }
+
+  /* ---------- menu mobile ---------- */
+  function closeMenu() { $('#mmenu').hidden = true; $('#navBurger').classList.remove('open'); }
+  $('#navBurger').addEventListener('click', () => {
+    const m = $('#mmenu'); m.hidden = !m.hidden; $('#navBurger').classList.toggle('open', !m.hidden);
+  });
+
+  /* ---------- detalhe do produto ---------- */
+  let prodCode = null;
+  function prodCtrlHTML(p) {
+    const q = qtyOf(p.codigo);
+    return q > 0
+      ? `<div class="pmodal__stepper" data-code="${esc(p.codigo)}"><button data-act="dec">−</button><input data-act="qty" inputmode="numeric" value="${q}"/><button data-act="inc">+</button></div>`
+      : `<button class="pmodal__add" data-act="add" data-code="${esc(p.codigo)}">+ Adicionar ao orçamento</button>`;
+  }
+  function openProd(code) {
+    const p = byCode(code); if (!p) return;
+    prodCode = code;
+    $('#pmMedia').innerHTML = p.imagem
+      ? `<img src="${esc(p.imagem)}" alt="${esc(p.nome)}" onerror="this.replaceWith(document.createRange().createContextualFragment(window.__plate))"/>`
+      : plate;
+    $('#pmSerie').textContent = p.serie || '';
+    $('#pmNome').textContent = p.nome;
+    $('#pmDims').textContent = p.dims ? 'Dimensões: ' + p.dims + ' mm' : '';
+    $('#pmDesc').textContent = `${p.nome} — equipamento ${p.serie ? 'da linha ' + p.serie + ' ' : ''}Torque Fitness, padrão comercial. Solicite o orçamento e fale com um consultor para condições e parcelamento.`;
+    $('#pmPrice').textContent = money(p.preco);
+    const maxN = Math.max(1, Math.floor(PARAMS.parcelasMax || 48));
+    $('#pmParc').textContent = `ou ${maxN}× de ${money(p.preco / maxN)}`;
+    $('#pmCtrl').innerHTML = prodCtrlHTML(p);
+    $('#prodModal').hidden = false; document.body.style.overflow = 'hidden';
+  }
+  function closeProd() { $('#prodModal').hidden = true; prodCode = null; if (!$('#drawer').hidden || !$('#leadModal').hidden) return; document.body.style.overflow = ''; }
+  function refreshProd() { if (prodCode) { const p = byCode(prodCode); if (p) $('#pmCtrl').innerHTML = prodCtrlHTML(p); } }
+
+  // re-render do controle do modal quando o carrinho muda
+  const _sync = syncAll;
+  syncAll = function () { _sync(); refreshProd(); };
+
+  /* ---------- WhatsApp flutuante ---------- */
+  (function () {
+    const num = String(SITE.whatsapp || '').replace(/\D/g, '');
+    const msg = encodeURIComponent(SITE.whatsappMsg || 'Olá! Quero um orçamento.');
+    const el = $('#wppFloat');
+    if (el) el.href = num ? `https://wa.me/${num}?text=${msg}` : `https://wa.me/?text=${msg}`;
+  })();
+
+  /* ---------- animações de rolagem ---------- */
+  (function () {
+    const els = $$('.reveal');
+    if (!('IntersectionObserver' in window) || !els.length) { els.forEach(e => e.classList.add('in')); return; }
+    const io = new IntersectionObserver((ents) => {
+      ents.forEach(en => { if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); } });
+    }, { rootMargin: '0px 0px -8% 0px' });
+    els.forEach(e => io.observe(e));
+  })();
 
   /* ---------- toast ---------- */
   let tT;
