@@ -94,6 +94,11 @@ create table if not exists public.orcamentos (
   status        text default 'enviado',
   criado_em     timestamptz default now()
 );
+-- acompanhamento (funil): anotação e data de retorno (rode mesmo se já existir)
+alter table public.orcamentos
+  add column if not exists obs        text default '',
+  add column if not exists retorno_em date;
+
 alter table public.orcamentos enable row level security;
 
 drop policy if exists orcamentos_select on public.orcamentos;
