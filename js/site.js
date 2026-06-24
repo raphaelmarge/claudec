@@ -20,7 +20,7 @@
     const d = DESC[normName(p.nome)];
     if (!d) return `${esc(p.nome)} — equipamento ${p.serie ? 'da linha ' + esc(p.serie) + ' ' : ''}Torque Fitness, padrão comercial. Solicite o orçamento e fale com um consultor.`;
     const row = (lab, val) => (val && val !== '—') ? `<span class="pm-desc__row"><b>${lab}:</b> ${esc(val)}</span>` : '';
-    return row('Função', d.f) + row('Músculos', d.m) + row('Biomecânica', d.b);
+    return row('Função', d.f) + row('Músculos', d.m) + row('Biomecânica', d.b) + row('Indicação', d.i) + row('Dica de execução', d.d);
   }
   const PAGE = 24;
   const byCode = code => PRODUCTS.find(x => x.codigo === code);
