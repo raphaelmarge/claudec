@@ -235,15 +235,55 @@
     const m = $('#mmenu'); m.hidden = !m.hidden; $('#navBurger').classList.toggle('open', !m.hidden);
   });
 
-  /* ---------- detalhe do produto ---------- */
+  /* ---------- detalhe do produto + deep-link ---------- */
   let prodCode = null;
+  const BASE_URL = location.origin + location.pathname;
+
+  // captura o estado original do <head> para restaurar ao fechar o produto
+  function metaProp(p) { const m = document.querySelector(`meta[property="${p}"]`); return m ? m.content : ''; }
+  function metaName(n) { const m = document.querySelector(`meta[name="${n}"]`); return m ? m.content : ''; }
+  const DEFAULT_META = {
+    title: document.title,
+    desc: metaName('description'),
+    ogTitle: metaProp('og:title'), ogDesc: metaProp('og:description'),
+    ogUrl: metaProp('og:url'), ogImage: metaProp('og:image'),
+    ogType: metaProp('og:type') || 'website',
+    canonical: (document.querySelector('link[rel="canonical"]') || {}).href || BASE_URL
+  };
+  function setProp(prop, val) { let m = document.querySelector(`meta[property="${prop}"]`); if (!m) { m = document.createElement('meta'); m.setAttribute('property', prop); document.head.appendChild(m); } m.setAttribute('content', val); }
+  function setNameMeta(name, val) { let m = document.querySelector(`meta[name="${name}"]`); if (!m) { m = document.createElement('meta'); m.setAttribute('name', name); document.head.appendChild(m); } m.setAttribute('content', val); }
+  function setCanonical(href) { let l = document.querySelector('link[rel="canonical"]'); if (!l) { l = document.createElement('link'); l.setAttribute('rel', 'canonical'); document.head.appendChild(l); } l.setAttribute('href', href); }
+
+  const currentCode = () => new URLSearchParams(location.search).get('p');
+  const prodURL = p => BASE_URL + '?p=' + encodeURIComponent(p.codigo);
+  function prodImageAbs(p) { try { return p.imagem ? new URL(p.imagem, BASE_URL).href : DEFAULT_META.ogImage; } catch (e) { return DEFAULT_META.ogImage; } }
+  function prodDesc(p) { return `${p.nome} — equipamento ${p.serie ? 'da linha ' + p.serie + ' ' : ''}Torque Fitness, padrão comercial. A partir de ${money(p.preco)}. Solicite o orçamento e fale com um consultor.`; }
+
+  function applyProdMeta(p) {
+    const t = `${p.nome} · Torque Fitness`, d = prodDesc(p), u = prodURL(p), img = prodImageAbs(p);
+    document.title = t;
+    setNameMeta('description', d);
+    setProp('og:type', 'product'); setProp('og:title', t); setProp('og:description', d);
+    setProp('og:url', u); setProp('og:image', img);
+    setNameMeta('twitter:title', t); setNameMeta('twitter:description', d); setNameMeta('twitter:image', img);
+    setCanonical(u);
+  }
+  function restoreMeta() {
+    document.title = DEFAULT_META.title;
+    setNameMeta('description', DEFAULT_META.desc);
+    setProp('og:type', DEFAULT_META.ogType); setProp('og:title', DEFAULT_META.ogTitle); setProp('og:description', DEFAULT_META.ogDesc);
+    setProp('og:url', DEFAULT_META.ogUrl); setProp('og:image', DEFAULT_META.ogImage);
+    setNameMeta('twitter:title', DEFAULT_META.ogTitle); setNameMeta('twitter:description', DEFAULT_META.ogDesc); setNameMeta('twitter:image', DEFAULT_META.ogImage);
+    setCanonical(DEFAULT_META.canonical);
+  }
+
   function prodCtrlHTML(p) {
     const q = qtyOf(p.codigo);
     return q > 0
       ? `<div class="pmodal__stepper" data-code="${esc(p.codigo)}"><button data-act="dec">−</button><input data-act="qty" inputmode="numeric" value="${q}"/><button data-act="inc">+</button></div>`
       : `<button class="pmodal__add" data-act="add" data-code="${esc(p.codigo)}">+ Adicionar ao orçamento</button>`;
   }
-  function openProd(code) {
+  function openProd(code, push) {
     const p = byCode(code); if (!p) return;
     prodCode = code;
     $('#pmMedia').innerHTML = p.imagem
@@ -258,9 +298,38 @@
     $('#pmParc').textContent = `ou ${maxN}× de ${money(p.preco / maxN)}`;
     $('#pmCtrl').innerHTML = prodCtrlHTML(p);
     $('#prodModal').hidden = false; document.body.style.overflow = 'hidden';
+    applyProdMeta(p);
+    if (push !== false && currentCode() !== code) history.pushState({ prod: code }, '', prodURL(p));
   }
-  function closeProd() { $('#prodModal').hidden = true; prodCode = null; if (!$('#drawer').hidden || !$('#leadModal').hidden) return; document.body.style.overflow = ''; }
+  function closeProdDOM() {
+    $('#prodModal').hidden = true; prodCode = null;
+    restoreMeta();
+    if (!$('#drawer').hidden || !$('#leadModal').hidden) return;
+    document.body.style.overflow = '';
+  }
+  function closeProd() {
+    if (currentCode()) history.replaceState({}, '', BASE_URL);
+    closeProdDOM();
+  }
   function refreshProd() { if (prodCode) { const p = byCode(prodCode); if (p) $('#pmCtrl').innerHTML = prodCtrlHTML(p); } }
+
+  // botão voltar/avançar do navegador sincroniza o modal com a URL
+  window.addEventListener('popstate', () => {
+    const code = currentCode();
+    if (code && byCode(code)) { if (prodCode !== code) openProd(code, false); }
+    else if (prodCode) closeProdDOM();
+  });
+
+  // compartilhar (Web Share API no celular; copia o link no desktop)
+  const shareBtn = $('#pmShare');
+  if (shareBtn) shareBtn.addEventListener('click', async () => {
+    if (!prodCode) return; const p = byCode(prodCode); if (!p) return;
+    const url = prodURL(p), data = { title: `${p.nome} · Torque Fitness`, text: p.nome, url };
+    try {
+      if (navigator.share) await navigator.share(data);
+      else { await navigator.clipboard.writeText(url); toast('Link copiado!'); }
+    } catch (e) { /* usuário cancelou */ }
+  });
 
   // re-render do controle do modal quando o carrinho muda
   const _sync = syncAll;
@@ -292,4 +361,13 @@
   window.__plate = plate;
   $('#ano').textContent = new Date().getFullYear();
   renderSeries(); renderChips(); renderGrid(); refreshCounts();
+
+  // deep-link: se a URL já vier com ?p=codigo, abre o produto direto
+  (function initDeepLink() {
+    const code = currentCode();
+    if (code && byCode(code)) {
+      history.replaceState({ prod: code }, '', prodURL(byCode(code)));
+      openProd(code, false);
+    }
+  })();
 })();
