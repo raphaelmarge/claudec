@@ -270,11 +270,16 @@ def write_report(rows, out_dir, products, seen_codes):
     return missing
 
 
-def apply_images(products, in_dir, backup_dir):
-    """Sobrescreve assets/products/<hash>.png com as imagens casadas."""
+def apply_images(products, in_dir, backup_dir, allowed=None):
+    """Sobrescreve assets/products/<hash>.png com as imagens casadas.
+
+    allowed: se fornecido, só aplica os códigos desse conjunto (ex.: só os 'OK').
+    """
     backup_dir.mkdir(parents=True, exist_ok=True)
     applied, skipped = 0, 0
     for p in products:
+        if allowed is not None and p["codigo"] not in allowed:
+            continue
         src = in_dir / f"{p['codigo']}.png"
         if not src.exists():
             skipped += 1
@@ -289,6 +294,19 @@ def apply_images(products, in_dir, backup_dir):
     print(f"  Backup dos originais em: {backup_dir}")
 
 
+def codes_by_status(out_dir, statuses):
+    """Lê o _report.csv e devolve o conjunto de códigos com um dos status dados."""
+    report = out_dir / "_report.csv"
+    out = set()
+    if not report.exists():
+        return out
+    with report.open(encoding="utf-8") as f:
+        for r in csv.DictReader(f):
+            if r["codigo"] and r["status"] in statuses:
+                out.add(r["codigo"])
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser(description="Extrai imagens do catálogo SYT e casa por código.")
     ap.add_argument("--pdf", required=True, help="Caminho do PDF do catálogo")
@@ -300,6 +318,8 @@ def main():
                     help="Ignora imagens menores que isso (px) — filtra ícones")
     ap.add_argument("--max-gap", type=float, default=120,
                     help="Distância vertical máxima (pt) entre a imagem e o código abaixo")
+    ap.add_argument("--grid-only", action="store_true",
+                    help="No --apply, troca só as casadas no grid (status OK), pulando as BANDA")
     args = ap.parse_args()
 
     pdf_path = Path(args.pdf)
@@ -317,7 +337,10 @@ def main():
             rows, seen = extract(pdf_path, products, code_index, out_dir,
                                  args.min_size, args.max_gap)
             write_report(rows, out_dir, products, seen)
-        apply_images(products, out_dir, REPO_ROOT / "assets" / "products" / "_backup")
+        allowed = codes_by_status(out_dir, {"OK"}) if args.grid_only else None
+        if args.grid_only:
+            print(f"  Modo --grid-only: aplicando só {len(allowed)} casadas no grid (status OK).")
+        apply_images(products, out_dir, REPO_ROOT / "assets" / "products" / "_backup", allowed)
     else:
         print(f"  Extraindo de: {pdf_path}")
         rows, seen = extract(pdf_path, products, code_index, out_dir,
