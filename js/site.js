@@ -14,6 +14,14 @@
   const PARAMS = DATA.params || {};
   const PRODUCTS = (DATA.products || []).filter(p => p.preco > 0);
   const SITE = window.TORQUE_SITE || {};
+  const DESC = window.TORQUE_DESCRICOES || {};
+  const normName = s => String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  function prodDescHTML(p) {
+    const d = DESC[normName(p.nome)];
+    if (!d) return `${esc(p.nome)} — equipamento ${p.serie ? 'da linha ' + esc(p.serie) + ' ' : ''}Torque Fitness, padrão comercial. Solicite o orçamento e fale com um consultor.`;
+    const row = (lab, val) => (val && val !== '—') ? `<span class="pm-desc__row"><b>${lab}:</b> ${esc(val)}</span>` : '';
+    return row('Função', d.f) + row('Músculos', d.m) + row('Biomecânica', d.b);
+  }
   const PAGE = 24;
   const byCode = code => PRODUCTS.find(x => x.codigo === code);
 
@@ -292,7 +300,7 @@
     $('#pmSerie').textContent = p.serie || '';
     $('#pmNome').textContent = p.nome;
     $('#pmDims').textContent = p.dims ? 'Dimensões: ' + p.dims + ' mm' : '';
-    $('#pmDesc').textContent = `${p.nome} — equipamento ${p.serie ? 'da linha ' + p.serie + ' ' : ''}Torque Fitness, padrão comercial. Solicite o orçamento e fale com um consultor para condições e parcelamento.`;
+    $('#pmDesc').innerHTML = prodDescHTML(p);
     $('#pmPrice').textContent = money(p.preco);
     const maxN = Math.max(1, Math.floor(PARAMS.parcelasMax || 48));
     $('#pmParc').textContent = `ou ${maxN}× de ${money(p.preco / maxN)}`;
