@@ -1,0 +1,354 @@
+#!/usr/bin/env python3
+"""
+Extrai as fotos em alta definição do catálogo SYT (PDF) e casa cada imagem
+com o código do produto que aparece logo abaixo dela na página.
+
+Fluxo seguro em duas fases:
+
+  Fase 1 (padrão) — EXTRAÇÃO + RELATÓRIO, não toca nas imagens do app:
+      python3 tools/extract_catalog_images.py --pdf "imagens_alta.pdf"
+
+      Resultado:
+        - tools/_incoming/<CODIGO>.png   (uma imagem por código casado)
+        - tools/_incoming/_report.csv    (o que casou, o que não casou)
+        - imagens sem código reconhecido vão para tools/_incoming/_unmatched/
+
+  Fase 2 — APLICAÇÃO, sobrescreve as imagens dos produtos:
+      python3 tools/extract_catalog_images.py --pdf "imagens_alta.pdf" --apply
+
+      Para cada produto cujo código tem imagem extraída, sobrescreve o
+      arquivo apontado por `imagem` em js/products.js. Os originais são
+      copiados para assets/products/_backup/ antes de qualquer troca.
+
+Casamento código→imagem:
+  Usamos a LISTA OFICIAL de códigos do js/products.js (não adivinhamos
+  formato). Para cada imagem da página, procuramos o código conhecido cujo
+  rótulo de texto está logo abaixo da imagem e horizontalmente alinhado.
+
+Dependência: PyMuPDF (fitz)
+  pip install pymupdf
+  (pypi.org está liberado mesmo no modo de rede "Trusted")
+"""
+
+import argparse
+import csv
+import json
+import re
+import shutil
+import sys
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+PRODUCTS_JS = REPO_ROOT / "js" / "products.js"
+
+
+def load_products():
+    """Lê js/products.js e devolve a lista de produtos (dicts)."""
+    text = PRODUCTS_JS.read_text(encoding="utf-8")
+    m = re.search(r"window\.TORQUE_PUBLIC\s*=\s*(\{.*\})\s*;?\s*$", text, re.S)
+    if not m:
+        sys.exit("Não encontrei window.TORQUE_PUBLIC em js/products.js")
+    data = json.loads(m.group(1))
+    return data["products"]
+
+
+def norm(s: str) -> str:
+    """Normaliza um token para comparação de código."""
+    return re.sub(r"[^A-Z0-9]", "", s.upper())
+
+
+def code_candidates(token):
+    """
+    Gera os normalizados a testar contra o índice de códigos.
+
+    No PDF os códigos vêm com prefixo SYT- (ex.: 'SYT-A776') e às vezes
+    colados ao nome do produto (ex.: 'BackSYT-A720'). No products.js a maioria
+    é sem o prefixo ('A776'). Então, além do token inteiro, tentamos a parte a
+    partir de 'SYT' e essa mesma parte sem o 'SYT'.
+    """
+    n = norm(token)
+    cands = {n}
+    i = n.find("SYT")
+    if i >= 0:
+        cands.add(n[i:])       # ex.: 'SYTA720'  (casa códigos tipo SYT-QB1010)
+        cands.add(n[i + 3:])   # ex.: 'A720'     (casa a maioria, sem prefixo)
+    return {c for c in cands if c}
+
+
+def match_code(token, code_index):
+    """Retorna o código conhecido para um token, ou None. Prefere o mais específico."""
+    for cand in sorted(code_candidates(token), key=len):
+        if cand in code_index:
+            return code_index[cand]
+    return None
+
+
+def build_code_index(products):
+    """normalizado -> codigo original. Em colisão, mantém o primeiro."""
+    idx = {}
+    for p in products:
+        n = norm(p["codigo"])
+        if n and n not in idx:
+            idx[n] = p["codigo"]
+    return idx
+
+
+def find_code_for_image(img_bbox, words, code_index, max_gap):
+    """
+    Acha o código conhecido cujo rótulo está logo ABAIXO da imagem e
+    horizontalmente sobreposto a ela. words = lista de (x0,y0,x1,y1,texto).
+    Retorna (codigo, distancia) ou (None, None).
+    """
+    ix0, iy0, ix1, iy1 = img_bbox
+    icx = (ix0 + ix1) / 2
+    best = None
+    best_dist = None
+    for x0, y0, x1, y1, txt in words:
+        code = match_code(txt, code_index)
+        if code is None:
+            continue
+        # precisa estar abaixo da base da imagem (com folga) e perto
+        if y0 < iy1 - 5:
+            continue
+        gap = y0 - iy1
+        if gap > max_gap:
+            continue
+        # sobreposição horizontal OU centro do texto perto do centro da imagem
+        overlap = min(ix1, x1) - max(ix0, x0)
+        wcx = (x0 + x1) / 2
+        if overlap <= 0 and abs(wcx - icx) > (ix1 - ix0) / 2 + 30:
+            continue
+        # distância = vertical + desvio horizontal do centro
+        dist = gap + abs(wcx - icx) * 0.5
+        if best_dist is None or dist < best_dist:
+            best_dist = dist
+            best = code
+    return best, best_dist
+
+
+def _img_bytes(doc, page, info, fitz):
+    """Bytes nativos da imagem (alta res). Se não der, renderiza a região em 300 DPI."""
+    xref = info.get("xref", 0)
+    try:
+        ext_img = doc.extract_image(xref) if xref else None
+    except Exception:
+        ext_img = None
+    if ext_img:
+        return ext_img["image"], ext_img["ext"]
+    pix = page.get_pixmap(clip=fitz.Rect(info["bbox"]), dpi=300)
+    return pix.tobytes("png"), "png"
+
+
+_CONF_RANK = {"OK": 2, "BANDA": 1}
+
+
+def extract(pdf_path, products, code_index, out_dir, min_size, max_gap):
+    try:
+        import fitz  # PyMuPDF
+    except ImportError:
+        sys.exit("PyMuPDF não instalado. Rode: pip install pymupdf")
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    unmatched_dir = out_dir / "_unmatched"
+    unmatched_dir.mkdir(exist_ok=True)
+
+    doc = fitz.open(pdf_path)
+    rows = []
+    seen = {}  # codigo -> (conf, area) já gravado (mantém o melhor)
+
+    for pno in range(len(doc)):
+        page = doc[pno]
+        words = [(w[0], w[1], w[2], w[3], w[4]) for w in page.get_text("words")]
+        bigs = []
+        for info in page.get_image_info(xrefs=True):
+            w_px, h_px = info.get("width", 0), info.get("height", 0)
+            if w_px < min_size or h_px < min_size:
+                continue  # ícone/logo pequeno, ignora
+            b = info["bbox"]
+            bigs.append({"info": info, "bbox": b, "w": w_px, "h": h_px,
+                         "area": w_px * h_px, "cy": (b[1] + b[3]) / 2, "used": False})
+
+        assigned = {}  # codigo -> (img_idx, dist, conf)
+
+        # PASSADA A — grid: cada imagem acha o código logo ABAIXO e alinhado (confiável)
+        for ii, im in enumerate(bigs):
+            code, dist = find_code_for_image(im["bbox"], words, code_index, max_gap)
+            if not code:
+                continue
+            cur = assigned.get(code)
+            if cur is None or dist < cur[1]:
+                assigned[code] = (ii, dist, "OK")
+        for ii, _, _ in assigned.values():
+            bigs[ii]["used"] = True
+
+        # PASSADA B — cabeçalho: códigos ainda sem imagem pegam a MAIOR imagem na
+        # faixa vertical logo abaixo do código (até o próximo código). Confiança menor.
+        codewords = []
+        for x0, y0, x1, y1, t in words:
+            c = match_code(t, code_index)
+            if c:
+                codewords.append((y0, c))
+        codewords.sort()
+        for k, (cy, c) in enumerate(codewords):
+            if c in assigned:
+                continue
+            y_top = cy - 25
+            y_bot = codewords[k + 1][0] - 2 if k + 1 < len(codewords) else 1e9
+            best, best_area = None, -1
+            for ii, im in enumerate(bigs):
+                if im["used"]:
+                    continue
+                if y_top < im["cy"] < y_bot and im["area"] > best_area:
+                    best, best_area = ii, im["area"]
+            if best is not None:
+                assigned[c] = (best, None, "BANDA")
+                bigs[best]["used"] = True
+
+        # grava as imagens casadas
+        for code, (ii, dist, conf) in assigned.items():
+            im = bigs[ii]
+            raw, ext = _img_bytes(doc, page, im["info"], fitz)
+            dst = out_dir / f"{code}.png"
+            prev = seen.get(code)
+            better = prev is None or _CONF_RANK[conf] > _CONF_RANK[prev[0]] or \
+                (_CONF_RANK[conf] == _CONF_RANK[prev[0]] and im["area"] > prev[1])
+            if better:
+                _save_png(raw, ext, dst)
+                seen[code] = (conf, im["area"])
+            rows.append([code, pno + 1, im["w"], im["h"],
+                         round(dist, 1) if dist else "", conf, dst.name])
+
+        # imagens que sobraram (sem código) vão para conferência
+        for ii, im in enumerate(bigs):
+            if im["used"]:
+                continue
+            raw, ext = _img_bytes(doc, page, im["info"], fitz)
+            dst = unmatched_dir / f"p{pno+1:03d}_{ii:04d}.png"
+            _save_png(raw, ext, dst)
+            rows.append(["", pno + 1, im["w"], im["h"], "", "SEM_CODIGO", dst.name])
+
+    doc.close()
+    return rows, seen
+
+
+def _save_png(raw_bytes, ext, dst: Path):
+    """Salva como PNG (converte se vier jp/outro)."""
+    if ext == "png":
+        dst.write_bytes(raw_bytes)
+        return
+    try:
+        from PIL import Image
+        import io
+        Image.open(io.BytesIO(raw_bytes)).convert("RGB").save(dst, "PNG")
+    except Exception:
+        # se Pillow falhar, grava com a extensão original ao lado
+        dst.with_suffix("." + ext).write_bytes(raw_bytes)
+
+
+def write_report(rows, out_dir, products, seen_codes):
+    report = out_dir / "_report.csv"
+    with report.open("w", newline="", encoding="utf-8") as f:
+        wr = csv.writer(f)
+        wr.writerow(["codigo", "pagina", "larg_px", "alt_px", "dist", "status", "arquivo"])
+        wr.writerows(sorted(rows, key=lambda r: (str(r[5]), str(r[0]))))
+
+    all_codes = {p["codigo"] for p in products}
+    matched = set(seen_codes)
+    missing = sorted(all_codes - matched)
+    n_ok = sum(1 for r in rows if r[5] == "OK")
+    n_banda = sum(1 for r in rows if r[5] == "BANDA")
+    print(f"\n  Relatório: {report}")
+    print(f"  Produtos no catálogo : {len(all_codes)}")
+    print(f"  Códigos casados      : {len(matched)}  (grid OK: {n_ok} | faixa/BANDA: {n_banda})")
+    print(f"  Produtos SEM imagem  : {len(missing)}")
+    no_code = sum(1 for r in rows if r[5] == "SEM_CODIGO")
+    print(f"  Imagens sem código   : {no_code} (em {out_dir / '_unmatched'})")
+    print("  >> Revise as linhas BANDA no _report.csv (confiança menor).")
+    if missing:
+        preview = ", ".join(missing[:25])
+        print(f"  Faltando (até 25): {preview}{' ...' if len(missing) > 25 else ''}")
+    return missing
+
+
+def apply_images(products, in_dir, backup_dir, allowed=None):
+    """Sobrescreve assets/products/<hash>.png com as imagens casadas.
+
+    allowed: se fornecido, só aplica os códigos desse conjunto (ex.: só os 'OK').
+    """
+    backup_dir.mkdir(parents=True, exist_ok=True)
+    applied, skipped = 0, 0
+    for p in products:
+        if allowed is not None and p["codigo"] not in allowed:
+            continue
+        src = in_dir / f"{p['codigo']}.png"
+        if not src.exists():
+            skipped += 1
+            continue
+        dst = REPO_ROOT / p["imagem"]
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        if dst.exists():
+            shutil.copy2(dst, backup_dir / dst.name)
+        shutil.copy2(src, dst)
+        applied += 1
+    print(f"\n  Aplicadas: {applied}  |  Sem imagem extraída: {skipped}")
+    print(f"  Backup dos originais em: {backup_dir}")
+
+
+def codes_by_status(out_dir, statuses):
+    """Lê o _report.csv e devolve o conjunto de códigos com um dos status dados."""
+    report = out_dir / "_report.csv"
+    out = set()
+    if not report.exists():
+        return out
+    with report.open(encoding="utf-8") as f:
+        for r in csv.DictReader(f):
+            if r["codigo"] and r["status"] in statuses:
+                out.add(r["codigo"])
+    return out
+
+
+def main():
+    ap = argparse.ArgumentParser(description="Extrai imagens do catálogo SYT e casa por código.")
+    ap.add_argument("--pdf", required=True, help="Caminho do PDF do catálogo")
+    ap.add_argument("--apply", action="store_true",
+                    help="Sobrescreve as imagens dos produtos (fase 2). Sem isso, só extrai.")
+    ap.add_argument("--out", default=str(REPO_ROOT / "tools" / "_incoming"),
+                    help="Pasta de saída/staging das imagens extraídas")
+    ap.add_argument("--min-size", type=int, default=80,
+                    help="Ignora imagens menores que isso (px) — filtra ícones")
+    ap.add_argument("--max-gap", type=float, default=120,
+                    help="Distância vertical máxima (pt) entre a imagem e o código abaixo")
+    ap.add_argument("--grid-only", action="store_true",
+                    help="No --apply, troca só as casadas no grid (status OK), pulando as BANDA")
+    args = ap.parse_args()
+
+    pdf_path = Path(args.pdf)
+    if not pdf_path.exists():
+        sys.exit(f"PDF não encontrado: {pdf_path}")
+
+    products = load_products()
+    code_index = build_code_index(products)
+    out_dir = Path(args.out)
+
+    if args.apply:
+        # fase 2: aplica o que já foi extraído (extrai antes se a pasta estiver vazia)
+        if not out_dir.exists() or not any(out_dir.glob("*.png")):
+            print("  Pasta de staging vazia — extraindo primeiro...")
+            rows, seen = extract(pdf_path, products, code_index, out_dir,
+                                 args.min_size, args.max_gap)
+            write_report(rows, out_dir, products, seen)
+        allowed = codes_by_status(out_dir, {"OK"}) if args.grid_only else None
+        if args.grid_only:
+            print(f"  Modo --grid-only: aplicando só {len(allowed)} casadas no grid (status OK).")
+        apply_images(products, out_dir, REPO_ROOT / "assets" / "products" / "_backup", allowed)
+    else:
+        print(f"  Extraindo de: {pdf_path}")
+        rows, seen = extract(pdf_path, products, code_index, out_dir,
+                             args.min_size, args.max_gap)
+        write_report(rows, out_dir, products, seen)
+        print("\n  Revise as imagens e o _report.csv. Para aplicar:")
+        print(f"    python3 tools/extract_catalog_images.py --pdf \"{args.pdf}\" --apply")
+
+
+if __name__ == "__main__":
+    main()

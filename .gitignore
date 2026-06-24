@@ -1,0 +1,7 @@
+# Imagens extraídas / staging e backups gerados pelo tools/extract_catalog_images.py
+tools/_incoming/
+assets/products/_backup/
+
+# Python
+__pycache__/
+*.pyc
