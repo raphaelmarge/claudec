@@ -57,6 +57,32 @@ def norm(s: str) -> str:
     return re.sub(r"[^A-Z0-9]", "", s.upper())
 
 
+def code_candidates(token):
+    """
+    Gera os normalizados a testar contra o índice de códigos.
+
+    No PDF os códigos vêm com prefixo SYT- (ex.: 'SYT-A776') e às vezes
+    colados ao nome do produto (ex.: 'BackSYT-A720'). No products.js a maioria
+    é sem o prefixo ('A776'). Então, além do token inteiro, tentamos a parte a
+    partir de 'SYT' e essa mesma parte sem o 'SYT'.
+    """
+    n = norm(token)
+    cands = {n}
+    i = n.find("SYT")
+    if i >= 0:
+        cands.add(n[i:])       # ex.: 'SYTA720'  (casa códigos tipo SYT-QB1010)
+        cands.add(n[i + 3:])   # ex.: 'A720'     (casa a maioria, sem prefixo)
+    return {c for c in cands if c}
+
+
+def match_code(token, code_index):
+    """Retorna o código conhecido para um token, ou None. Prefere o mais específico."""
+    for cand in sorted(code_candidates(token), key=len):
+        if cand in code_index:
+            return code_index[cand]
+    return None
+
+
 def build_code_index(products):
     """normalizado -> codigo original. Em colisão, mantém o primeiro."""
     idx = {}
@@ -78,8 +104,8 @@ def find_code_for_image(img_bbox, words, code_index, max_gap):
     best = None
     best_dist = None
     for x0, y0, x1, y1, txt in words:
-        n = norm(txt)
-        if n not in code_index:
+        code = match_code(txt, code_index)
+        if code is None:
             continue
         # precisa estar abaixo da base da imagem (com folga) e perto
         if y0 < iy1 - 5:
@@ -96,8 +122,24 @@ def find_code_for_image(img_bbox, words, code_index, max_gap):
         dist = gap + abs(wcx - icx) * 0.5
         if best_dist is None or dist < best_dist:
             best_dist = dist
-            best = code_index[n]
+            best = code
     return best, best_dist
+
+
+def _img_bytes(doc, page, info, fitz):
+    """Bytes nativos da imagem (alta res). Se não der, renderiza a região em 300 DPI."""
+    xref = info.get("xref", 0)
+    try:
+        ext_img = doc.extract_image(xref) if xref else None
+    except Exception:
+        ext_img = None
+    if ext_img:
+        return ext_img["image"], ext_img["ext"]
+    pix = page.get_pixmap(clip=fitz.Rect(info["bbox"]), dpi=300)
+    return pix.tobytes("png"), "png"
+
+
+_CONF_RANK = {"OK": 2, "BANDA": 1}
 
 
 def extract(pdf_path, products, code_index, out_dir, min_size, max_gap):
@@ -112,53 +154,81 @@ def extract(pdf_path, products, code_index, out_dir, min_size, max_gap):
 
     doc = fitz.open(pdf_path)
     rows = []
-    seen_codes = {}  # codigo -> (page, area) para resolver duplicatas (fica a maior)
-    n_imgs = 0
+    seen = {}  # codigo -> (conf, area) já gravado (mantém o melhor)
 
     for pno in range(len(doc)):
         page = doc[pno]
         words = [(w[0], w[1], w[2], w[3], w[4]) for w in page.get_text("words")]
-        # get_image_info(xrefs=True): bbox + xref de cada imagem desenhada
-        infos = page.get_image_info(xrefs=True)
-        for info in infos:
-            xref = info.get("xref", 0)
-            bbox = info["bbox"]  # (x0,y0,x1,y1)
-            w_px = info.get("width", 0)
-            h_px = info.get("height", 0)
+        bigs = []
+        for info in page.get_image_info(xrefs=True):
+            w_px, h_px = info.get("width", 0), info.get("height", 0)
             if w_px < min_size or h_px < min_size:
                 continue  # ícone/logo pequeno, ignora
-            n_imgs += 1
-            code, dist = find_code_for_image(bbox, words, code_index, max_gap)
+            b = info["bbox"]
+            bigs.append({"info": info, "bbox": b, "w": w_px, "h": h_px,
+                         "area": w_px * h_px, "cy": (b[1] + b[3]) / 2, "used": False})
 
-            # extrai os bytes nativos da imagem (alta resolução, sem perda)
-            try:
-                ext_img = doc.extract_image(xref) if xref else None
-            except Exception:
-                ext_img = None
+        assigned = {}  # codigo -> (img_idx, dist, conf)
 
-            if ext_img:
-                raw, ext = ext_img["image"], ext_img["ext"]
-            else:
-                # fallback: renderiza a região da imagem em alta DPI
-                pix = page.get_pixmap(clip=fitz.Rect(bbox), dpi=300)
-                raw, ext = pix.tobytes("png"), "png"
+        # PASSADA A — grid: cada imagem acha o código logo ABAIXO e alinhado (confiável)
+        for ii, im in enumerate(bigs):
+            code, dist = find_code_for_image(im["bbox"], words, code_index, max_gap)
+            if not code:
+                continue
+            cur = assigned.get(code)
+            if cur is None or dist < cur[1]:
+                assigned[code] = (ii, dist, "OK")
+        for ii, _, _ in assigned.values():
+            bigs[ii]["used"] = True
 
-            area = w_px * h_px
-            if code:
-                # mantém a maior versão se o código aparecer mais de uma vez
-                prev = seen_codes.get(code)
-                dst = out_dir / f"{code}.png"
-                if prev is None or area > prev:
-                    _save_png(raw, ext, dst)
-                    seen_codes[code] = area
-                rows.append([code, pno + 1, w_px, h_px, round(dist or 0, 1), "OK", dst.name])
-            else:
-                dst = unmatched_dir / f"p{pno+1:03d}_{n_imgs:04d}.png"
+        # PASSADA B — cabeçalho: códigos ainda sem imagem pegam a MAIOR imagem na
+        # faixa vertical logo abaixo do código (até o próximo código). Confiança menor.
+        codewords = []
+        for x0, y0, x1, y1, t in words:
+            c = match_code(t, code_index)
+            if c:
+                codewords.append((y0, c))
+        codewords.sort()
+        for k, (cy, c) in enumerate(codewords):
+            if c in assigned:
+                continue
+            y_top = cy - 25
+            y_bot = codewords[k + 1][0] - 2 if k + 1 < len(codewords) else 1e9
+            best, best_area = None, -1
+            for ii, im in enumerate(bigs):
+                if im["used"]:
+                    continue
+                if y_top < im["cy"] < y_bot and im["area"] > best_area:
+                    best, best_area = ii, im["area"]
+            if best is not None:
+                assigned[c] = (best, None, "BANDA")
+                bigs[best]["used"] = True
+
+        # grava as imagens casadas
+        for code, (ii, dist, conf) in assigned.items():
+            im = bigs[ii]
+            raw, ext = _img_bytes(doc, page, im["info"], fitz)
+            dst = out_dir / f"{code}.png"
+            prev = seen.get(code)
+            better = prev is None or _CONF_RANK[conf] > _CONF_RANK[prev[0]] or \
+                (_CONF_RANK[conf] == _CONF_RANK[prev[0]] and im["area"] > prev[1])
+            if better:
                 _save_png(raw, ext, dst)
-                rows.append(["", pno + 1, w_px, h_px, "", "SEM_CODIGO", dst.name])
+                seen[code] = (conf, im["area"])
+            rows.append([code, pno + 1, im["w"], im["h"],
+                         round(dist, 1) if dist else "", conf, dst.name])
+
+        # imagens que sobraram (sem código) vão para conferência
+        for ii, im in enumerate(bigs):
+            if im["used"]:
+                continue
+            raw, ext = _img_bytes(doc, page, im["info"], fitz)
+            dst = unmatched_dir / f"p{pno+1:03d}_{ii:04d}.png"
+            _save_png(raw, ext, dst)
+            rows.append(["", pno + 1, im["w"], im["h"], "", "SEM_CODIGO", dst.name])
 
     doc.close()
-    return rows, seen_codes
+    return rows, seen
 
 
 def _save_png(raw_bytes, ext, dst: Path):
@@ -185,12 +255,15 @@ def write_report(rows, out_dir, products, seen_codes):
     all_codes = {p["codigo"] for p in products}
     matched = set(seen_codes)
     missing = sorted(all_codes - matched)
+    n_ok = sum(1 for r in rows if r[5] == "OK")
+    n_banda = sum(1 for r in rows if r[5] == "BANDA")
     print(f"\n  Relatório: {report}")
     print(f"  Produtos no catálogo : {len(all_codes)}")
-    print(f"  Códigos casados      : {len(matched)}")
+    print(f"  Códigos casados      : {len(matched)}  (grid OK: {n_ok} | faixa/BANDA: {n_banda})")
     print(f"  Produtos SEM imagem  : {len(missing)}")
     no_code = sum(1 for r in rows if r[5] == "SEM_CODIGO")
     print(f"  Imagens sem código   : {no_code} (em {out_dir / '_unmatched'})")
+    print("  >> Revise as linhas BANDA no _report.csv (confiança menor).")
     if missing:
         preview = ", ".join(missing[:25])
         print(f"  Faltando (até 25): {preview}{' ...' if len(missing) > 25 else ''}")
