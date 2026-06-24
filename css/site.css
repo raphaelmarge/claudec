@@ -221,6 +221,8 @@ img{max-width:100%;display:block}
 .pmodal__info h2{font-size:1.4rem;margin:8px 0}
 .pmodal__dims{font-family:var(--font-mono);font-size:.76rem;color:var(--txt-mut);margin-bottom:10px}
 .pmodal__desc{color:var(--txt-dim);font-size:.9rem;line-height:1.55}
+.pm-desc__row{display:block;margin:.4rem 0}
+.pm-desc__row b{color:var(--txt);font-weight:700}
 .pmodal__price{margin:16px 0;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
 .pmodal__price small{display:block;width:100%;font-size:.66rem;color:var(--txt-mut)}
 .pmodal__price b{font-family:var(--font-mono);font-size:1.5rem;color:var(--txt)}
