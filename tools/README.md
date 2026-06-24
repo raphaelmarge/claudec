@@ -15,7 +15,7 @@ pip install pymupdf      # pypi.org é liberado mesmo na rede "Trusted"
 ### Fase 1 — extrair e conferir (não altera nada do app)
 
 ```bash
-python3 tools/extract_catalog_images.py --pdf "catalog syt-2026.pdf"
+python3 tools/extract_catalog_images.py --pdf "imagens_alta.pdf"
 ```
 
 Gera:
@@ -29,7 +29,7 @@ Gera:
 ### Fase 2 — aplicar (sobrescreve as imagens dos produtos)
 
 ```bash
-python3 tools/extract_catalog_images.py --pdf "catalog syt-2026.pdf" --apply
+python3 tools/extract_catalog_images.py --pdf "imagens_alta.pdf" --apply
 ```
 
 Para cada produto cujo código tem imagem extraída, sobrescreve o arquivo

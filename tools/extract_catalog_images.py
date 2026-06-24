@@ -6,7 +6,7 @@ com o código do produto que aparece logo abaixo dela na página.
 Fluxo seguro em duas fases:
 
   Fase 1 (padrão) — EXTRAÇÃO + RELATÓRIO, não toca nas imagens do app:
-      python3 tools/extract_catalog_images.py --pdf "catalog syt-2026.pdf"
+      python3 tools/extract_catalog_images.py --pdf "imagens_alta.pdf"
 
       Resultado:
         - tools/_incoming/<CODIGO>.png   (uma imagem por código casado)
@@ -14,7 +14,7 @@ Fluxo seguro em duas fases:
         - imagens sem código reconhecido vão para tools/_incoming/_unmatched/
 
   Fase 2 — APLICAÇÃO, sobrescreve as imagens dos produtos:
-      python3 tools/extract_catalog_images.py --pdf "catalog syt-2026.pdf" --apply
+      python3 tools/extract_catalog_images.py --pdf "imagens_alta.pdf" --apply
 
       Para cada produto cujo código tem imagem extraída, sobrescreve o
       arquivo apontado por `imagem` em js/products.js. Os originais são
