@@ -957,7 +957,41 @@
     } catch (e) { console.error(e); toast('Falhou salvar na nuvem (verifique conexão).'); }
   }
 
-  $('#btnPdfQuote').addEventListener('click', () => window.print());
+  // Gera um PDF A4 de verdade a partir do documento (#quoteDoc), paginado.
+  // Cai no diálogo de impressão se as libs (CDN) não carregarem (ex.: offline).
+  async function gerarPDF() {
+    const el = $('#quoteDoc');
+    if (!el) return;
+    toast('Gerando PDF…');
+    try {
+      await loadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js');
+      await loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js');
+      const jsPDFCtor = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+      if (!jsPDFCtor) throw new Error('jsPDF indisponível');
+      const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#ffffff', useCORS: true });
+      const pdf = new jsPDFCtor({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const pw = pdf.internal.pageSize.getWidth();
+      const ph = pdf.internal.pageSize.getHeight();
+      const imgH = canvas.height * pw / canvas.width;   // altura proporcional à largura A4
+      const data = canvas.toDataURL('image/jpeg', 0.92);
+      let heightLeft = imgH, position = 0;
+      pdf.addImage(data, 'JPEG', 0, position, pw, imgH);
+      heightLeft -= ph;
+      while (heightLeft > 0) {                            // fatia em páginas A4
+        position -= ph;
+        pdf.addPage();
+        pdf.addImage(data, 'JPEG', 0, position, pw, imgH);
+        heightLeft -= ph;
+      }
+      pdf.save(`orcamento-${lastQuoteNumero || 'torque'}.pdf`);
+      toast('PDF gerado.');
+    } catch (e) {
+      console.error(e);
+      toast('Abrindo impressão para salvar em PDF…');
+      window.print();                                    // fallback robusto (offline / CORS)
+    }
+  }
+  $('#btnPdfQuote').addEventListener('click', gerarPDF);
 
   $('#btnImageQuote').addEventListener('click', async () => {
     try {
