@@ -461,6 +461,8 @@ body[data-auth="out"] .login { display: flex; }
 .dflag.late { color: var(--danger); border-color: rgba(248,113,113,.4); background: rgba(248,113,113,.1); }
 .dflag.ok { color: var(--ok); border-color: rgba(52,211,153,.4); background: rgba(52,211,153,.08); }
 .dflag.site { color: var(--violet); border-color: var(--violet); background: rgba(139,92,246,.12); }
+.dflag.exp { color: var(--danger); border-color: rgba(248,113,113,.45); background: rgba(248,113,113,.14); }
+.dflag.soon { color: #F5A524; border-color: rgba(245,165,36,.4); background: rgba(245,165,36,.1); }
 .dcard__contato { margin-top: 7px; font-size: .76rem; color: var(--txt-dim); font-family: var(--font-mono); }
 .dcard__actions .dc-wpp { border-color: #25D366; color: #25D366; }
 .dcard__note { margin-top: 8px; font-size: .74rem; color: var(--txt-dim); background: var(--black); border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px; }

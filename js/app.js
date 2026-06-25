@@ -1345,6 +1345,26 @@
     return ri ? Math.max(1, 100 - ri.diff) : 50;
   }
 
+  // validade da proposta: criado_em + dias (snapshot no orçamento, ou parâmetro atual)
+  function validadeInfo(r) {
+    if (!r.criado_em) return null;
+    const dias = Number(r.validade) || Number(P().validade) || 7;
+    const base = new Date(r.criado_em); if (isNaN(base.getTime())) return null;
+    base.setHours(0, 0, 0, 0);
+    const exp = new Date(base.getTime() + dias * DAY);
+    const t = new Date(); t.setHours(0, 0, 0, 0);
+    return { exp, diff: Math.round((exp - t) / DAY), dias };   // diff < 0 = expirado
+  }
+  // selo de validade — só p/ orçamentos em aberto e quando relevante (expirando/expirado)
+  function validadeBadge(r, longo) {
+    if (!emAberto(r)) return '';
+    const vi = validadeInfo(r); if (!vi) return '';
+    if (vi.diff < 0) return `<span class="dflag exp">⌛ ${longo ? 'proposta expirada' : 'expirado'}</span>`;
+    if (vi.diff === 0) return '<span class="dflag exp">⌛ expira hoje</span>';
+    if (vi.diff <= 3) return `<span class="dflag soon">⌛ expira em ${vi.diff}d</span>`;
+    return '';
+  }
+
   let dashData = [];
   let dashStage = 'all';
   let dashView = 'list';        // list | kanban | agenda | metrics
@@ -1473,6 +1493,7 @@
     if (r.origem === 'site') flags.push('<span class="dflag site">🌐 Lead</span>');
     if (ri && ri.atrasado) flags.push(`<span class="dflag late">⏰ ${dmy(r.retorno_em)}</span>`);
     else if (ri && ri.diff === 0) flags.push('<span class="dflag warn">📞 hoje</span>');
+    const vb = validadeBadge(r); if (vb) flags.push(vb);
     const nItens = (r.itens || []).length;
     return `<div class="kcard" draggable="true" data-id="${r.id}">
       <div class="kcard__top"><span class="kcard__cli">${esc(r.cliente_nome || '—')}</span><span class="kcard__val">${money(r.total)}</span></div>
@@ -1727,6 +1748,7 @@
     else if (ri && ri.diff === 0) flags.push(`<span class="dflag warn">📞 retornar hoje</span>`);
     else if (ri && ri.diff > 0 && ativo) flags.push(`<span class="dflag">📅 retorno ${dmy(r.retorno_em)}</span>`);
     if (ativo && !ri && dias >= 5) flags.push(`<span class="dflag warn">⏳ parado há ${dias}d</span>`);
+    const vb = validadeBadge(r, true); if (vb) flags.push(vb);
     if (stageOf(r) === 'ganho') flags.push(`<span class="dflag ok">✅ venda fechada</span>`);
     const contato = lead ? [r.contato_telefone, r.contato_email].filter(Boolean).map(esc).join(' · ') : '';
 
