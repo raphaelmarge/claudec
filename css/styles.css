@@ -133,6 +133,8 @@ body[data-mode="admin"]    .mode-toggle__opt[data-for="admin"] { color: #fff; }
   outline: none; border-color: var(--violet); box-shadow: 0 0 0 3px var(--violet-glow);
 }
 .field input[type="number"] { font-family: var(--font-mono); }
+.field--err input { border-color: var(--danger); box-shadow: 0 0 0 3px rgba(229, 72, 77, .18); }
+.field--err > span::after { content: " — verifique"; color: var(--danger); font-weight: 600; }
 .field--wide { grid-column: 1 / -1; }
 .field--switch { flex-direction: row; align-items: center; justify-content: space-between; gap: 10px; }
 

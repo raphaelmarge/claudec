@@ -549,11 +549,18 @@
     $('#clCidade').value = c ? (c.cidade || '') : '';
     $('#clObs').value = c ? (c.obs || '') : '';
     $('#btnDeleteCliente').style.display = c ? '' : 'none';
+    ['#clTelefone', '#clEmail', '#clDoc'].forEach(s => markField(s, true));
     openModal('#clienteModal');
   }
   $('#btnSaveCliente').addEventListener('click', async () => {
     const nome = $('#clNome').value.trim();
     if (!nome) { toast('Informe o nome do cliente.'); return; }
+    const tel = $('#clTelefone').value.trim(), email = $('#clEmail').value.trim(), doc = $('#clDoc').value.trim();
+    const okTel = validaTel(tel), okEmail = validaEmail(email), okDoc = validaDoc(doc);
+    markField('#clTelefone', okTel); markField('#clEmail', okEmail); markField('#clDoc', okDoc);
+    if (!okTel) { toast('Telefone inválido — use DDD + número.'); return; }
+    if (!okEmail) { toast('E-mail inválido.'); return; }
+    if (!okDoc) { toast('CNPJ/CPF inválido.'); return; }
     const dados = {
       id: editClienteId || undefined,
       nome, empresa: $('#clEmpresa').value.trim(), telefone: $('#clTelefone').value.trim(),
@@ -577,6 +584,10 @@
       save(); closeModal('#clienteModal'); renderSummary(); toast('Cliente removido.');
     } catch (e) { console.error(e); toast('Erro ao remover cliente.'); }
   });
+
+  // máscara ao digitar nos campos de contato
+  bindMask('#clTelefone', maskTel); bindMask('#clDoc', maskDoc);
+  bindMask('#pfCelular', maskTel); bindMask('#pfCpf', maskDoc); bindMask('#pfCep', maskCEP);
 
   async function reloadClientes() {
     try { state.clientes = await Cloud.listClientes(); } catch (e) { console.error(e); }
@@ -1075,6 +1086,65 @@
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
   /* ------------------------------------------------------------
+     VALIDAÇÃO + MÁSCARA (telefone, e-mail, CPF/CNPJ, CEP)
+     Funções puras — campos vazios são válidos (são opcionais).
+     ------------------------------------------------------------ */
+  const digits = s => String(s == null ? '' : s).replace(/\D/g, '');
+
+  function validaCPF(v) {
+    const c = digits(v);
+    if (c.length !== 11 || /^(\d)\1{10}$/.test(c)) return false;
+    let s = 0; for (let i = 0; i < 9; i++) s += +c[i] * (10 - i);
+    let d1 = (s * 10) % 11; if (d1 === 10) d1 = 0; if (d1 !== +c[9]) return false;
+    s = 0; for (let i = 0; i < 10; i++) s += +c[i] * (11 - i);
+    let d2 = (s * 10) % 11; if (d2 === 10) d2 = 0; return d2 === +c[10];
+  }
+  function validaCNPJ(v) {
+    const c = digits(v);
+    if (c.length !== 14 || /^(\d)\1{13}$/.test(c)) return false;
+    const dig = len => { let s = 0, pos = len - 7; for (let i = len; i >= 1; i--) { s += +c[len - i] * pos--; if (pos < 2) pos = 9; } const r = s % 11; return r < 2 ? 0 : 11 - r; };
+    return dig(12) === +c[12] && dig(13) === +c[13];
+  }
+  // CPF (11) ou CNPJ (14); vazio = válido
+  function validaDoc(v) { const c = digits(v); if (!c) return true; if (c.length === 11) return validaCPF(c); if (c.length === 14) return validaCNPJ(c); return false; }
+  function validaEmail(v) { v = String(v || '').trim(); return !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
+  function validaTel(v) { let d = digits(v); if (!d) return true; if (d.length > 11 && d.startsWith('55')) d = d.slice(2); return d.length === 10 || d.length === 11; }
+
+  function maskTel(v) {
+    let d = digits(v); if (d.length > 11 && d.startsWith('55')) d = d.slice(2); d = d.slice(0, 11);
+    if (d.length <= 2) return d;
+    const rest = d.slice(2);
+    if (rest.length <= 4) return `(${d.slice(0, 2)}) ${rest}`;
+    if (d.length <= 10) return `(${d.slice(0, 2)}) ${rest.slice(0, 4)}-${rest.slice(4)}`;
+    return `(${d.slice(0, 2)}) ${rest.slice(0, 5)}-${rest.slice(5)}`;
+  }
+  function maskDoc(v) {
+    const d = digits(v).slice(0, 14);
+    if (d.length <= 11) { // CPF 000.000.000-00
+      let r = d.slice(0, 3);
+      if (d.length > 3) r += '.' + d.slice(3, 6);
+      if (d.length > 6) r += '.' + d.slice(6, 9);
+      if (d.length > 9) r += '-' + d.slice(9, 11);
+      return r;
+    } // CNPJ 00.000.000/0000-00
+    let r = d.slice(0, 2);
+    if (d.length > 2) r += '.' + d.slice(2, 5);
+    if (d.length > 5) r += '.' + d.slice(5, 8);
+    if (d.length > 8) r += '/' + d.slice(8, 12);
+    if (d.length > 12) r += '-' + d.slice(12, 14);
+    return r;
+  }
+  function maskCEP(v) { const d = digits(v).slice(0, 8); return d.length > 5 ? d.slice(0, 5) + '-' + d.slice(5) : d; }
+
+  // marca/limpa estado de erro no campo (label.field pai do input)
+  function markField(sel, ok) { const el = $(sel); if (el && el.parentElement) el.parentElement.classList.toggle('field--err', !ok); }
+  // máscara ao digitar; limpa o vermelho enquanto o usuário corrige
+  function bindMask(sel, fn) {
+    const el = $(sel); if (!el) return;
+    el.addEventListener('input', () => { el.value = fn(el.value); markField(sel, true); });
+  }
+
+  /* ------------------------------------------------------------
      AUTENTICAÇÃO (Supabase) + MENU DO USUÁRIO
      ------------------------------------------------------------ */
   function toggleUserMenu() { const m = $('#userMenu'); m.hidden = !m.hidden; }
@@ -1101,15 +1171,21 @@
     $('#pfCidade').value = p.cidade || '';
     $('#pfCep').value = p.cep || '';
     $('#pfEmail').value = cv.email || '';
+    ['#pfCpf', '#pfCelular'].forEach(s => markField(s, true));
     openModal('#perfilModal');
   });
   $('#btnSavePerfil').addEventListener('click', async () => {
     const nome = $('#pfNome').value.trim();
     if (!nome) { toast('Informe seu nome.'); return; }
     const celular = $('#pfCelular').value.trim();
+    const cpf = $('#pfCpf').value.trim();
+    const okCpf = !cpf || validaCPF(cpf), okCel = validaTel(celular);
+    markField('#pfCpf', okCpf); markField('#pfCelular', okCel);
+    if (!okCpf) { toast('CPF inválido.'); return; }
+    if (!okCel) { toast('Celular inválido — use DDD + número.'); return; }
     try {
       await Cloud.updateMyProfile({
-        nome, cpf: $('#pfCpf').value.trim(), celular, telefone: celular,
+        nome, cpf, celular, telefone: celular,
         endereco: $('#pfEndereco').value.trim(), cidade: $('#pfCidade').value.trim(), cep: $('#pfCep').value.trim()
       });
       if (state.currentVendedor) state.currentVendedor.nome = nome;
