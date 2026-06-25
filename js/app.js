@@ -1298,6 +1298,7 @@
   }
   function renderDashboard() {
     const base = baseRows();
+    updateDashChrome(base);
     if (dashView === 'kanban') return renderKanban(base);
     if (dashView === 'agenda') return renderAgenda(base);
     if (dashView === 'metrics') return renderMetrics(base);
@@ -1333,6 +1334,29 @@
   const dmy = iso => new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' });
 
   /* ====================== KANBAN (arrastar entre fases) ====================== */
+  // valor compacto p/ rótulos de gráfico: 1234 -> "R$ 1k", 1.2e6 -> "R$ 1,2M"
+  const moneyK = n => { n = Number(n) || 0; const a = Math.abs(n);
+    if (a >= 1e6) return 'R$ ' + (n / 1e6).toFixed(1).replace('.', ',') + 'M';
+    if (a >= 1e3) return 'R$ ' + Math.round(n / 1e3) + 'k';
+    return money(n); };
+  // donut SVG (gauge de %) — a cor vem do CSS
+  function donut(pct) {
+    const R = 32, C = 2 * Math.PI * R, p = Math.max(0, Math.min(100, pct)), off = C * (1 - p / 100);
+    return `<svg class="donut" viewBox="0 0 80 80" aria-hidden="true"><circle class="donut__bg" cx="40" cy="40" r="${R}"></circle><circle class="donut__fg" cx="40" cy="40" r="${R}" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" transform="rotate(-90 40 40)"></circle><text x="40" y="45" class="donut__t">${pct}%</text></svg>`;
+  }
+  // cabeçalho do painel: contador de negócios + valor; selo de pendências na aba Agenda
+  function updateDashChrome(base) {
+    const sub = $('#dashSub');
+    if (sub) {
+      const val = base.reduce((t, r) => t + (Number(r.total) || 0), 0);
+      sub.textContent = base.length ? `${base.length} negócio(s) · ${money(val)} em pipeline` : 'Nenhum negócio ainda';
+    }
+    const badge = $('#agendaBadge');
+    if (badge) {
+      const pend = base.filter(r => { const ri = retornoInfo(r); return ri && ri.diff <= 0 && emAberto(r); }).length;
+      badge.textContent = pend; badge.hidden = pend === 0;
+    }
+  }
   function kcardHTML(r) {
     const ri = retornoInfo(r);
     const flags = [];
@@ -1354,7 +1378,7 @@
       const rows = byStage[s.key].slice().sort(sorter);
       const val = rows.reduce((t, r) => t + (Number(r.total) || 0), 0);
       return `<div class="kcol st-${s.key}" data-stage="${s.key}">
-        <div class="kcol__head"><span class="kcol__t">${s.label}</span><span class="kcol__n">${rows.length}</span><span class="kcol__v">${money(val)}</span></div>
+        <div class="kcol__head"><span class="kcol__t">${s.short}</span><span class="kcol__n">${rows.length}</span><span class="kcol__v">${money(val)}</span></div>
         <div class="kcol__body">${rows.length ? rows.map(kcardHTML).join('') : '<p class="kempty">—</p>'}</div>
       </div>`;
     };
@@ -1473,17 +1497,31 @@
     const kpis = `<div class="mkpis">
       <div class="mkpi"><b>${money(abertoV)}</b><span>Pipeline aberto (${abertoC})</span></div>
       <div class="mkpi"><b>${money(val.ganho)}</b><span>Fechado (${cnt.ganho})</span></div>
-      <div class="mkpi"><b>${conv}%</b><span>Conversão</span></div>
       <div class="mkpi"><b>${money(ticket)}</b><span>Ticket médio</span></div>
     </div>`;
 
+    // ---- card de conversão com donut ----
+    const convCard = `<div class="mcard mcard--conv">
+      <div class="conv__gauge">${donut(conv)}</div>
+      <div class="conv__leg">
+        <h3 class="mcard__t">Taxa de conversão</h3>
+        <span class="conv__row"><i class="ok"></i>${cnt.ganho} fechada(s)</span>
+        <span class="conv__row"><i class="bad"></i>${cnt.perdido} perdida(s)</span>
+        <span class="conv__sub">${fechados} oportunidade(s) concluída(s)</span>
+      </div>
+    </div>`;
+
+    // ---- distribuição do funil (barras + % do total) ----
+    const totalCount = STAGES.reduce((t, s) => t + cnt[s.key], 0) || 1;
     const maxStage = Math.max(1, ...STAGES.map(s => cnt[s.key]));
     const funil = STAGES.map(s => {
       const w = Math.round(cnt[s.key] / maxStage * 100);
+      const pct = Math.round(cnt[s.key] / totalCount * 100);
       const cls = s.key === 'ganho' ? 'ok' : s.key === 'perdido' ? 'bad' : s.key === 'sem_retorno' ? 'warn' : '';
-      return `<div class="mbar"><span class="mbar__lab">${s.short}</span><div class="mbar__track"><div class="mbar__fill ${cls}" style="width:${w}%"></div></div><span class="mbar__val">${cnt[s.key]} · ${money(val[s.key])}</span></div>`;
+      return `<div class="mbar"><span class="mbar__lab">${s.short}</span><div class="mbar__track"><div class="mbar__fill ${cls}" style="width:${w}%"></div></div><span class="mbar__val">${cnt[s.key]} · ${pct}%</span></div>`;
     }).join('');
 
+    // ---- fechado × perdido por mês (com eixo, linhas-guia e rótulos) ----
     const months = lastMonths(6), mg = {}, mp = {};
     months.forEach(m => { mg[m.key] = 0; mp[m.key] = 0; });
     base.forEach(r => {
@@ -1494,20 +1532,28 @@
     const maxM = Math.max(1, ...months.map(m => Math.max(mg[m.key], mp[m.key])));
     const cols = months.map(m => {
       const hg = Math.round(mg[m.key] / maxM * 100), hp = Math.round(mp[m.key] / maxM * 100);
-      return `<div class="mcol"><div class="mcol__bars"><div class="mcol__bar" style="height:${hg}%" title="Fechado ${money(mg[m.key])}"></div><div class="mcol__bar bad" style="height:${hp}%" title="Perdido ${money(mp[m.key])}"></div></div><span class="mcol__x">${m.label}</span></div>`;
+      return `<div class="mcol"><div class="mcol__bars">
+        <div class="mcol__bar" style="height:${hg}%" title="Fechado ${money(mg[m.key])}"></div>
+        <div class="mcol__bar bad" style="height:${hp}%" title="Perdido ${money(mp[m.key])}"></div>
+      </div><span class="mcol__x">${m.label}</span><span class="mcol__v">${mg[m.key] ? moneyK(mg[m.key]) : '—'}</span></div>`;
     }).join('');
+    const chart6 = `<div class="mchart">
+      <div class="mchart__y"><span>${moneyK(maxM)}</span><span>${moneyK(maxM / 2)}</span><span>0</span></div>
+      <div class="mchart__plot"><div class="mchart__grid"><i></i><i></i><i></i><i></i></div><div class="mcol-chart">${cols}</div></div>
+    </div>`;
 
+    // ---- valor fechado por vendedor ----
     const vend = {};
     base.forEach(r => { if (stageOf(r) === 'ganho') { const n = r.vendedor_nome || '—'; vend[n] = (vend[n] || 0) + (Number(r.total) || 0); } });
     const vArr = Object.entries(vend).sort((a, b) => b[1] - a[1]).slice(0, 8);
     const maxV = Math.max(1, ...vArr.map(v => v[1]));
     const vendBars = vArr.length
-      ? vArr.map(([n, v]) => `<div class="mbar"><span class="mbar__lab">${esc(n)}</span><div class="mbar__track"><div class="mbar__fill ok" style="width:${Math.round(v / maxV * 100)}%"></div></div><span class="mbar__val">${money(v)}</span></div>`).join('')
+      ? vArr.map(([n, v]) => `<div class="mbar"><span class="mbar__lab">${esc(n)}</span><div class="mbar__track"><div class="mbar__fill ok" style="width:${Math.round(v / maxV * 100)}%"></div></div><span class="mbar__val">${moneyK(v)}</span></div>`).join('')
       : '<p class="atv__empty">Nenhuma venda fechada ainda.</p>';
 
-    $('#dashMetrics').innerHTML = kpis +
+    $('#dashMetrics').innerHTML = kpis + convCard +
       `<div class="mcard"><h3 class="mcard__t">Distribuição do funil</h3>${funil}</div>` +
-      `<div class="mcard"><h3 class="mcard__t">Fechado × Perdido · últimos 6 meses</h3><div class="mcol-chart">${cols}</div><div class="mlegend"><span><i style="background:var(--ok)"></i>Fechado</span><span><i style="background:var(--danger)"></i>Perdido</span></div></div>` +
+      `<div class="mcard"><h3 class="mcard__t">Fechado × Perdido · últimos 6 meses</h3>${chart6}<div class="mlegend"><span><i style="background:var(--ok)"></i>Fechado</span><span><i style="background:var(--danger)"></i>Perdido</span></div></div>` +
       `<div class="mcard"><h3 class="mcard__t">Valor fechado por vendedor</h3>${vendBars}</div>`;
   }
 

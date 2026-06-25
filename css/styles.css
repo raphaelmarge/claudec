@@ -552,6 +552,46 @@ body[data-auth="out"] .login { display: flex; }
 .mlegend { display: flex; gap: 14px; margin-top: 10px; font-size: .68rem; color: var(--txt-dim); }
 .mlegend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: middle; }
 
+/* ---- cabeçalho do painel + selo nas abas ---- */
+.dash__htitle { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.dash__sub { font-size: .72rem; color: var(--txt-mut); font-weight: 500; }
+.dtab__badge { display: inline-flex; align-items: center; justify-content: center; min-width: 17px; height: 17px; padding: 0 5px;
+  border-radius: 999px; background: var(--danger); color: #fff; font-size: .64rem; font-weight: 700; font-family: var(--font-mono); margin-left: 3px; }
+.dtab__badge[hidden] { display: none; }
+
+/* ---- card de conversão com donut ---- */
+.mcard--conv { display: flex; align-items: center; gap: 18px; }
+.conv__gauge { flex: none; }
+.donut { width: 92px; height: 92px; }
+.donut__bg { fill: none; stroke: var(--line-2); stroke-width: 7; }
+.donut__fg { fill: none; stroke: var(--violet); stroke-width: 7; stroke-linecap: round; transition: stroke-dashoffset .6s ease; }
+.donut__t { fill: var(--txt); font-family: var(--font-mono); font-size: 19px; font-weight: 700; text-anchor: middle; }
+.conv__leg { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.conv__leg .mcard__t { margin: 0 0 4px; }
+.conv__row { font-size: .8rem; color: var(--txt-dim); display: flex; align-items: center; gap: 8px; }
+.conv__row i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; flex: none; }
+.conv__row i.ok { background: var(--ok); } .conv__row i.bad { background: var(--danger); }
+.conv__sub { font-size: .72rem; color: var(--txt-mut); margin-top: 2px; }
+
+/* ---- gráfico de colunas com eixo + linhas-guia ---- */
+.mchart { display: grid; grid-template-columns: auto 1fr; gap: 8px; }
+.mchart__y { display: flex; flex-direction: column; justify-content: space-between; height: 130px; text-align: right;
+  font-family: var(--font-mono); font-size: .58rem; color: var(--txt-mut); }
+.mchart__plot { position: relative; }
+.mchart__grid { position: absolute; left: 0; right: 0; top: 0; height: 130px; display: flex; flex-direction: column; justify-content: space-between; pointer-events: none; }
+.mchart__grid i { display: block; border-top: 1px dashed var(--line); }
+.mcol-chart { position: relative; z-index: 1; height: auto; align-items: flex-end; }
+.mcol { height: auto; }
+.mcol__bars { height: 130px; flex: none; }
+.mcol__v { font-family: var(--font-mono); font-size: .58rem; color: var(--ok); }
+
+/* ---- Kanban: títulos curtos + cards compactos no celular ---- */
+@media (max-width: 599px) {
+  .kcard { padding: 9px 10px; }
+  .kcard__cli { font-size: .82rem; }
+  .kcol__head { padding: 10px 12px; }
+}
+
 /* ---- Histórico de atividades (timeline) ---- */
 .atv { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 12px; }
 .atv__head { font-size: .74rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--txt-dim); margin-bottom: 10px; }

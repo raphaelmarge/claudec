@@ -47,7 +47,10 @@
   <!-- ===================== DASHBOARD ===================== -->
   <div id="dashScreen" class="dash" hidden>
     <header class="dash__head">
-      <h2 id="dashTitle">Painel de orçamentos</h2>
+      <div class="dash__htitle">
+        <h2 id="dashTitle">Painel de orçamentos</h2>
+        <span class="dash__sub" id="dashSub"></span>
+      </div>
       <button class="modal__x" id="dashClose" type="button" aria-label="Fechar">✕</button>
     </header>
     <div class="dash__tools">
@@ -60,7 +63,7 @@
     <div class="dash__tabs" id="dashTabs">
       <button class="dtab active" data-view="list" type="button">📊 Funil</button>
       <button class="dtab" data-view="kanban" type="button">🗂 Kanban</button>
-      <button class="dtab" data-view="agenda" type="button">📅 Agenda</button>
+      <button class="dtab" data-view="agenda" type="button">📅 Agenda <b class="dtab__badge" id="agendaBadge" hidden></b></button>
       <button class="dtab" data-view="metrics" type="button">📈 Métricas</button>
     </div>
     <div class="dash__view" id="viewList">
