@@ -10,423 +10,423 @@
    ============================================================ */
 window.TORQUE_DESCRICOES = (function () {
   const legPress = {
-    f: 'Força e hipertrofia dos membros inferiores.',
+    f: 'O campeão de pernas: máxima carga para quadríceps e glúteos com total segurança lombar.',
     m: 'Quadríceps, glúteo máximo e isquiotibiais (auxiliar).',
     b: 'Cadeia cinética fechada: extensão simultânea de quadril e joelho contra a plataforma. A coluna apoiada reduz a carga axial sobre a lombar, permitindo grandes cargas com segurança.',
-    i: 'Todos os níveis, do iniciante ao avançado; boa opção para quem tem restrição lombar.',
+    i: 'Indispensável em qualquer sala de musculação — atrai de iniciantes a avançados e é referência de procura na área de pernas.',
     d: 'Não estenda totalmente os joelhos no topo e não deixe a lombar descolar do encosto na descida.'
   };
   const hackSquat = {
-    f: 'Agachamento guiado para quadríceps e glúteos.',
+    f: 'Agachamento guiado que entrega coxas fortes e definidas sem o risco do agachamento livre.',
     m: 'Quadríceps, glúteo máximo e adutores.',
     b: 'Agachamento em trajetória guiada com apoio dorsal; a inclinação direciona a carga para os quadríceps reduzindo a exigência de equilíbrio do agachamento livre.',
-    i: 'Intermediários e avançados que querem volume de quadríceps com segurança.',
+    i: 'Queridinho de quem busca volume de coxa — vende muito para o público intermediário e avançado.',
     d: 'Pés na largura dos ombros; desça até ~90° controlando, sem deixar os calcanhares subirem.'
   };
   const legExt = {
-    f: 'Isolamento dos extensores do joelho.',
+    f: 'Isolamento total do quadríceps para definição e aquele "gomo" na coxa.',
     m: 'Quadríceps (reto femoral e vastos).',
     b: 'Extensão de joelho em cadeia aberta, com o quadril fixo no banco isolando completamente o quadríceps.',
-    i: 'Todos os níveis; muito usada em hipertrofia e reabilitação de joelho.',
+    i: 'Presença obrigatória na sala: campeã em hipertrofia e também muito usada em reabilitação de joelho.',
     d: 'Alinhe o eixo da máquina com o joelho e segure 1s na contração; evite cargas que gerem dor patelar.'
   };
   const legCurl = {
-    f: 'Isolamento dos flexores do joelho.',
+    f: 'O par perfeito da extensora: posterior de coxa forte, equilibrado e protegido contra lesões.',
     m: 'Isquiotibiais (bíceps femoral, semitendíneo, semimembranáceo); panturrilha auxiliar.',
     b: 'Flexão de joelho em cadeia aberta; o apoio do quadril estabiliza a pelve e isola a musculatura posterior da coxa.',
-    i: 'Todos os níveis; essencial para equilibrar a força entre frente e posterior da coxa.',
+    i: 'Item essencial de toda sala — agrada todos os públicos e completa o treino de pernas.',
     d: 'Controle a volta (fase excêntrica) e evite levantar o quadril do apoio para “roubar” o movimento.'
   };
   const legCurlExt = {
-    f: 'Combo: flexão e extensão de joelho no mesmo equipamento.',
+    f: 'Dois em um: extensora e flexora no mesmo aparelho — coxa completa ocupando metade do espaço.',
     m: 'Quadríceps na extensão; isquiotibiais na flexão.',
     b: 'Permite treinar agonista e antagonista do joelho (frente e posterior da coxa) alternando o movimento em cadeia aberta.',
-    i: 'Academias que querem economia de espaço treinando coxa completa em um só aparelho.',
+    i: 'A escolha inteligente para academias que querem otimizar espaço e investimento treinando a coxa inteira.',
     d: 'Ajuste o apoio a cada função; mantenha o tronco firme e a amplitude completa nos dois movimentos.'
   };
   const chestPress = {
-    f: 'Desenvolvimento de força e volume do peitoral.',
+    f: 'Peito forte e largo com a segurança de uma trajetória guiada — o supino sem complicação.',
     m: 'Peitoral maior, deltoide anterior e tríceps.',
     b: 'Empurrar horizontal (adução horizontal do ombro + extensão do cotovelo); trajetória guiada protege o ombro e dispensa estabilização da carga.',
-    i: 'Todos os níveis; alternativa segura ao supino livre, ótima para iniciantes.',
+    i: 'Alternativa segura e acessível ao supino livre — conquista iniciantes e mantém os avançados.',
     d: 'Ombros para baixo e para trás; não trave totalmente os cotovelos no fim do empurrão.'
   };
   const inclinePress = {
-    f: 'Ênfase na porção superior (clavicular) do peitoral.',
+    f: 'Constrói a parte alta do peito, aquele volume que faz a diferença no espelho.',
     m: 'Peitoral superior, deltoide anterior e tríceps.',
     b: 'Empurrar em plano inclinado; o ângulo recruta mais as fibras claviculares do peitoral e o deltoide anterior.',
-    i: 'Intermediários e avançados que querem desenvolver a parte alta do peito.',
+    i: 'Procurada pelo público que já treina e quer desenvolver o peito superior com qualidade.',
     d: 'Não exagere na inclinação (acima de ~45° vira exercício de ombro); desça controlando até a linha do peito.'
   };
   const pecFly = {
-    f: 'Isolamento do peitoral em adução horizontal.',
+    f: 'O isolador de peito por excelência — contração máxima para um peitoral definido.',
     m: 'Peitoral maior (esterno-costal); deltoide anterior auxiliar.',
     b: 'Adução horizontal dos ombros com cotovelos semi-fixos (crucifixo); isola o peitoral sem participação do tríceps.',
-    i: 'Todos os níveis; ótimo para finalizar o treino de peito com foco em contração.',
+    i: 'Favorita para finalizar o treino de peito — agrada do iniciante ao avançado.',
     d: 'Mantenha um leve flexionamento de cotovelo fixo e junte as mãos à frente apertando o peito 1s.'
   };
   const shoulderPress = {
-    f: 'Força e volume dos ombros.',
+    f: 'Ombros largos e poderosos: o desenvolvimento que dá amplitude à silhueta.',
     m: 'Deltoides (anterior e medial), trapézio e tríceps.',
     b: 'Empurrar vertical acima da cabeça (flexão/abdução do ombro + extensão do cotovelo) em trajetória guiada.',
-    i: 'Todos os níveis; base para construção dos ombros.',
+    i: 'Base de qualquer treino de ombro — indispensável e de altíssima procura na sala.',
     d: 'Não hiperextenda a lombar; suba sem travar os cotovelos e desça até a linha das orelhas.'
   };
   const lateralRaise = {
-    f: 'Isolamento do deltoide lateral (largura do ombro).',
+    f: 'O segredo dos ombros largos: isolamento do deltoide lateral para aquela aparência atlética.',
     m: 'Deltoide medial; supraespinhal auxiliar.',
     b: 'Abdução do ombro até a linha do ombro com o cotovelo fixo, isolando a cabeça lateral do deltoide.',
-    i: 'Todos os níveis; principal exercício para “largura” dos ombros.',
+    i: 'Exercício-chave para a "largura" dos ombros — sucesso garantido com todos os públicos.',
     d: 'Suba até a altura dos ombros (não além) liderando com os cotovelos, sem balançar o tronco.'
   };
   const deltMachine = {
-    f: 'Isolamento dos deltoides laterais/posteriores.',
+    f: 'Ombros torneados e saudáveis: trabalha contorno lateral e posterior em um só movimento.',
     m: 'Deltoide medial e posterior.',
     b: 'Abdução/extensão horizontal do ombro com apoio do tronco; trabalha o contorno e a parte posterior do ombro.',
-    i: 'Todos os níveis; bom para volume e saúde do ombro (postura).',
+    i: 'Excelente para estética e postura — agrada todos os níveis e tem ótima saída.',
     d: 'Movimento lento e controlado; evite usar impulso e mantenha o peito apoiado.'
   };
   const rearDelt = {
-    f: 'Ênfase no deltoide posterior e costas altas.',
+    f: 'Postura impecável e ombros 3D: foco no deltoide posterior e nas costas altas.',
     m: 'Deltoide posterior, romboides e trapézio médio.',
     b: 'Abdução horizontal (movimento de “abrir”) curvado, recrutando a parte de trás do ombro e a musculatura escapular.',
-    i: 'Todos os níveis; corrige desequilíbrio postural de quem treina muito peito.',
+    i: 'Corrige a postura de quem treina muito peito — argumento de venda forte para todos os níveis.',
     d: 'Cotovelos levemente flexionados e fixos; abra apertando as escápulas, sem usar o trapézio superior.'
   };
   const latPull = {
-    f: 'Desenvolvimento da largura das costas.',
+    f: 'Costas em "V": a puxada que dá largura e aquele dorso de atleta.',
     m: 'Latíssimo do dorso, redondo maior, bíceps e romboides.',
     b: 'Adução e extensão do ombro puxando a barra para baixo; o apoio das coxas estabiliza o tronco e foca no dorsal.',
-    i: 'Todos os níveis; progressão natural para quem ainda não faz barra fixa.',
+    i: 'Campeã de procura na área de costas — perfeita para quem ainda não faz barra fixa.',
     d: 'Puxe a barra até a parte alta do peito levando os cotovelos para baixo; não jogue o tronco para trás.'
   };
   const row = {
-    f: 'Desenvolvimento da espessura das costas.',
+    f: 'Costas densas e fortes: a remada que constrói espessura e melhora a postura.',
     m: 'Latíssimo, romboides, trapézio médio, deltoide posterior e bíceps.',
     b: 'Puxada horizontal (remada): retração escapular + extensão do ombro com o peito apoiado, isolando o dorso e poupando a lombar.',
-    i: 'Todos os níveis; fundamental para postura e espessura das costas.',
+    i: 'Indispensável para costas completas — alta saída e aprovação de todos os públicos.',
     d: 'Inicie puxando pelas escápulas (junte-as) e só depois pelos braços; não curve a lombar.'
   };
   const bicepsCurl = {
-    f: 'Isolamento dos flexores do cotovelo.',
+    f: 'Braços impressionantes: isolamento total do bíceps, sem trapaça.',
     m: 'Bíceps braquial, braquial e braquiorradial.',
     b: 'Flexão de cotovelo com o úmero apoiado, eliminando o balanço e isolando o bíceps.',
-    i: 'Todos os níveis; foco estético no braço.',
+    i: 'Um clássico que nunca sai de moda — atrai todo mundo que quer braços maiores.',
     d: 'Não balance o corpo; desça até estender quase totalmente e suba apertando o bíceps.'
   };
   const tricepsExt = {
-    f: 'Isolamento dos extensores do cotovelo.',
+    f: 'Braços maiores de verdade: o tríceps é 2/3 do braço, e este aparelho é o caminho.',
     m: 'Tríceps braquial (três cabeças).',
     b: 'Extensão de cotovelo contra resistência; a fixação do braço isola o tríceps.',
-    i: 'Todos os níveis; responsável pela maior parte do volume do braço.',
+    i: 'Essencial para braços volumosos — sucesso de procura com todos os públicos.',
     d: 'Mantenha os cotovelos junto ao corpo e estenda totalmente, controlando a volta.'
   };
   const calf = {
-    f: 'Desenvolvimento da panturrilha.',
+    f: 'Panturrilhas potentes que completam o shape das pernas.',
     m: 'Gastrocnêmio e sóleo.',
     b: 'Flexão plantar do tornozelo (elevar os calcanhares) contra carga, em pé ou sentado.',
-    i: 'Todos os níveis; panturrilha responde bem a volume e amplitude.',
+    i: 'Aparelho que não pode faltar para quem leva o treino de pernas a sério.',
     d: 'Use amplitude total: desça bem os calcanhares (alongamento) e suba ao máximo, com pausa no topo.'
   };
   const abdution = {
-    f: 'Isolamento dos abdutores do quadril (parte externa).',
+    f: 'Glúteos firmes e quadril estável: o trabalho da parte externa que todos procuram.',
     m: 'Glúteo médio e mínimo, tensor da fáscia lata.',
     b: 'Abdução do quadril (afastar as coxas) sentado, isolando a região lateral do glúteo.',
-    i: 'Todos os níveis; importante para estabilidade do quadril e do joelho.',
+    i: 'Altíssima procura, sobretudo do público feminino — campeão de fila na sala.',
     d: 'Incline levemente o tronco à frente para ativar mais o glúteo; controle a volta sem bater os pesos.'
   };
   const adduction = {
-    f: 'Isolamento dos adutores (parte interna da coxa).',
+    f: 'Parte interna da coxa tonificada e quadril protegido contra lesões.',
     m: 'Adutores (magno, longo, curto), grácil e pectíneo.',
     b: 'Adução do quadril (juntar as coxas) sentado contra resistência.',
-    i: 'Todos os níveis; útil para estabilidade do quadril e prevenção de lesões na virilha.',
+    i: 'Muito procurado para tonificar a coxa interna — sucesso com todos os públicos.',
     d: 'Abra só até onde sentir alongamento confortável e junte controlando, sem solavancos.'
   };
   const innerOuter = {
-    f: 'Trabalha parte interna e externa da coxa no mesmo aparelho.',
+    f: 'Coxa interna e externa no mesmo aparelho: dois exercícios campeões, um só investimento.',
     m: 'Adutores (juntar) e glúteo médio/mínimo (afastar).',
     b: 'Adução e abdução do quadril sentado; um mesmo equipamento treina os dois grupos antagonistas.',
-    i: 'Academias que querem economia de espaço treinando o quadril completo.',
+    i: 'Escolha inteligente para academias: une dois dos aparelhos mais procurados economizando espaço.',
     d: 'Troque o ajuste entre as duas funções; movimento controlado em ambas, sem impulso.'
   };
   const glute = {
-    f: 'Isolamento e fortalecimento dos glúteos.',
+    f: 'O foco em glúteos que o público pede: estética e força em um movimento isolado.',
     m: 'Glúteo máximo; isquiotibiais auxiliares.',
     b: 'Extensão de quadril contra resistência (coice/empurrar para trás), com o tronco apoiado.',
-    i: 'Todos os níveis; muito procurado para estética e força do quadril.',
+    i: 'Um dos campeões de procura da sala — imbatível para o público focado em glúteos.',
     d: 'Aperte o glúteo no fim da extensão e evite arquear a lombar para compensar.'
   };
   const hipThrust = {
-    f: 'Potência e hipertrofia de glúteos.',
+    f: 'O rei dos glúteos: o exercício mais eficiente para resultados que aparecem.',
     m: 'Glúteo máximo; isquiotibiais e quadríceps auxiliares.',
     b: 'Extensão de quadril com apoio das costas, levando a carga do quadril para cima — pico de tensão na contração do glúteo.',
-    i: 'Todos os níveis; um dos exercícios mais eficientes para glúteos.',
+    i: 'Febre nas redes e na sala — um dos aparelhos mais desejados pelo público atual.',
     d: 'Suba até o tronco ficar paralelo ao chão, queixo neutro, apertando o glúteo 1s no topo.'
   };
   const abs = {
-    f: 'Fortalecimento da parede abdominal.',
+    f: 'Abdômen definido e core forte: a base de um corpo bonito e funcional.',
     m: 'Reto abdominal; oblíquos auxiliares.',
     b: 'Flexão do tronco (aproximar costelas da pelve) contra resistência guiada.',
-    i: 'Todos os níveis; núcleo (core) forte melhora postura e desempenho.',
+    i: 'Core forte melhora postura e desempenho — aparelho de apelo universal.',
     d: 'Enrole a coluna (não puxe pelo pescoço) e expire na contração; evite tracionar a cabeça.'
   };
   const obliques = {
-    f: 'Trabalho da cintura/oblíquos e rotação do tronco.',
+    f: 'Cintura definida e tronco forte: trabalho de oblíquos e rotação.',
     m: 'Oblíquos interno e externo; reto abdominal.',
     b: 'Rotação da coluna torácica contra resistência, com a pelve estabilizada.',
-    i: 'Todos os níveis; melhora rotação e estabilidade do core.',
+    i: 'Complementa o abdômen e desenha a cintura — agrada todos os públicos.',
     d: 'Gire a partir do tronco, mantendo o quadril fixo; cargas moderadas e movimento controlado.'
   };
   const backExt = {
-    f: 'Fortalecimento da lombar e cadeia posterior.',
+    f: 'Lombar blindada: fortalece a cadeia posterior e previne dores nas costas.',
     m: 'Eretores da espinha, glúteos e isquiotibiais.',
     b: 'Extensão do tronco (hiperextensão) a partir da flexão de quadril, fortalecendo a musculatura paravertebral.',
-    i: 'Todos os níveis; preventivo e reabilitador para lombar (com carga adequada).',
+    i: 'Argumento de venda imbatível: prevenção de dor lombar atrai todos os públicos.',
     d: 'Suba até alinhar o tronco (sem hiperestender demais) e desça controlando; evite usar impulso.'
   };
   const pullupAssist = {
-    f: 'Barra fixa/paralela assistida (progressão de força).',
+    f: 'Faça barra fixa hoje: o contrapeso que transforma iniciantes em quem domina o peso do corpo.',
     m: 'Latíssimo, bíceps, peitoral e tríceps (conforme a pegada).',
     b: 'Puxada/empurrada vertical com contrapeso que reduz a carga, permitindo executar barra e paralela com técnica até ganhar força.',
-    i: 'Iniciantes e intermediários que ainda não fazem barra/paralela com o peso do corpo.',
+    i: 'Conquista o iniciante que sonha com a primeira barra — porta de entrada de grande apelo.',
     d: 'Use o contrapeso mínimo necessário; desça controlando e suba com amplitude total.'
   };
   const dip = {
-    f: 'Mergulho para peitoral inferior e tríceps.',
+    f: 'Peito e tríceps com o peso do corpo: o clássico que entrega tronco forte.',
     m: 'Tríceps, peitoral inferior e deltoide anterior.',
     b: 'Flexão e extensão dos cotovelos sustentando o corpo nas paralelas; a inclinação do tronco direciona para peito ou tríceps.',
-    i: 'Intermediários e avançados; tronco ereto foca tríceps, inclinado foca peito.',
+    i: 'Preferido do público que já treina e quer evoluir com o peso corporal.',
     d: 'Não desça além do confortável para o ombro; mantenha as escápulas estáveis.'
   };
   const preacher = {
-    f: 'Rosca de bíceps com apoio (banco Scott).',
+    f: 'O banco Scott: pico de bíceps sem trapaça, para braços que impressionam.',
     m: 'Bíceps braquial e braquial.',
     b: 'Flexão de cotovelo com o braço totalmente apoiado no banco inclinado, eliminando trapaça e maximizando o pico do bíceps.',
-    i: 'Todos os níveis; ótimo para corrigir o uso de impulso na rosca.',
+    i: 'Clássico desejado por quem quer braços de destaque — agrada todos os níveis.',
     d: 'Não estenda o cotovelo de forma brusca no fim; controle a descida para proteger a articulação.'
   };
   const functional = {
-    f: 'Estação de cabos para treino funcional e multiarticular.',
+    f: 'A estação mais versátil da sala: centenas de exercícios funcionais em um só lugar.',
     m: 'Corpo inteiro, conforme o exercício escolhido.',
     b: 'Polias ajustáveis em altura permitem puxar/empurrar em qualquer ângulo e plano, treinando força, estabilidade e padrões funcionais.',
-    i: 'Todos os níveis e modalidades; do iniciante ao atleta e à reabilitação.',
+    i: 'Atende todos os públicos e modalidades — do iniciante ao atleta — e nunca fica parada na sala.',
     d: 'Ajuste a altura da polia ao exercício e mantenha o core firme para estabilizar o movimento.'
   };
   const multiStation = {
-    f: 'Estação combinada para treinar vários grupos musculares.',
+    f: 'Academia completa em um só equipamento: corpo inteiro com economia máxima de espaço.',
     m: 'Corpo inteiro (peito, costas, ombros, braços, pernas).',
     b: 'Reúne várias polias/estações num só equipamento, permitindo circuito completo — ideal para academias e espaços compartilhados.',
-    i: 'Academias, condomínios e estúdios que precisam atender vários usuários ao mesmo tempo.',
+    i: 'Solução ideal para academias, condomínios e estúdios: atende vários alunos ao mesmo tempo, maximizando o retorno.',
     d: 'Organize uma sequência de estações para circuito; ajuste cargas e apoios em cada posto.'
   };
   const smith = {
-    f: 'Barra guiada (Smith) para agachamento, supino e remada.',
+    f: 'Versatilidade e segurança: agachamento, supino e remada com a barra sempre sob controle.',
     m: 'Varia com o exercício; compostos de pernas, peito e costas.',
     b: 'A barra corre em trilhos verticais, restringindo a trajetória; aumenta a segurança e reduz a exigência de estabilização.',
-    i: 'Iniciantes (segurança) e avançados (intensidade sem auxiliar).',
+    i: 'Equipamento curinga que agrada do iniciante (segurança) ao avançado (intensidade sem auxiliar).',
     d: 'Use as travas de segurança; posicione os pés conforme o exercício para respeitar a trajetória fixa.'
   };
   const crossover = {
-    f: 'Cruzamento de cabos (crossover) para peito e ombros.',
+    f: 'O crossover dos sonhos: tensão contínua e infinitos ângulos para um peito definido.',
     m: 'Peitoral, deltoides e estabilizadores.',
     b: 'Adução horizontal contra cabos altos/baixos; a tensão constante e o ajuste de ângulo permitem isolar diferentes porções do peito.',
-    i: 'Intermediários e avançados que querem definição e tensão contínua no peito.',
+    i: 'Peça de destaque na sala — atrai o público que busca definição e variedade de treino.',
     d: 'Dê um passo à frente para gerar tensão; cruze as mãos à frente apertando o peito.'
   };
   const benchFree = {
-    f: 'Banco de apoio para exercícios com pesos livres.',
+    f: 'A base de todo treino livre: banco robusto para supino, desenvolvimento e roscas.',
     m: '—',
     b: 'Estrutura de apoio (plano/inclinado/declinado) para supino, desenvolvimento e roscas com halteres e barra.',
-    i: 'Todos os níveis; item básico de qualquer sala de musculação.',
+    i: 'Item básico e indispensável: nenhuma sala de musculação funciona sem ele.',
     d: 'Confira a estabilidade antes de carregar; ajuste o encosto ao exercício desejado.'
   };
   const benchAdj = {
-    f: 'Banco ajustável para pesos livres em vários ângulos.',
+    f: 'Um banco, infinitos treinos: regule o ângulo e mude a ênfase a cada exercício.',
     m: '—',
     b: 'Encosto regulável (declinado a inclinado) que dá suporte a supinos, desenvolvimentos e roscas em diferentes planos.',
-    i: 'Todos os níveis; versátil para treino com halteres.',
+    i: 'O coringa da área de pesos livres — versatilidade que justifica a compra na hora.',
     d: 'Trave bem a regulagem antes de usar; varie o ângulo para mudar a ênfase muscular.'
   };
   const olympicBench = {
-    f: 'Banco olímpico com suporte de barra para supino.',
+    f: 'Supino de verdade: banco olímpico robusto para treinar peito pesado com barra.',
     m: '—',
     b: 'Banco com cavaletes para barra olímpica; permite supino reto/inclinado/declinado com pesos livres.',
-    i: 'Intermediários e avançados que treinam supino com barra.',
+    i: 'Indispensável para o público que treina força e leva o supino com barra a sério.',
     d: 'Treine com auxiliar ou pinos de segurança; ajuste a altura dos ganchos à sua envergadura.'
   };
   const rack = {
-    f: 'Estrutura de suporte/segurança para treino com barra.',
+    f: 'O coração da área livre: treine pesado e sozinho com total segurança.',
     m: '—',
     b: 'Suporta a barra olímpica em agachamentos, supinos e levantamentos, com pinos de segurança para treinar sem auxiliar.',
-    i: 'Intermediários e avançados que treinam pesado com barra livre.',
+    i: 'Peça central de qualquer sala de força — alta procura do público intermediário e avançado.',
     d: 'Posicione os pinos de segurança na altura certa antes de cada série.'
   };
   const storage = {
-    f: 'Suporte de armazenamento (organização da sala).',
+    f: 'Sala organizada, imagem profissional: acessórios sempre arrumados e à mão.',
     m: '—',
     b: 'Acessório de organização — não é equipamento de exercício; mantém anilhas, barras, halteres ou kettlebells arrumados e acessíveis.',
-    i: 'Qualquer academia ou espaço de treino que precise organizar os acessórios.',
+    i: 'Investimento que valoriza o espaço: organização que transmite seriedade e segurança aos alunos.',
     d: 'Posicione próximo à área de uso e distribua o peso de forma equilibrada nas prateleiras.'
   };
   const squatMachine = {
-    f: 'Agachamento guiado para pernas e glúteos.',
+    f: 'Agachamento sem medo: pernas e glúteos completos com a coluna protegida.',
     m: 'Quadríceps, glúteo máximo, adutores e isquiotibiais.',
     b: 'Agachamento em trajetória guiada com apoio de ombros/quadril, distribuindo a carga e poupando a coluna.',
-    i: 'Todos os níveis; alternativa segura ao agachamento livre.',
+    i: 'Alternativa segura ao agachamento livre — conquista quem tem receio do movimento tradicional.',
     d: 'Pés alinhados aos ombros; desça controlando e empurre pelos calcanhares.'
   };
   const pendulumSquat = {
-    f: 'Agachamento pendular para quadríceps e glúteos.',
+    f: 'Estímulo intenso de coxa com a trajetória mais confortável e natural do mercado.',
     m: 'Quadríceps, glúteo máximo e adutores.',
     b: 'A plataforma descreve um arco pendular, mantendo tensão constante e respeitando a trajetória natural do agachamento.',
-    i: 'Intermediários e avançados que querem estímulo intenso de coxa com segurança.',
+    i: 'Equipamento premium que vira atração da sala para o público intermediário e avançado.',
     d: 'Mantenha o tronco apoiado e desça profundo respeitando o arco da máquina.'
   };
   const beltSquat = {
-    f: 'Agachamento com cinturão, sem carga na coluna.',
+    f: 'Pernas pesadas, zero carga na coluna: a solução para treinar forte sem dor lombar.',
     m: 'Quadríceps, glúteos e isquiotibiais.',
     b: 'A carga é presa ao quadril por um cinturão, tirando a compressão da coluna — ideal para quem tem restrição lombar.',
-    i: 'Quem tem dor/limitação lombar e quer treinar pernas pesado.',
+    i: 'Diferencial de venda: atende quem tem limitação lombar e quer continuar treinando perna pesado.',
     d: 'Ajuste o cinturão no quadril (não na cintura) e mantenha o core firme durante o agachamento.'
   };
   const tibialis = {
-    f: 'Fortalecimento da tíbia (dorsiflexores).',
+    f: 'A peça que faltava: fortalece a canela e previne lesões em corredores.',
     m: 'Tibial anterior.',
     b: 'Dorsiflexão do tornozelo (puxar a ponta do pé para cima) contra carga; previne canelite e equilibra a panturrilha.',
-    i: 'Corredores e atletas; prevenção de canelite e lesões de tornozelo.',
+    i: 'Diferencial para atrair corredores e atletas — prevenção de canelite é um forte argumento.',
     d: 'Movimento curto e controlado; foque na amplitude total da dorsiflexão.'
   };
   const shrug = {
-    f: 'Encolhimento para trapézio superior.',
+    f: 'Trapézio imponente: a moldura dos ombros que dá presença ao físico.',
     m: 'Trapézio superior; levantador da escápula.',
     b: 'Elevação das escápulas (“encolher os ombros”) contra carga, isolando o trapézio.',
-    i: 'Intermediários e avançados que querem volume de trapézio.',
+    i: 'Procurada pelo público avançado que busca um trapézio volumoso e marcante.',
     d: 'Suba os ombros em direção às orelhas (sem rolar) e segure 1s no topo.'
   };
   const bicepsTriceps = {
-    f: 'Estação combinada de bíceps e tríceps.',
+    f: 'Braço completo em uma estação: rosca e tríceps no mesmo equipamento.',
     m: 'Bíceps e braquial (rosca); tríceps (extensão).',
     b: 'Treina flexão (rosca) e extensão (tríceps) de cotovelo na mesma estação — braço completo.',
-    i: 'Todos os níveis; eficiente para treinar o braço completo com economia de espaço.',
+    i: 'Eficiência que vende: dois exercícios de braço economizando espaço e investimento.',
     d: 'Alterne as duas funções; mantenha os cotovelos fixos em ambos os movimentos.'
   };
   const tricepsPush = {
-    f: 'Tríceps na polia (pushdown).',
+    f: 'O pushdown clássico: tensão contínua para um tríceps definido e cheio.',
     m: 'Tríceps braquial (três cabeças).',
     b: 'Extensão de cotovelo empurrando o cabo para baixo, com os cotovelos junto ao corpo isolando o tríceps.',
-    i: 'Todos os níveis; ótimo para volume e definição do braço.',
+    i: 'Favorito para volume e definição de braço — alta procura com todos os públicos.',
     d: 'Cole os cotovelos no tronco e estenda totalmente, controlando a subida do cabo.'
   };
   const declineBench = {
-    f: 'Banco declinado para supino (peito inferior).',
+    f: 'A parte baixa do peito em destaque: banco declinado para um peitoral completo.',
     m: 'Peitoral inferior, deltoide anterior e tríceps.',
     b: 'Apoio em declive para supino com pesos livres, enfatizando as fibras inferiores do peitoral.',
-    i: 'Intermediários e avançados que querem trabalhar a parte baixa do peito.',
+    i: 'Complemento desejado pelo público que quer um peito desenhado por inteiro.',
     d: 'Prenda bem as pernas; controle a barra/halteres na descida até a linha inferior do peito.'
   };
   const reformer = {
-    f: 'Reformer de Pilates.',
+    f: 'O coração do estúdio de Pilates: força, controle e alongamento com elegância e baixo impacto.',
     m: 'Core, estabilizadores e corpo inteiro.',
     b: 'Carro deslizante sobre molas reguláveis: empurrar/puxar contra a resistência trabalha força, controle e alongamento com baixíssimo impacto.',
-    i: 'Todos os públicos — do iniciante ao avançado, reabilitação, gestantes e idosos.',
+    i: 'Atende o público mais amplo possível — do iniciante ao avançado, reabilitação, gestantes e idosos — fidelizando alunos.',
     d: 'Ajuste as molas ao exercício e ao nível; priorize controle e respiração, não velocidade.'
   };
   const cadillac = {
-    f: 'Cadillac / Trapézio de Pilates.',
+    f: 'A peça mais completa do Pilates: centenas de exercícios e descompressão da coluna em um só aparelho.',
     m: 'Corpo inteiro, core e flexibilidade.',
     b: 'Cama com barras, molas e alças para centenas de exercícios de força, mobilidade e descompressão da coluna.',
-    i: 'Estúdios de Pilates; atende do condicionamento à reabilitação.',
+    i: 'Investimento de prestígio para estúdios — atende do condicionamento à reabilitação e valoriza o espaço.',
     d: 'Versátil para todos os níveis; selecione molas e acessórios conforme o objetivo da aula.'
   };
   const pilatesChair = {
-    f: 'Cadeira de Pilates (Wunda Chair).',
+    f: 'Compacta e desafiadora: força e equilíbrio de corpo inteiro ocupando pouco espaço.',
     m: 'Core, glúteos, pernas e estabilizadores.',
     b: 'Pedal com molas para exercícios de empurrar e equilíbrio que desafiam força e controle em base reduzida.',
-    i: 'Intermediários e avançados; desafia equilíbrio e força em pequena base de apoio.',
+    i: 'Queridinha dos estúdios que querem desafiar o aluno intermediário e avançado sem ocupar área.',
     d: 'Ative o core antes de empurrar o pedal e controle a subida (excêntrica) das molas.'
   };
   const ladderBarrel = {
-    f: 'Ladder Barrel (barril com escada).',
+    f: 'Mobilidade e alongamento de coluna como nenhum outro: postura e flexibilidade que o aluno sente.',
     m: 'Core, coluna e flexibilidade.',
     b: 'Barril e escada para alongamento, extensão da coluna e fortalecimento do core.',
-    i: 'Todos os níveis; excelente para mobilidade de coluna e alongamento.',
+    i: 'Complemento valorizado em estúdios — entrega resultados de mobilidade que fidelizam alunos.',
     d: 'Ajuste a distância escada–barril ao tamanho do praticante; movimentos lentos e amplos.'
   };
   const spineCorrector = {
-    f: 'Corretor de coluna (Spine Corrector).',
+    f: 'Alívio e alinhamento: mobiliza a coluna e fortalece o core com conforto.',
     m: 'Core e musculatura paravertebral.',
     b: 'Apoio curvo para mobilizar e alinhar a coluna, alongando e fortalecendo o core.',
-    i: 'Reabilitação postural e trabalho de mobilidade da coluna.',
+    i: 'Diferencial para estúdios com foco em reabilitação postural e bem-estar da coluna.',
     d: 'Acomode bem a curvatura da coluna no apoio e respeite os limites de amplitude.'
   };
   const treadmill = {
-    f: 'Esteira ergométrica (caminhada/corrida).',
+    f: 'A esteira que não pode faltar: o cardio nº 1 procurado por todos os alunos.',
     m: 'Cardiovascular; quadríceps, glúteos, isquiotibiais e panturrilhas.',
     b: 'Corrida/caminhada sobre esteira motorizada — condicionamento aeróbico e gasto calórico no padrão de marcha.',
-    i: 'Todos os níveis; do iniciante na caminhada ao corredor avançado.',
+    i: 'Campeã absoluta de procura na área de cardio — do iniciante na caminhada ao corredor avançado.',
     d: 'Comece com aquecimento, evite segurar no apoio ao correr e use a inclinação para variar a intensidade.'
   };
   const curvedTread = {
-    f: 'Esteira curva sem motor.',
+    f: 'Esteira sem motor que queima mais: o cardio premium para treinos intensos.',
     m: 'Cardio; cadeia posterior e panturrilhas.',
     b: 'Sem motor: a lona se move pela ação do corredor, elevando o gasto energético e recrutando mais a cadeia posterior.',
-    i: 'Intermediários e avançados; treinos intervalados de alta intensidade.',
+    i: 'Diferencial de alto valor para boxes e estúdios — atrai o público de alta intensidade.',
     d: 'A velocidade é você quem controla com a passada; ideal para tiros curtos e potentes.'
   };
   const elliptical = {
-    f: 'Elíptico (cardio de baixo impacto).',
+    f: 'Cardio sem impacto para todos: queima calorias preservando as articulações.',
     m: 'Cardio; pernas, glúteos e braços.',
     b: 'Passada elíptica fluida sem impacto articular, movimentando membros superiores e inferiores ao mesmo tempo.',
-    i: 'Todos os níveis; ótimo para quem tem dores articulares ou está em reabilitação.',
+    i: 'Sucesso com todos os públicos — especialmente quem tem dores articulares ou está em reabilitação.',
     d: 'Mantenha a postura ereta e use os braços ativamente para um gasto calórico maior.'
   };
   const bike = {
-    f: 'Bicicleta ergométrica (cardio).',
+    f: 'O cardio mais acessível: pedalar com baixo impacto que agrada de iniciantes a idosos.',
     m: 'Cardio; quadríceps, glúteos e panturrilhas.',
     b: 'Pedalada com carga ajustável — condicionamento aeróbico de baixo impacto para os membros inferiores.',
-    i: 'Todos os níveis; baixo impacto, boa para iniciantes e reabilitação.',
+    i: 'Aposta certeira de baixo impacto — perfeita para iniciantes e reabilitação.',
     d: 'Regule a altura do banco (joelho levemente flexionado no ponto baixo) para proteger o joelho.'
   };
   const recumbent = {
-    f: 'Bicicleta horizontal (recumbent).',
+    f: 'Conforto e segurança no cardio: encosto reclinado que protege a coluna ao pedalar.',
     m: 'Cardio; quadríceps, glúteos e isquiotibiais.',
     b: 'Pedalada com encosto reclinado e apoio lombar — ideal para reabilitação e baixo impacto na coluna.',
-    i: 'Idosos, reabilitação e quem tem desconforto lombar na bike vertical.',
+    i: 'Conquista o público idoso e de reabilitação — conforto que vira argumento de venda.',
     d: 'Ajuste a distância do banco para pedalar sem estender totalmente o joelho.'
   };
   const airBike = {
-    f: 'Air bike (bike de ar).',
+    f: 'A bike do HIIT: quanto mais forte você pedala, mais ela responde — queima total.',
     m: 'Cardio de corpo inteiro.',
     b: 'Resistência por ventoinha que cresce com o esforço; braços e pernas trabalham juntos — excelente para HIIT.',
-    i: 'Intermediários e avançados; treinos intervalados e cross training.',
+    i: 'Estrela do cross training e dos treinos intervalados — desejo do público intenso.',
     d: 'Quanto mais forte você pedala/puxa, maior a resistência — ideal para tiros curtos e intensos.'
   };
   const spinning = {
-    f: 'Bike de spinning.',
+    f: 'O motor das aulas que lotam: spinning é energia, comunidade e resultado.',
     m: 'Cardio; pernas e glúteos.',
     b: 'Roda inercial com carga ajustável para treinos intervalados, em pé ou sentado.',
-    i: 'Todos os níveis; aulas coletivas e treinos de resistência.',
+    i: 'Base das aulas coletivas mais populares — enche a sala e fideliza turmas.',
     d: 'Ajuste banco e guidão antes de começar; nunca pedale com a carga zerada em pé.'
   };
   const stair = {
-    f: 'Simulador de subir escadas (stair climber).',
+    f: 'O cardio que mais queima e tonifica glúteos: subir escadas sem parar.',
     m: 'Cardio; glúteos, quadríceps e panturrilhas.',
     b: 'Subida contínua de degraus — alto gasto calórico e forte recrutamento de glúteos e pernas.',
-    i: 'Intermediários e avançados que querem cardio intenso e foco em glúteos/pernas.',
+    i: 'Febre entre quem quer cardio intenso e glúteos definidos — grande apelo atual.',
     d: 'Mantenha-se ereto, pise com o pé todo nos degraus e evite apoiar o peso nos corrimãos.'
   };
   const rowingCardio = {
-    f: 'Remo ergômetro (cardio de corpo inteiro).',
+    f: 'O cardio mais completo: 85% da musculatura em ação, com baixíssimo impacto.',
     m: 'Costas, pernas, core e braços.',
     b: 'Ciclo de remada — empurrar com as pernas, puxar com tronco e braços — contra resistência de ar/água; cardio completo e de baixo impacto.',
-    i: 'Todos os níveis; trabalha ~85% da musculatura com baixo impacto.',
+    i: 'Trabalha o corpo quase inteiro de uma vez — argumento de eficiência que conquista todos os públicos.',
     d: 'A força vem das pernas primeiro, depois tronco e braços; volte na ordem inversa, sem curvar a lombar.'
   };
   const pedal = {
-    f: 'Componente/pedal de cardio.',
+    f: 'Cardio leve e prático: pedalar de baixo impacto para condicionamento e recuperação.',
     m: 'Cardio; membros inferiores.',
     b: 'Movimento de pedalada de baixo impacto para condicionamento e reabilitação.',
-    i: 'Reabilitação e condicionamento leve de baixo impacto.',
+    i: 'Solução compacta para reabilitação e condicionamento leve — agrada o público que busca baixo impacto.',
     d: 'Mantenha cadência constante e ajuste a resistência ao objetivo.'
   };
 
