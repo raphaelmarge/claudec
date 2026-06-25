@@ -96,9 +96,33 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4a6 6 0 104.47 10.03l4.25 4.25 1.41-1.41-4.25-4.25A6 6 0 0010 4zm0 2a4 4 0 110 8 4 4 0 010-8z"/></svg>
           <input type="search" id="search" placeholder="Buscar equipamento…" />
         </div>
+        <label class="selfield">
+          <span class="selfield__lab">Faixa</span>
+          <select id="priceBand" aria-label="Filtrar por faixa de preço">
+            <option value="all">Todos os preços</option>
+            <option value="0-5000">Até R$ 5.000</option>
+            <option value="5000-10000">R$ 5.000 – 10.000</option>
+            <option value="10000-20000">R$ 10.000 – 20.000</option>
+            <option value="20000-40000">R$ 20.000 – 40.000</option>
+            <option value="40000-">Acima de R$ 40.000</option>
+          </select>
+        </label>
+        <label class="selfield">
+          <span class="selfield__lab">Ordenar</span>
+          <select id="sortBy" aria-label="Ordenar produtos">
+            <option value="rel">Relevância</option>
+            <option value="price-asc">Preço: menor → maior</option>
+            <option value="price-desc">Preço: maior → menor</option>
+            <option value="name-asc">Nome: A → Z</option>
+          </select>
+        </label>
       </div>
     </div>
     <div class="chips" id="chips"></div>
+    <div class="catalog__meta">
+      <span class="catalog__count" id="resultCount"></span>
+      <button class="catalog__clear" id="clearFilters" type="button" hidden>✕ Limpar filtros</button>
+    </div>
     <div class="prod-grid" id="prodGrid"></div>
     <p class="empty" id="empty" hidden>Nenhum produto encontrado.</p>
     <div class="loadmore"><button id="loadMore" type="button" class="btn btn--ghost" hidden>Ver mais</button></div>
