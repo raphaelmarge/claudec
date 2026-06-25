@@ -28,6 +28,8 @@
   let cart = load();
   let filterSerie = 'all';
   let query = '';
+  let priceBand = 'all';
+  let sortBy = 'rel';
   let shown = PAGE;
 
   function load() { try { return JSON.parse(localStorage.getItem(CART_KEY)) || {}; } catch (e) { return {}; } }
@@ -56,20 +58,40 @@
   }
 
   /* ---------- catálogo ---------- */
+  function inBand(preco) {
+    if (priceBand === 'all') return true;
+    const [lo, hi] = priceBand.split('-');
+    const min = Number(lo) || 0;
+    const max = hi === '' || hi === undefined ? Infinity : Number(hi);
+    return preco >= min && preco < max;
+  }
   function filtered() {
     const q = query.trim().toLowerCase();
-    return PRODUCTS.filter(p => {
+    const list = PRODUCTS.filter(p => {
       if (filterSerie !== 'all' && (p.serie || 'Geral') !== filterSerie) return false;
+      if (!inBand(p.preco)) return false;
       if (q && !((p.nome + ' ' + p.codigo + ' ' + p.serie).toLowerCase().includes(q))) return false;
       return true;
     });
+    if (sortBy === 'price-asc') list.sort((a, b) => a.preco - b.preco);
+    else if (sortBy === 'price-desc') list.sort((a, b) => b.preco - a.preco);
+    else if (sortBy === 'name-asc') list.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+    return list;
+  }
+  function filtersActive() { return filterSerie !== 'all' || query.trim() !== '' || priceBand !== 'all' || sortBy !== 'rel'; }
+  function renderMeta(count) {
+    const total = PRODUCTS.length;
+    const rc = $('#resultCount');
+    if (rc) rc.innerHTML = count === total ? `<b>${total}</b> produtos` : `<b>${count}</b> de ${total} produtos`;
+    const cf = $('#clearFilters');
+    if (cf) cf.hidden = !filtersActive();
   }
   const qtyOf = code => Number(cart[code]) || 0;
 
   function pcardHTML(p) {
     const q = qtyOf(p.codigo);
     const media = p.imagem
-      ? `<img src="${esc(p.imagem)}" alt="${esc(p.nome)}" loading="lazy" onerror="this.replaceWith(document.createRange().createContextualFragment(window.__plate))"/>`
+      ? `<img src="${esc(p.imagem)}" alt="${esc(p.nome)}" loading="lazy" decoding="async" onerror="this.replaceWith(document.createRange().createContextualFragment(window.__plate))"/>`
       : plate;
     const ctrl = q > 0
       ? `<div class="pcard__stepper" data-code="${esc(p.codigo)}"><button data-act="dec">−</button><input data-act="qty" inputmode="numeric" value="${q}"/><button data-act="inc">+</button></div>`
@@ -91,6 +113,7 @@
     $('#prodGrid').innerHTML = slice.map(pcardHTML).join('');
     $('#empty').hidden = list.length !== 0;
     $('#loadMore').hidden = list.length <= shown;
+    renderMeta(list.length);
   }
 
   /* ---------- carrinho / drawer ---------- */
@@ -107,7 +130,7 @@
   function renderDrawer() {
     const lines = cartLines();
     $('#drawerItems').innerHTML = lines.length ? lines.map(l => {
-      const media = l.p.imagem ? `<img src="${esc(l.p.imagem)}" alt="" onerror="this.style.visibility='hidden'"/>` : `<span></span>`;
+      const media = l.p.imagem ? `<img src="${esc(l.p.imagem)}" alt="" loading="lazy" decoding="async" onerror="this.style.visibility='hidden'"/>` : `<span></span>`;
       return `<div class="ditem" data-code="${esc(l.p.codigo)}">
         ${media}
         <div><div class="ditem__nm">${esc(l.p.nome)}</div><div class="ditem__pr">${money(l.p.preco)} un</div></div>
@@ -145,6 +168,13 @@
     if (pc && !e.target.closest('button') && !e.target.closest('input')) openProd(pc.dataset.code);
   });
   $('#search').addEventListener('input', e => { query = e.target.value; shown = PAGE; renderGrid(); });
+  $('#priceBand').addEventListener('change', e => { priceBand = e.target.value; shown = PAGE; renderGrid(); });
+  $('#sortBy').addEventListener('change', e => { sortBy = e.target.value; shown = PAGE; renderGrid(); });
+  $('#clearFilters').addEventListener('click', () => {
+    filterSerie = 'all'; query = ''; priceBand = 'all'; sortBy = 'rel'; shown = PAGE;
+    $('#search').value = ''; $('#priceBand').value = 'all'; $('#sortBy').value = 'rel';
+    renderSeries(); renderChips(); renderGrid();
+  });
   $('#loadMore').addEventListener('click', () => { shown += PAGE; renderGrid(); });
   $('#navCart').addEventListener('click', openDrawer);
 
@@ -295,7 +325,7 @@
     const p = byCode(code); if (!p) return;
     prodCode = code;
     $('#pmMedia').innerHTML = p.imagem
-      ? `<img src="${esc(p.imagem)}" alt="${esc(p.nome)}" onerror="this.replaceWith(document.createRange().createContextualFragment(window.__plate))"/>`
+      ? `<img src="${esc(p.imagem)}" alt="${esc(p.nome)}" decoding="async" onerror="this.replaceWith(document.createRange().createContextualFragment(window.__plate))"/>`
       : plate;
     $('#pmSerie').textContent = p.serie || '';
     $('#pmNome').textContent = p.nome;
