@@ -1390,15 +1390,70 @@
     dashStage = b.dataset.stage; renderDashboard();
   });
   // mudar a fase de um orçamento direto no card
-  $('#dashList').addEventListener('change', async e => {
+  $('#dashList').addEventListener('change', e => {
     if (e.target.dataset.act !== 'stage') return;
-    const id = e.target.closest('.dcard').dataset.id;
-    const status = e.target.value;
+    changeStage(e.target.closest('.dcard').dataset.id, e.target.value);
+  });
+
+  // troca de fase unificada (lista + kanban). "Não fechou" pede o motivo antes.
+  async function changeStage(id, status) {
+    const r = dashData.find(x => x.id === id); if (!r) return;
+    if (stageOf(r) === status) { renderDashboard(); return; }
+    if (status === 'perdido') { openLossModal(r); return; }
+    const prev = r.status;
+    r.status = status; renderDashboard();                 // otimista
     try {
       await Cloud.updateOrcamento(id, { status });
-      const r = dashData.find(x => x.id === id); if (r) { r.status = status; logActivityAuto(r, 'fase', `Movido para "${STAGE_LABEL[status]}"`); }
-      renderDashboard(); toast('Fase atualizada.');
-    } catch (err) { console.error(err); toast('Erro ao mudar a fase.'); }
+      logActivityAuto(r, 'fase', `Movido para "${STAGE_LABEL[status]}"`);
+      toast('Fase atualizada.');
+    } catch (err) { console.error(err); r.status = prev; renderDashboard(); toast('Erro ao mudar a fase.'); }
+  }
+
+  // ---- motivo da perda ----
+  let lossPending = null, lossMotivo = '';
+  function openLossModal(r) {
+    lossPending = { id: r.id, prev: r.status }; lossMotivo = '';
+    $('#lossCliente').textContent = (r.cliente_nome || 'Cliente') + (r.numero ? ' · ' + r.numero : '');
+    $('#lossDetail').value = '';
+    $('#lossChips').innerHTML = Object.entries(LOSS)
+      .map(([k, label]) => `<button class="loss__chip" type="button" data-motivo="${k}">${label}</button>`).join('');
+    openModal('#lossModal');
+  }
+  $('#lossChips').addEventListener('click', e => {
+    const b = e.target.closest('.loss__chip'); if (!b) return;
+    lossMotivo = b.dataset.motivo;
+    $$('#lossChips .loss__chip').forEach(c => c.classList.toggle('sel', c === b));
+  });
+  // cancelar/fechar (X, backdrop, Cancelar) volta o card pra fase anterior na tela
+  $('#lossModal').addEventListener('click', e => { if (e.target.matches('[data-close]')) { lossPending = null; renderDashboard(); } });
+  $('#btnLossConfirm').addEventListener('click', async () => {
+    if (!lossPending) return;
+    if (!lossMotivo) { toast('Escolha o motivo.'); return; }
+    const o = dashData.find(x => x.id === lossPending.id); if (!o) return;
+    const prev = lossPending.prev;
+    const detalhe = ($('#lossDetail').value || '').trim();
+    const txt = LOSS[lossMotivo] + (detalhe ? ` — ${detalhe}` : '');
+    const entry = { t: 'perda', x: txt, motivo: lossMotivo, by: (Cloud.profile && Cloud.profile.nome) || '', at: new Date().toISOString() };
+    o.status = 'perdido'; closeModal('#lossModal'); lossPending = null;
+    try {
+      if (ativColumn !== false) {
+        const arr = atvOf(o).concat(entry);
+        await Cloud.updateOrcamento(o.id, { status: 'perdido', atividades: arr });
+        o.atividades = arr; ativColumn = true;
+      } else {
+        const obs = (o.obs ? o.obs + ' · ' : '') + 'Motivo da perda: ' + txt;
+        await Cloud.updateOrcamento(o.id, { status: 'perdido', obs }); o.obs = obs;
+      }
+      renderDashboard(); toast('Marcado como não fechou.');
+    } catch (err) {
+      if (ativColumn !== false && isMissingCol(err)) {           // sem coluna de atividades → guarda no obs
+        ativColumn = false;
+        const obs = (o.obs ? o.obs + ' · ' : '') + 'Motivo da perda: ' + txt;
+        try { await Cloud.updateOrcamento(o.id, { status: 'perdido', obs }); o.obs = obs; renderDashboard(); toast('Marcado como não fechou.'); return; }
+        catch (e2) { err = e2; }
+      }
+      console.error(err); o.status = prev; renderDashboard(); toast('Erro ao salvar.');
+    }
   });
 
   async function openDashboard() {
@@ -1415,6 +1470,7 @@
         $('#dashVendedorFilter').innerHTML = '<option value="">Todos vendedores</option>' + names.map(n => `<option>${esc(n)}</option>`).join('');
       }
       renderDashboard();
+      maybeNotify(dashData);
     } catch (e) { console.error(e); $('#dashList').innerHTML = '<p class="dash__empty">Erro ao carregar os orçamentos.</p>'; }
   }
   function baseRows() {
@@ -1534,13 +1590,7 @@
       const col = e.target.closest('.kcol'); if (!col || !dragId) return;
       e.preventDefault();
       const id = dragId; dragId = null;
-      const status = col.dataset.stage;
-      const r = dashData.find(x => x.id === id);
-      if (!r || stageOf(r) === status) { renderDashboard(); return; }
-      const prev = r.status;
-      r.status = status; renderDashboard();   // otimista
-      try { await Cloud.updateOrcamento(id, { status }); logActivityAuto(r, 'fase', `Movido para "${STAGE_LABEL[status]}"`); toast('Fase atualizada.'); }
-      catch (err) { console.error(err); r.status = prev; renderDashboard(); toast('Erro ao mudar a fase.'); }
+      changeStage(id, col.dataset.stage);
     });
     // toque (celular): abrir o card para acompanhar / trocar fase
     kb.addEventListener('click', e => {
@@ -1558,7 +1608,7 @@
       const dt = new Date(r.retorno_em + 'T00:00:00');
       dbox = `<div class="arow__date"><b>${dt.getDate()}</b><span>${dt.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}</span></div>`;
     }
-    const wpp = r.contato_telefone ? `<button class="a-wpp" data-act="ag-wpp" data-id="${r.id}" title="WhatsApp">📱</button>` : '';
+    const wpp = `<button class="a-wpp" data-act="ag-wpp" data-id="${r.id}" title="Enviar follow-up no WhatsApp">📱</button>`;
     return `<div class="arow ${cls}" data-id="${r.id}">
       ${dbox}
       <div class="arow__main">
@@ -1591,20 +1641,68 @@
       grp('', '📅', 'Próximos 7 dias', g.soon) +
       grp('', '🗓', 'Mais tarde', g.later) +
       grp('', '•', 'Sem data de retorno', g.none);
-    $('#dashAgenda').innerHTML = html || '<p class="dash__empty">Nada em aberto na agenda. 🎉</p>';
+    $('#dashAgenda').innerHTML = notifBarHTML() + (html || '<p class="dash__empty">Nada em aberto na agenda. 🎉</p>');
   }
   const dagenda = $('#dashAgenda');
   if (dagenda) dagenda.addEventListener('click', e => {
+    if (e.target.closest('[data-act="notif-enable"]')) {
+      Notification.requestPermission().then(p => {
+        if (p === 'granted') { notifShown = false; maybeNotify(dashData); toast('Lembretes ativados.'); }
+        renderDashboard();
+      });
+      return;
+    }
     const el = e.target.closest('[data-id]'); if (!el) return;
     const o = dashData.find(x => x.id === el.dataset.id); if (!o) return;
     if (e.target.closest('[data-act="ag-wpp"]')) { openWppFor(o); return; }
     openOrc(o);
   });
+  // telefone do orçamento: contato do lead OU telefone do cliente vinculado
+  function quotePhone(o) {
+    if (o.contato_telefone) return o.contato_telefone;
+    const c = o.cliente_id ? clienteById(o.cliente_id) : null;
+    return (c && c.telefone) || '';
+  }
+  // mensagem pronta de retomada (follow-up)
+  function followupTexto(o) {
+    const nome = String(o.cliente_nome || '').trim().split(' ')[0] || '';
+    const vend = (Cloud.profile && Cloud.profile.nome) ? Cloud.profile.nome.split(' ')[0] : '';
+    const ref = o.numero ? ` ${o.numero}` : '';
+    const valor = o.total ? ` (${money(o.total)})` : '';
+    return `Olá ${nome}, tudo bem? Aqui é ${vend ? vend + ' da' : 'da'} Torque Fitness 💪 ` +
+      `Passando para saber se você conseguiu avaliar o orçamento${ref}${valor}. ` +
+      `Posso esclarecer qualquer dúvida ou ajustar as condições. Podemos seguir?`;
+  }
   function openWppFor(o) {
-    const num = whatsNumero(o.contato_telefone);
-    const itens = (o.itens || []).map(i => `• ${i.qtd}× ${i.nome}`).join('\n');
-    const txt = encodeURIComponent(`Olá ${o.cliente_nome || ''}! Sou consultor da Torque Fitness. Sobre seu orçamento:\n\n${itens}\n\nPodemos seguir?`);
+    const num = whatsNumero(quotePhone(o));
+    const txt = encodeURIComponent(followupTexto(o));
     window.open(num ? `https://wa.me/${num}?text=${txt}` : `https://wa.me/?text=${txt}`, '_blank');
+    logActivityAuto(o, 'whatsapp', 'Follow-up enviado pelo WhatsApp');
+  }
+
+  /* ============ LEMBRETES DE RETORNO (notificações PWA) ============ */
+  let notifShown = false;   // dispara no máx. 1× por sessão de uso
+  function notifSupported() { return 'Notification' in window; }
+  function pendentesRetorno(rows) {
+    return rows.filter(r => { const ri = retornoInfo(r); return ri && ri.diff <= 0 && emAberto(r); });
+  }
+  function maybeNotify(rows) {
+    if (!notifSupported() || Notification.permission !== 'granted' || notifShown) return;
+    const pend = pendentesRetorno(rows);
+    if (!pend.length) return;
+    notifShown = true;
+    try {
+      new Notification('Torque CRM · retornos', {
+        body: `Você tem ${pend.length} retorno(s) atrasado(s) ou para hoje.`,
+        icon: 'icons/icon-192.png', tag: 'torque-retornos'
+      });
+    } catch (e) { /* alguns navegadores exigem SW para notificar */ }
+  }
+  function notifBarHTML() {
+    if (!notifSupported()) return '';
+    return Notification.permission === 'granted'
+      ? '<div class="agenda__notif on">🔔 Lembretes de retorno ativos</div>'
+      : '<button class="agenda__notif" type="button" data-act="notif-enable">🔔 Ativar lembretes de retorno</button>';
   }
 
   /* ====================== MÉTRICAS (gráficos) ====================== */
@@ -1682,15 +1780,34 @@
       ? vArr.map(([n, v]) => `<div class="mbar"><span class="mbar__lab">${esc(n)}</span><div class="mbar__track"><div class="mbar__fill ok" style="width:${Math.round(v / maxV * 100)}%"></div></div><span class="mbar__val">${moneyK(v)}</span></div>`).join('')
       : '<p class="atv__empty">Nenhuma venda fechada ainda.</p>';
 
+    // ---- motivos de perda (do log de atividades; fallback p/ obs) ----
+    const lossAgg = {};
+    base.forEach(r => {
+      if (stageOf(r) !== 'perdido') return;
+      const pe = atvOf(r).filter(a => a.t === 'perda').slice(-1)[0];
+      let label = pe ? (LOSS[pe.motivo] || 'Outro') : null;
+      if (!label && r.obs) { const m = /Motivo da perda:\s*([^—·]+)/.exec(r.obs); if (m) label = m[1].trim(); }
+      label = label || 'Não informado';
+      lossAgg[label] = (lossAgg[label] || 0) + 1;
+    });
+    const lossArr = Object.entries(lossAgg).sort((a, b) => b[1] - a[1]);
+    const maxL = Math.max(1, ...lossArr.map(l => l[1]));
+    const lossBars = lossArr.map(([n, c]) =>
+      `<div class="mbar"><span class="mbar__lab">${esc(n)}</span><div class="mbar__track"><div class="mbar__fill bad" style="width:${Math.round(c / maxL * 100)}%"></div></div><span class="mbar__val">${c}</span></div>`).join('');
+    const lossCard = cnt.perdido ? `<div class="mcard"><h3 class="mcard__t">Motivos de perda (${cnt.perdido})</h3>${lossBars}</div>` : '';
+
     $('#dashMetrics').innerHTML = kpis + convCard +
       `<div class="mcard"><h3 class="mcard__t">Distribuição do funil</h3>${funil}</div>` +
+      lossCard +
       `<div class="mcard"><h3 class="mcard__t">Fechado × Perdido · últimos 6 meses</h3>${chart6}<div class="mlegend"><span><i style="background:var(--ok)"></i>Fechado</span><span><i style="background:var(--danger)"></i>Perdido</span></div></div>` +
       `<div class="mcard"><h3 class="mcard__t">Valor fechado por vendedor</h3>${vendBars}</div>`;
   }
 
   /* ====================== HISTÓRICO DE ATIVIDADES ====================== */
-  const ATV_ICON = { nota: '🗒', ligacao: '📞', whatsapp: '📱', email: '✉️', reuniao: '🤝', proposta: '📄', fase: '↗️', sistema: '⚙️' };
-  const ATV_LABEL = { nota: 'Nota', ligacao: 'Ligação', whatsapp: 'WhatsApp', email: 'E-mail', reuniao: 'Reunião', proposta: 'Proposta', fase: 'Mudança de fase', sistema: 'Sistema' };
+  const ATV_ICON = { nota: '🗒', ligacao: '📞', whatsapp: '📱', email: '✉️', reuniao: '🤝', proposta: '📄', fase: '↗️', perda: '❌', sistema: '⚙️' };
+  const ATV_LABEL = { nota: 'Nota', ligacao: 'Ligação', whatsapp: 'WhatsApp', email: 'E-mail', reuniao: 'Reunião', proposta: 'Proposta', fase: 'Mudança de fase', perda: 'Motivo da perda', sistema: 'Sistema' };
+  // motivos de perda (rótulos centralizados; usados no modal e nas métricas)
+  const LOSS = { preco: 'Preço', prazo: 'Prazo de entrega', concorrente: 'Concorrente', verba: 'Sem verba', timing: 'Adiou a compra', sumiu: 'Sem resposta', outro: 'Outro' };
   const ATV_SQL = "alter table public.orcamentos add column if not exists atividades jsonb not null default '[]'::jsonb;";
   const atvOf = o => Array.isArray(o.atividades) ? o.atividades : [];
   function fmtAtv(iso) { const d = new Date(iso); return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' }) + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); }
