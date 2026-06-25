@@ -57,9 +57,27 @@
       </div>
       <select id="dashVendedorFilter" class="role-admin-only"></select>
     </div>
-    <div class="dash__funnel" id="dashFunnel"></div>
-    <div class="dash__stats" id="dashStats"></div>
-    <div class="dash__list" id="dashList"></div>
+    <div class="dash__tabs" id="dashTabs">
+      <button class="dtab active" data-view="list" type="button">📊 Funil</button>
+      <button class="dtab" data-view="kanban" type="button">🗂 Kanban</button>
+      <button class="dtab" data-view="agenda" type="button">📅 Agenda</button>
+      <button class="dtab" data-view="metrics" type="button">📈 Métricas</button>
+    </div>
+    <div class="dash__view" id="viewList">
+      <div class="dash__funnel" id="dashFunnel"></div>
+      <div class="dash__stats" id="dashStats"></div>
+      <div class="dash__list" id="dashList"></div>
+    </div>
+    <div class="dash__view dash__view--scroll" id="viewKanban" hidden>
+      <p class="kanban__hint">Arraste os cards entre as colunas para mudar a fase (no computador). No celular, toque no card para abrir e trocar a fase.</p>
+      <div class="kanban" id="dashKanban"></div>
+    </div>
+    <div class="dash__view dash__view--scroll" id="viewAgenda" hidden>
+      <div class="agenda" id="dashAgenda"></div>
+    </div>
+    <div class="dash__view dash__view--scroll" id="viewMetrics" hidden>
+      <div class="metrics" id="dashMetrics"></div>
+    </div>
   </div>
 
   <!-- ===================== HEADER ===================== -->
@@ -370,6 +388,24 @@
         <p class="hint" id="orcCliente">—</p>
         <label class="field"><span>Anotação / próximo passo</span><textarea id="orcObs" rows="3"></textarea></label>
         <label class="field"><span>Data de retorno</span><input id="orcRetorno" type="date" /></label>
+
+        <div class="atv" id="orcAtv">
+          <div class="atv__head"><span>Histórico de atividades</span></div>
+          <div class="atv__add">
+            <select id="atvTipo" aria-label="Tipo de atividade">
+              <option value="nota">🗒 Nota</option>
+              <option value="ligacao">📞 Ligação</option>
+              <option value="whatsapp">📱 WhatsApp</option>
+              <option value="email">✉️ E-mail</option>
+              <option value="reuniao">🤝 Reunião</option>
+              <option value="proposta">📄 Proposta</option>
+            </select>
+            <input id="atvTexto" type="text" placeholder="O que aconteceu? (ex.: cliente pediu desconto)" />
+            <button class="btn btn--primary" id="btnAtvAdd" type="button">Registrar</button>
+          </div>
+          <ul class="atv__list" id="atvList"></ul>
+          <p class="atv__off" id="atvOff" hidden>O histórico de atividades precisa de um ajuste no banco. <button type="button" id="atvHelp" class="atv__help">Como ativar</button></p>
+        </div>
       </div>
       <footer class="modal__foot">
         <span class="spacer"></span>

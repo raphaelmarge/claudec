@@ -1237,7 +1237,21 @@
 
   let dashData = [];
   let dashStage = 'all';
+  let dashView = 'list';        // list | kanban | agenda | metrics
+  let ativColumn = null;        // null = desconhecido, true/false = coluna 'atividades' existe?
   $('#umDashboard').addEventListener('click', openDashboard);
+
+  // troca de visão (abas do CRM)
+  $('#dashTabs').addEventListener('click', e => {
+    const b = e.target.closest('.dtab'); if (!b) return;
+    dashView = b.dataset.view;
+    $$('#dashTabs .dtab').forEach(t => t.classList.toggle('active', t === b));
+    $('#viewList').hidden = dashView !== 'list';
+    $('#viewKanban').hidden = dashView !== 'kanban';
+    $('#viewAgenda').hidden = dashView !== 'agenda';
+    $('#viewMetrics').hidden = dashView !== 'metrics';
+    renderDashboard();
+  });
   $('#dashClose').addEventListener('click', () => { $('#dashScreen').hidden = true; document.body.style.overflow = ''; });
   $('#dashSearch').addEventListener('input', renderDashboard);
   $('#dashVendedorFilter').addEventListener('change', renderDashboard);
@@ -1252,7 +1266,7 @@
     const status = e.target.value;
     try {
       await Cloud.updateOrcamento(id, { status });
-      const r = dashData.find(x => x.id === id); if (r) r.status = status;
+      const r = dashData.find(x => x.id === id); if (r) { r.status = status; logActivityAuto(r, 'fase', `Movido para "${STAGE_LABEL[status]}"`); }
       renderDashboard(); toast('Fase atualizada.');
     } catch (err) { console.error(err); toast('Erro ao mudar a fase.'); }
   });
@@ -1265,6 +1279,7 @@
     $('#dashStats').innerHTML = '';
     try {
       dashData = await Cloud.listOrcamentos();
+      if (dashData.length) ativColumn = dashData.some(r => 'atividades' in r);
       if (Cloud.isAdmin()) {
         const names = Array.from(new Set(dashData.map(r => r.vendedor_nome).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'pt-BR'));
         $('#dashVendedorFilter').innerHTML = '<option value="">Todos vendedores</option>' + names.map(n => `<option>${esc(n)}</option>`).join('');
@@ -1272,16 +1287,23 @@
       renderDashboard();
     } catch (e) { console.error(e); $('#dashList').innerHTML = '<p class="dash__empty">Erro ao carregar os orçamentos.</p>'; }
   }
-  function renderDashboard() {
+  function baseRows() {
     const q = ($('#dashSearch').value || '').toLowerCase().trim();
     const vf = $('#dashVendedorFilter').value;
-    // base: aplica busca + filtro de vendedor (o funil reflete esse universo)
-    const base = dashData.filter(r => {
+    return dashData.filter(r => {
       if (vf && r.vendedor_nome !== vf) return false;
       if (q && !String(r.cliente_nome || '').toLowerCase().includes(q)) return false;
       return true;
     });
-
+  }
+  function renderDashboard() {
+    const base = baseRows();
+    if (dashView === 'kanban') return renderKanban(base);
+    if (dashView === 'agenda') return renderAgenda(base);
+    if (dashView === 'metrics') return renderMetrics(base);
+    renderListView(base);
+  }
+  function renderListView(base) {
     // ---- funil: contagem + valor por fase ----
     const cnt = { all: base.length }, val = { all: 0 };
     STAGES.forEach(s => { cnt[s.key] = 0; val[s.key] = 0; });
@@ -1309,6 +1331,232 @@
       : '<p class="dash__empty">Nenhum orçamento nesta fase.</p>';
   }
   const dmy = iso => new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+
+  /* ====================== KANBAN (arrastar entre fases) ====================== */
+  function kcardHTML(r) {
+    const ri = retornoInfo(r);
+    const flags = [];
+    if (r.origem === 'site') flags.push('<span class="dflag site">🌐 Lead</span>');
+    if (ri && ri.atrasado) flags.push(`<span class="dflag late">⏰ ${dmy(r.retorno_em)}</span>`);
+    else if (ri && ri.diff === 0) flags.push('<span class="dflag warn">📞 hoje</span>');
+    const nItens = (r.itens || []).length;
+    return `<div class="kcard" draggable="true" data-id="${r.id}">
+      <div class="kcard__top"><span class="kcard__cli">${esc(r.cliente_nome || '—')}</span><span class="kcard__val">${money(r.total)}</span></div>
+      <div class="kcard__meta">${r.vendedor_nome ? `<span>${esc(r.vendedor_nome)}</span>` : ''}<span>${nItens} item(ns)</span></div>
+      ${flags.length ? `<div class="kcard__flags">${flags.join('')}</div>` : ''}
+    </div>`;
+  }
+  function renderKanban(base) {
+    const byStage = {}; STAGES.forEach(s => byStage[s.key] = []);
+    base.forEach(r => byStage[stageOf(r)].push(r));
+    const sorter = (a, b) => (prioridade(b) - prioridade(a)) || (new Date(b.criado_em) - new Date(a.criado_em));
+    const col = s => {
+      const rows = byStage[s.key].slice().sort(sorter);
+      const val = rows.reduce((t, r) => t + (Number(r.total) || 0), 0);
+      return `<div class="kcol st-${s.key}" data-stage="${s.key}">
+        <div class="kcol__head"><span class="kcol__t">${s.label}</span><span class="kcol__n">${rows.length}</span><span class="kcol__v">${money(val)}</span></div>
+        <div class="kcol__body">${rows.length ? rows.map(kcardHTML).join('') : '<p class="kempty">—</p>'}</div>
+      </div>`;
+    };
+    $('#dashKanban').innerHTML = STAGES.map(col).join('');
+  }
+  let dragId = null;
+  const kb = $('#dashKanban');
+  if (kb) {
+    kb.addEventListener('dragstart', e => {
+      const c = e.target.closest('.kcard'); if (!c) return;
+      dragId = c.dataset.id; c.classList.add('dragging');
+      if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
+    });
+    kb.addEventListener('dragend', e => {
+      const c = e.target.closest('.kcard'); if (c) c.classList.remove('dragging');
+      $$('.kcol').forEach(k => k.classList.remove('drop'));
+    });
+    kb.addEventListener('dragover', e => { const col = e.target.closest('.kcol'); if (!col) return; e.preventDefault(); if (e.dataTransfer) e.dataTransfer.dropEffect = 'move'; });
+    kb.addEventListener('dragenter', e => { const col = e.target.closest('.kcol'); if (col) col.classList.add('drop'); });
+    kb.addEventListener('dragleave', e => { const col = e.target.closest('.kcol'); if (col && !col.contains(e.relatedTarget)) col.classList.remove('drop'); });
+    kb.addEventListener('drop', async e => {
+      const col = e.target.closest('.kcol'); if (!col || !dragId) return;
+      e.preventDefault();
+      const id = dragId; dragId = null;
+      const status = col.dataset.stage;
+      const r = dashData.find(x => x.id === id);
+      if (!r || stageOf(r) === status) { renderDashboard(); return; }
+      const prev = r.status;
+      r.status = status; renderDashboard();   // otimista
+      try { await Cloud.updateOrcamento(id, { status }); logActivityAuto(r, 'fase', `Movido para "${STAGE_LABEL[status]}"`); toast('Fase atualizada.'); }
+      catch (err) { console.error(err); r.status = prev; renderDashboard(); toast('Erro ao mudar a fase.'); }
+    });
+    // toque (celular): abrir o card para acompanhar / trocar fase
+    kb.addEventListener('click', e => {
+      const c = e.target.closest('.kcard'); if (!c) return;
+      const o = dashData.find(x => x.id === c.dataset.id); if (o) openOrc(o);
+    });
+  }
+
+  /* ====================== AGENDA (follow-ups) ====================== */
+  function arow(r) {
+    const ri = retornoInfo(r);
+    const cls = (ri && ri.atrasado) ? 'late' : (ri && ri.diff === 0 ? 'today' : '');
+    let dbox = '<div class="arow__date"><b>—</b><span>s/ data</span></div>';
+    if (r.retorno_em) {
+      const dt = new Date(r.retorno_em + 'T00:00:00');
+      dbox = `<div class="arow__date"><b>${dt.getDate()}</b><span>${dt.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}</span></div>`;
+    }
+    const wpp = r.contato_telefone ? `<button class="a-wpp" data-act="ag-wpp" data-id="${r.id}" title="WhatsApp">📱</button>` : '';
+    return `<div class="arow ${cls}" data-id="${r.id}">
+      ${dbox}
+      <div class="arow__main">
+        <div class="arow__cli">${esc(r.cliente_nome || '—')}</div>
+        <div class="arow__sub">${STAGE_LABEL[stageOf(r)]}${r.vendedor_nome ? ` · <span class="vend">${esc(r.vendedor_nome)}</span>` : ''}${r.obs ? ` · ${esc(r.obs)}` : ''}</div>
+      </div>
+      <div class="arow__val">${money(r.total)}</div>
+      <div class="arow__act">${wpp}<button data-act="ag-open" data-id="${r.id}" title="Abrir">✎</button></div>
+    </div>`;
+  }
+  function renderAgenda(base) {
+    const open = base.filter(emAberto);
+    const g = { late: [], today: [], soon: [], later: [], none: [] };
+    open.forEach(r => {
+      const ri = retornoInfo(r);
+      if (!ri) g.none.push(r);
+      else if (ri.diff < 0) g.late.push(r);
+      else if (ri.diff === 0) g.today.push(r);
+      else if (ri.diff <= 7) g.soon.push(r);
+      else g.later.push(r);
+    });
+    const byDate = (a, b) => new Date(a.retorno_em) - new Date(b.retorno_em);
+    [g.late, g.today, g.soon, g.later].forEach(x => x.sort(byDate));
+    g.none.sort((a, b) => prioridade(b) - prioridade(a));
+    const grp = (cls, icon, title, rows) => rows.length
+      ? `<div class="agenda__grp"><h3 class="agenda__gh ${cls}">${icon} ${title} <b>${rows.length}</b></h3>${rows.map(arow).join('')}</div>` : '';
+    const html =
+      grp('late', '⏰', 'Atrasados', g.late) +
+      grp('today', '📞', 'Para hoje', g.today) +
+      grp('', '📅', 'Próximos 7 dias', g.soon) +
+      grp('', '🗓', 'Mais tarde', g.later) +
+      grp('', '•', 'Sem data de retorno', g.none);
+    $('#dashAgenda').innerHTML = html || '<p class="dash__empty">Nada em aberto na agenda. 🎉</p>';
+  }
+  const dagenda = $('#dashAgenda');
+  if (dagenda) dagenda.addEventListener('click', e => {
+    const el = e.target.closest('[data-id]'); if (!el) return;
+    const o = dashData.find(x => x.id === el.dataset.id); if (!o) return;
+    if (e.target.closest('[data-act="ag-wpp"]')) { openWppFor(o); return; }
+    openOrc(o);
+  });
+  function openWppFor(o) {
+    const num = whatsNumero(o.contato_telefone);
+    const itens = (o.itens || []).map(i => `• ${i.qtd}× ${i.nome}`).join('\n');
+    const txt = encodeURIComponent(`Olá ${o.cliente_nome || ''}! Sou consultor da Torque Fitness. Sobre seu orçamento:\n\n${itens}\n\nPodemos seguir?`);
+    window.open(num ? `https://wa.me/${num}?text=${txt}` : `https://wa.me/?text=${txt}`, '_blank');
+  }
+
+  /* ====================== MÉTRICAS (gráficos) ====================== */
+  function lastMonths(n) {
+    const arr = [], d = new Date();
+    for (let i = n - 1; i >= 0; i--) {
+      const x = new Date(d.getFullYear(), d.getMonth() - i, 1);
+      arr.push({ key: `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}`, label: x.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '') });
+    }
+    return arr;
+  }
+  function renderMetrics(base) {
+    const cnt = {}, val = {}; STAGES.forEach(s => { cnt[s.key] = 0; val[s.key] = 0; });
+    base.forEach(r => { const k = stageOf(r); cnt[k]++; val[k] += Number(r.total) || 0; });
+    const abertoC = cnt.novo + cnt.negociacao + cnt.sem_retorno;
+    const abertoV = val.novo + val.negociacao + val.sem_retorno;
+    const fechados = cnt.ganho + cnt.perdido;
+    const conv = fechados ? Math.round(cnt.ganho / fechados * 100) : 0;
+    const ticket = cnt.ganho ? val.ganho / cnt.ganho : 0;
+
+    const kpis = `<div class="mkpis">
+      <div class="mkpi"><b>${money(abertoV)}</b><span>Pipeline aberto (${abertoC})</span></div>
+      <div class="mkpi"><b>${money(val.ganho)}</b><span>Fechado (${cnt.ganho})</span></div>
+      <div class="mkpi"><b>${conv}%</b><span>Conversão</span></div>
+      <div class="mkpi"><b>${money(ticket)}</b><span>Ticket médio</span></div>
+    </div>`;
+
+    const maxStage = Math.max(1, ...STAGES.map(s => cnt[s.key]));
+    const funil = STAGES.map(s => {
+      const w = Math.round(cnt[s.key] / maxStage * 100);
+      const cls = s.key === 'ganho' ? 'ok' : s.key === 'perdido' ? 'bad' : s.key === 'sem_retorno' ? 'warn' : '';
+      return `<div class="mbar"><span class="mbar__lab">${s.short}</span><div class="mbar__track"><div class="mbar__fill ${cls}" style="width:${w}%"></div></div><span class="mbar__val">${cnt[s.key]} · ${money(val[s.key])}</span></div>`;
+    }).join('');
+
+    const months = lastMonths(6), mg = {}, mp = {};
+    months.forEach(m => { mg[m.key] = 0; mp[m.key] = 0; });
+    base.forEach(r => {
+      const k = stageOf(r); if (k !== 'ganho' && k !== 'perdido') return;
+      const mk = String(r.criado_em || '').slice(0, 7); if (!(mk in mg)) return;
+      if (k === 'ganho') mg[mk] += Number(r.total) || 0; else mp[mk] += Number(r.total) || 0;
+    });
+    const maxM = Math.max(1, ...months.map(m => Math.max(mg[m.key], mp[m.key])));
+    const cols = months.map(m => {
+      const hg = Math.round(mg[m.key] / maxM * 100), hp = Math.round(mp[m.key] / maxM * 100);
+      return `<div class="mcol"><div class="mcol__bars"><div class="mcol__bar" style="height:${hg}%" title="Fechado ${money(mg[m.key])}"></div><div class="mcol__bar bad" style="height:${hp}%" title="Perdido ${money(mp[m.key])}"></div></div><span class="mcol__x">${m.label}</span></div>`;
+    }).join('');
+
+    const vend = {};
+    base.forEach(r => { if (stageOf(r) === 'ganho') { const n = r.vendedor_nome || '—'; vend[n] = (vend[n] || 0) + (Number(r.total) || 0); } });
+    const vArr = Object.entries(vend).sort((a, b) => b[1] - a[1]).slice(0, 8);
+    const maxV = Math.max(1, ...vArr.map(v => v[1]));
+    const vendBars = vArr.length
+      ? vArr.map(([n, v]) => `<div class="mbar"><span class="mbar__lab">${esc(n)}</span><div class="mbar__track"><div class="mbar__fill ok" style="width:${Math.round(v / maxV * 100)}%"></div></div><span class="mbar__val">${money(v)}</span></div>`).join('')
+      : '<p class="atv__empty">Nenhuma venda fechada ainda.</p>';
+
+    $('#dashMetrics').innerHTML = kpis +
+      `<div class="mcard"><h3 class="mcard__t">Distribuição do funil</h3>${funil}</div>` +
+      `<div class="mcard"><h3 class="mcard__t">Fechado × Perdido · últimos 6 meses</h3><div class="mcol-chart">${cols}</div><div class="mlegend"><span><i style="background:var(--ok)"></i>Fechado</span><span><i style="background:var(--danger)"></i>Perdido</span></div></div>` +
+      `<div class="mcard"><h3 class="mcard__t">Valor fechado por vendedor</h3>${vendBars}</div>`;
+  }
+
+  /* ====================== HISTÓRICO DE ATIVIDADES ====================== */
+  const ATV_ICON = { nota: '🗒', ligacao: '📞', whatsapp: '📱', email: '✉️', reuniao: '🤝', proposta: '📄', fase: '↗️', sistema: '⚙️' };
+  const ATV_LABEL = { nota: 'Nota', ligacao: 'Ligação', whatsapp: 'WhatsApp', email: 'E-mail', reuniao: 'Reunião', proposta: 'Proposta', fase: 'Mudança de fase', sistema: 'Sistema' };
+  const ATV_SQL = "alter table public.orcamentos add column if not exists atividades jsonb not null default '[]'::jsonb;";
+  const atvOf = o => Array.isArray(o.atividades) ? o.atividades : [];
+  function fmtAtv(iso) { const d = new Date(iso); return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' }) + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); }
+  function isMissingCol(err) { const m = ((err && (err.message || '')) + ' ' + (err && err.code || '')).toLowerCase(); return m.includes('atividades') || m.includes('column') || m.includes('schema') || (err && err.code === '42703') || m.includes('pgrst204'); }
+  function renderAtv(o) {
+    if (!$('#orcAtv')) return;
+    const supported = ativColumn !== false;
+    $('#atvOff').hidden = supported;
+    $('#atvTipo').disabled = $('#atvTexto').disabled = $('#btnAtvAdd').disabled = !supported;
+    const list = atvOf(o).slice().sort((a, b) => new Date(b.at) - new Date(a.at));
+    $('#atvList').innerHTML = list.length
+      ? list.map(a => `<li class="atv__it t-${a.t}"><div class="atv__meta">${ATV_ICON[a.t] || '•'} <b>${ATV_LABEL[a.t] || a.t}</b> · ${fmtAtv(a.at)}${a.by ? ` · ${esc(a.by)}` : ''}</div><div class="atv__txt">${esc(a.x || '')}</div></li>`).join('')
+      : (supported ? '<li class="atv__empty">Nenhuma atividade ainda. Registre o primeiro contato acima.</li>' : '');
+  }
+  async function logActivityAuto(o, t, x) {
+    if (ativColumn === false) return;
+    const entry = { t, x, by: (Cloud.profile && Cloud.profile.nome) || '', at: new Date().toISOString() };
+    const arr = atvOf(o).concat(entry);
+    try { await Cloud.updateOrcamento(o.id, { atividades: arr }); o.atividades = arr; ativColumn = true; }
+    catch (err) { if (isMissingCol(err)) ativColumn = false; }
+  }
+  $('#btnAtvAdd').addEventListener('click', async () => {
+    if (!orcEditId) return;
+    const o = dashData.find(x => x.id === orcEditId); if (!o) return;
+    const x = ($('#atvTexto').value || '').trim();
+    if (!x) { toast('Escreva o que aconteceu.'); return; }
+    const entry = { t: $('#atvTipo').value, x, by: (Cloud.profile && Cloud.profile.nome) || '', at: new Date().toISOString() };
+    const arr = atvOf(o).concat(entry);
+    const btn = $('#btnAtvAdd'); btn.disabled = true;
+    try {
+      await Cloud.updateOrcamento(orcEditId, { atividades: arr });
+      o.atividades = arr; ativColumn = true;
+      $('#atvTexto').value = ''; renderAtv(o); toast('Atividade registrada.');
+    } catch (err) {
+      console.error(err);
+      if (isMissingCol(err)) { ativColumn = false; renderAtv(o); }
+      else toast('Erro ao registrar.');
+    } finally { btn.disabled = false; }
+  });
+  $('#atvHelp').addEventListener('click', () => {
+    alert('Para ativar o histórico de atividades, abra o painel do Supabase → SQL Editor e rode:\n\n' + ATV_SQL + '\n\nDepois recarregue esta página.');
+  });
+
   function dcard(r) {
     const d = r.criado_em ? dmy(r.criado_em) : '';
     const dias = diasDesde(r.criado_em);
@@ -1376,6 +1624,7 @@
     $('#orcCliente').textContent = (o.cliente_nome || 'Cliente') + (o.numero ? ' · ' + o.numero : '');
     $('#orcObs').value = o.obs || '';
     $('#orcRetorno').value = o.retorno_em || '';
+    renderAtv(o);
     openModal('#orcModal');
   }
   $('#btnSaveOrc').addEventListener('click', async () => {
