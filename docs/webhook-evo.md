@@ -45,23 +45,28 @@ https://uqwbywzuqooqzmiklqct.supabase.co/functions/v1/evo-webhook
 ```
 
 ### 4) Registrar o webhook no EVO
-Pegue suas credenciais de API em **EVO → Configurações → Integrações → API**
-(login/dns + chave). Depois:
 
-```bash
-export EVO_LOGIN="suaConta"
-export EVO_TOKEN="suaChaveDeApiDoEVO"
-export EVO_WEBHOOK_SECRET="o-mesmo-segredo-do-passo-3"
-export CALLBACK_URL="https://uqwbywzuqooqzmiklqct.supabase.co/functions/v1/evo-webhook"
-export EVENT_TYPE="NewSale"     # rode 1x por evento que quiser ouvir
-# export ID_BRANCH="7921"       # opcional: só esta unidade
-./tools/registrar_webhook_evo.sh
-```
+**Jeito mais fácil — pela tela do EVO (recomendado):**
+Em **EVO → Configurações → Integrações → EVO API → aba Webhook → Novo webhook**, preencha:
 
-Eventos conhecidos: **NewSale** (venda), **CreateMember** (virou aluno),
-**AlterMember** (dados/situação do aluno alterados — útil pra detectar quem ficou
-inativo). A lista completa aparece no painel do EVO em Integrações; confirme lá os
-nomes exatos antes de registrar.
+| Campo | Valor |
+|---|---|
+| Nome | `Reativação Supabase` (qualquer) |
+| URL de callback | `https://uqwbywzuqooqzmiklqct.supabase.co/functions/v1/evo-webhook` |
+| Habilitar para envio via WhatsApp | desmarcado (por enquanto) |
+| Cabeçalhos → + Header | Chave `x-evo-token` · Valor = o segredo do passo 3 |
+
+Clique em **TESTAR WEBHOOK** e depois **SALVAR**. As credenciais (token) ficam na
+aba **Tokens**, ao lado.
+
+**Jeito via terminal (alternativa):** use `tools/registrar_webhook_evo.sh` com
+`EVO_LOGIN` (DNS da conta) + `EVO_TOKEN` (token da aba Tokens).
+
+> Formato do evento: o EVO usa nomes em namespace, ex.:
+> `crm.automation.contract_due_date` ("Vencimento de contrato"), com os dados em
+> `person.idMember` e `organization.idBranch`. Confira a lista de eventos
+> disponíveis na própria tela do EVO — o de **vencimento/cancelamento de contrato**
+> é o ideal para disparar a reativação.
 
 ### 5) Testar
 Faça uma ação no EVO que dispare o evento (ou peça um reenvio de teste) e confira:

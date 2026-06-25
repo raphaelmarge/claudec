@@ -9,12 +9,22 @@
 //
 // Variáveis de ambiente (Settings > Edge Functions > Secrets):
 //   EVO_WEBHOOK_SECRET   -> um segredo forte que você inventa (ex.: 32+ chars).
-//                           O MESMO valor vai no header do webhook registrado no EVO.
+//                           O MESMO valor vai no header `x-evo-token` do webhook no EVO.
 //   SUPABASE_URL               } injetadas automaticamente pelo Supabase
 //   SUPABASE_SERVICE_ROLE_KEY }  no ambiente da função.
 //
 // URL pública (urlCallback do webhook):
 //   https://<seu-projeto>.supabase.co/functions/v1/evo-webhook
+//
+// Formato real do evento do EVO (exemplo):
+//   {
+//     "eventType": "crm.automation.contract_due_date",
+//     "eventLabel": "Vencimento de contrato",
+//     "eventDate": "2026-03-17T14:30:00Z",
+//     "eventContext": { "moment": "after", "daysOffset": 10 },
+//     "organization": { "idW12": 12345, "idBranch": 10, "branchName": "..." },
+//     "person": { "idMember": 456789, "idProspect": null, "firstName": "...", "lastName": "..." }
+//   }
 // ============================================================
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -31,19 +41,31 @@ function safeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
-// extrai um número de um objeto tentando várias grafias de chave
-function pickNum(obj: Record<string, unknown>, keys: string[]): number | null {
-  for (const k of keys) {
-    const v = obj?.[k];
+type Obj = Record<string, unknown>;
+
+// lê um valor num caminho aninhado, ex.: get(o, ["person", "idMember"])
+function get(o: unknown, path: string[]): unknown {
+  let cur: unknown = o;
+  for (const k of path) {
+    if (cur && typeof cur === "object" && k in (cur as Obj)) cur = (cur as Obj)[k];
+    else return undefined;
+  }
+  return cur;
+}
+
+// tenta vários caminhos (planos OU aninhados) e devolve o primeiro número válido
+function firstNum(o: unknown, paths: string[][]): number | null {
+  for (const p of paths) {
+    const v = get(o, p);
     if (typeof v === "number") return v;
     if (typeof v === "string" && v.trim() !== "" && !isNaN(Number(v))) return Number(v);
   }
   return null;
 }
 
-function pickStr(obj: Record<string, unknown>, keys: string[]): string | null {
-  for (const k of keys) {
-    const v = obj?.[k];
+function firstStr(o: unknown, paths: string[][]): string | null {
+  for (const p of paths) {
+    const v = get(o, p);
     if (typeof v === "string" && v.trim() !== "") return v;
   }
   return null;
@@ -69,16 +91,15 @@ Deno.serve(async (req) => {
   }
   const eventos = Array.isArray(body) ? body : [body];
 
-  // 3) Monta as linhas a inserir, extraindo os campos mais úteis.
-  const linhas = eventos.map((ev) => {
-    const o = (ev ?? {}) as Record<string, unknown>;
-    return {
-      event_type: pickStr(o, ["eventType", "EventType", "event", "tipo"]),
-      id_member: pickNum(o, ["idMember", "IdMember", "memberId"]),
-      id_branch: pickNum(o, ["idBranch", "IdBranch", "branchId"]),
-      payload: o,
-    };
-  });
+  // 3) Monta as linhas, extraindo os campos úteis (formato novo aninhado + fallback plano).
+  const linhas = eventos.map((ev) => ({
+    event_type: firstStr(ev, [["eventType"], ["EventType"], ["event"]]),
+    event_label: firstStr(ev, [["eventLabel"], ["EventLabel"]]),
+    event_date: firstStr(ev, [["eventDate"], ["EventDate"]]),
+    id_member: firstNum(ev, [["person", "idMember"], ["idMember"], ["IdMember"]]),
+    id_branch: firstNum(ev, [["organization", "idBranch"], ["idBranch"], ["IdBranch"]]),
+    payload: (ev ?? {}) as Obj,
+  }));
 
   // 4) Grava com a SERVICE ROLE (ignora RLS).
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE, {
