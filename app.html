@@ -292,7 +292,21 @@
           <label class="field"><span>Código</span><input id="edCodigo" type="text" /></label>
           <label class="field"><span>Série / Categoria</span><input id="edSerie" type="text" list="serieList" /></label>
           <label class="field field--wide"><span>Nome</span><input id="edNome" type="text" required /></label>
-          <label class="field field--wide"><span>Imagem (URL)</span><input id="edImagem" type="text" placeholder="https://… ou assets/products/…" /></label>
+          <div class="field field--wide">
+            <span>Imagem do produto</span>
+            <div class="imgpick">
+              <img id="edImgPreview" class="imgpick__preview" alt="" hidden />
+              <div class="imgpick__ph" id="edImgPh">sem imagem</div>
+              <div class="imgpick__body">
+                <div class="imgpick__actions">
+                  <button type="button" class="btn btn--primary" id="btnPickImg">📷 Escolher / tirar foto</button>
+                  <button type="button" class="btn btn--ghost" id="btnClearImg" hidden>Remover</button>
+                  <input type="file" id="edImgFile" accept="image/*" hidden />
+                </div>
+                <input id="edImagem" type="text" class="imgpick__url" placeholder="ou cole um link de imagem (URL)" />
+              </div>
+            </div>
+          </div>
           <label class="field"><span>Custo FOB (US$)</span><input id="edCusto" type="number" step="0.01" min="0" inputmode="decimal" /></label>
           <label class="field"><span>Dimensões</span><input id="edDims" type="text" placeholder="L×P×A (mm)" /></label>
           <label class="field"><span>Margem (%) <small>vazio = padrão</small></span><input id="edMargem" type="number" step="1" inputmode="decimal" /></label>

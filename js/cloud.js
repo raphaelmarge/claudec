@@ -122,6 +122,17 @@ window.Cloud = (function () {
     if (error) throw error;
   }
 
+  // ---------- IMAGENS DE PRODUTO (Storage) ----------
+  // Envia para o bucket público "produtos" e devolve a URL pública.
+  async function uploadProductImage(blob, ext) {
+    if (!sb) throw new Error('Sem conexão.');
+    const path = 'p/' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8) + '.' + (ext || 'jpg');
+    const { error } = await sb.storage.from('produtos').upload(path, blob, { contentType: blob.type || 'image/jpeg', upsert: true });
+    if (error) throw error;
+    const { data } = sb.storage.from('produtos').getPublicUrl(path);
+    return data.publicUrl;
+  }
+
   // ---------- IA: sugestão de follow-up (Edge Function) ----------
   async function suggestReply(context) {
     if (!sb) throw new Error('Sem conexão.');
@@ -135,7 +146,7 @@ window.Cloud = (function () {
     signIn, signUp, signOut, loadProfile, updateMyProfile,
     listClientes, saveCliente, deleteCliente,
     saveOrcamento, updateOrcamento, deleteOrcamento, listOrcamentos, listVendedores,
-    loadSettings, saveSettings, suggestReply,
+    loadSettings, saveSettings, suggestReply, uploadProductImage,
     get profile() { return profile; },
     isAdmin() { return !!profile && profile.role === 'admin'; }
   };
