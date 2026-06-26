@@ -92,6 +92,67 @@
   }
 
   /* ------------------------------------------------------------
+     SYNC DE PARÂMETROS PÚBLICOS (Supabase tabela `settings`)
+     Admin escreve; todos leem. Só parâmetros NÃO sensíveis — os
+     fiscais (custo/margem) nunca saem daqui. Degrada para
+     localStorage se a tabela não existir.
+     ------------------------------------------------------------ */
+  const SHARED_PARAM_KEYS = ['parcelasMax', 'juros', 'validade', 'stages', 'metas'];
+  const SETTINGS_SQL =
+    "create table if not exists public.settings (\n" +
+    "  id int primary key default 1,\n" +
+    "  data jsonb not null default '{}'::jsonb,\n" +
+    "  updated_at timestamptz not null default now(),\n" +
+    "  constraint settings_singleton check (id = 1)\n" +
+    ");\n" +
+    "alter table public.settings enable row level security;\n" +
+    "create policy settings_read on public.settings for select to authenticated using (true);\n" +
+    "create policy settings_write on public.settings for all to authenticated\n" +
+    "  using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin'))\n" +
+    "  with check (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin'));";
+  let settingsSync = null;   // null = desconhecido, true = ativo, false = tabela ausente
+  function isMissingTable(err) {
+    const m = ((err && (err.message || '')) + ' ' + (err && err.code || '')).toLowerCase();
+    return m.includes('settings') && (m.includes('exist') || m.includes('relation') || m.includes('schema cache'))
+      || (err && err.code === '42p01') || m.includes('pgrst205') || m.includes('pgrst204');
+  }
+  async function pullSettings() {
+    if (!(Cloud.ready && Cloud.ready())) return;
+    try {
+      const data = await Cloud.loadSettings();
+      settingsSync = true;
+      if (data && typeof data === 'object') {
+        SHARED_PARAM_KEYS.forEach(k => { if (data[k] !== undefined) state.params[k] = data[k]; });
+        save();
+      }
+    } catch (err) { if (isMissingTable(err)) settingsSync = false; else console.error(err); }
+  }
+  let _pushTimer = null;
+  function schedulePushSettings() {
+    if (settingsSync === false) return;                 // tabela não existe → fica local
+    if (!(Cloud.isAdmin && Cloud.isAdmin())) return;    // só admin publica
+    clearTimeout(_pushTimer);
+    _pushTimer = setTimeout(async () => {
+      const payload = {};
+      SHARED_PARAM_KEYS.forEach(k => { if (state.params[k] !== undefined) payload[k] = state.params[k]; });
+      try { await Cloud.saveSettings(payload); settingsSync = true; renderSyncStatus(); }
+      catch (err) { if (isMissingTable(err)) { settingsSync = false; renderSyncStatus(); } else console.error(err); }
+    }, 800);
+  }
+  function renderSyncStatus() {
+    const el = $('#syncStatus'); if (!el) return;
+    if (!(Cloud.isAdmin && Cloud.isAdmin())) { el.hidden = true; return; }
+    el.hidden = false;
+    if (settingsSync === false) {
+      el.className = 'sync-status off';
+      el.innerHTML = 'Sincronização desativada — etapas e metas ficam só neste aparelho. <button type="button" id="syncHelp" class="atv__help">Como ativar</button>';
+    } else {
+      el.className = 'sync-status on';
+      el.textContent = '☁️ Etapas, metas e condições sincronizadas com a equipe.';
+    }
+  }
+
+  /* ------------------------------------------------------------
      SENHA / DESTRAVAR (AES-256-GCM via Web Crypto)
      ------------------------------------------------------------ */
   const b64d = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
@@ -268,8 +329,15 @@
     setVal('#cfgParcelas', p.parcelasMax); setVal('#cfgJuros', p.juros);
     setVal('#cfgValidade', p.validade);
     renderStagesEditor();
+    renderSyncStatus();
     $('#configPanel').hidden = state.mode !== 'admin';
   }
+  // ajuda do sync (botão recriado dinamicamente → delegação)
+  document.addEventListener('click', e => {
+    if (e.target && e.target.id === 'syncHelp') {
+      alert('Para sincronizar etapas, metas e condições com toda a equipe, abra o Supabase → SQL Editor e rode:\n\n' + SETTINGS_SQL + '\n\nDepois recarregue a página.');
+    }
+  });
   function setVal(sel, v) { const el = $(sel); if (el && document.activeElement !== el) el.value = v; }
 
   // editor das etapas do funil (nome + probabilidade) — admin
@@ -294,7 +362,7 @@
       const cur = P().stages[k] || {};
       if (nameEl) cur.nome = nameEl.value;
       if (probEl) cur.prob = Math.max(0, Math.min(100, parseInt(probEl.value, 10) || 0));
-      P().stages[k] = cur; save();
+      P().stages[k] = cur; save(); schedulePushSettings();
       if (dashView === 'metrics' && !$('#dashScreen').hidden) renderDashboard();   // atualiza a previsão ao vivo
     });
   })();
@@ -307,7 +375,7 @@
       const nome = inp.dataset.meta;
       const target = Math.max(0, Number(inp.value) || 0);
       if (!P().metas) P().metas = {};
-      P().metas[nome] = target; save();
+      P().metas[nome] = target; save(); schedulePushSettings();
       const row = inp.closest('.metarow'); if (!row) return;
       const done = Number(row.dataset.done) || 0;
       const pct = target ? Math.min(100, Math.round(done / target * 100)) : 0;
@@ -512,10 +580,11 @@
       P()[CFG_MAP[sel]] = num($(sel).value) || 0;
       if (sel !== '#cfgJuros') recalcAll();   // juros não altera preço, só parcela
       save(); renderGrid(); renderSummary();
+      if (sel === '#cfgJuros') schedulePushSettings();   // juros é parâmetro compartilhado
     });
   });
-  $('#cfgParcelas').addEventListener('input', () => { P().parcelasMax = Math.max(1, parseInt($('#cfgParcelas').value, 10) || 1); save(); renderSummary(); });
-  $('#cfgValidade').addEventListener('input', () => { P().validade = Math.max(1, parseInt($('#cfgValidade').value, 10) || 1); save(); });
+  $('#cfgParcelas').addEventListener('input', () => { P().parcelasMax = Math.max(1, parseInt($('#cfgParcelas').value, 10) || 1); save(); renderSummary(); schedulePushSettings(); });
+  $('#cfgValidade').addEventListener('input', () => { P().validade = Math.max(1, parseInt($('#cfgValidade').value, 10) || 1); save(); schedulePushSettings(); });
 
   // grid interactions (delegation)
   $('#productGrid').addEventListener('click', e => {
@@ -1289,6 +1358,7 @@
     if (!Cloud.isAdmin()) { state.mode = 'vendedor'; }
     setRoleUI(nome);
     await reloadClientes();
+    await pullSettings();          // puxa etapas/metas/condições compartilhadas
     save();
     document.body.dataset.auth = 'in';
     render();
@@ -1580,6 +1650,8 @@
       if (Cloud.isAdmin()) {
         const names = Array.from(new Set(dashData.map(r => r.vendedor_nome).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'pt-BR'));
         $('#dashVendedorFilter').innerHTML = '<option value="">Todos vendedores</option>' + names.map(n => `<option>${esc(n)}</option>`).join('');
+      } else {
+        await pullSettings();        // vendedor recebe etapas/metas/condições mais recentes do admin
       }
       renderDashboard();
       maybeNotify(dashData);
