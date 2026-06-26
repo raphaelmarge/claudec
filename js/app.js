@@ -119,7 +119,7 @@
   // catálogo público compartilhado (sem custo/margem; imagens locais "data:" não sobem — só URLs)
   function publicCatalog() {
     return state.products.map(p => ({
-      id: p.id, codigo: p.codigo || '', nome: p.nome || '', serie: p.serie || 'Geral',
+      id: p.id, codigo: p.codigo || '', nome: p.nome || '', serie: p.serie || 'Geral', tipo: p.tipo || 'maquina',
       imagem: (p.imagem && !String(p.imagem).startsWith('data:')) ? p.imagem : '',
       dims: p.dims || '', preco: Number(p.preco) || 0, oculto: !!p.oculto, travado: !!p.travado
     }));
@@ -131,7 +131,7 @@
     state.products = remote.map(p => {
       const old = byId[p.id] || (p.codigo && byCode[p.codigo]) || {};
       return {
-        id: p.id || old.id || uid(), codigo: p.codigo || '', nome: p.nome || '', serie: p.serie || 'Geral',
+        id: p.id || old.id || uid(), codigo: p.codigo || '', nome: p.nome || '', serie: p.serie || 'Geral', tipo: p.tipo || 'maquina',
         imagem: p.imagem || old.imagem || '',   // imagem vazia do servidor NÃO apaga a foto local existente
         dims: p.dims || '', preco: Number(p.preco) || 0,
         margem: null, travado: !!p.travado, oculto: !!p.oculto
@@ -795,6 +795,7 @@
     $('#edId').value = id || '';
     $('#edCodigo').value = p ? p.codigo : '';
     $('#edSerie').value = p ? p.serie : (state.filters.serie !== 'all' ? state.filters.serie : '');
+    $('#edTipo').value = (p && p.tipo) || 'maquina';
     $('#edNome').value = p ? p.nome : '';
     $('#edImagem').value = p ? p.imagem : '';
     setImgPreview(p ? p.imagem : '');
@@ -811,6 +812,7 @@
     return {
       codigo: $('#edCodigo').value.trim(),
       serie: $('#edSerie').value.trim() || 'Geral',
+      tipo: $('#edTipo').value || 'maquina',
       nome: $('#edNome').value.trim(),
       imagem: $('#edImagem').value.trim(),
       dims: $('#edDims').value.trim(),
@@ -885,7 +887,7 @@
     const f = readEditForm();
     if (!f.nome) { toast('Informe o nome do produto.'); return; }
     const p = editingId ? state.products.find(x => x.id === editingId) : { id: uid() };
-    p.codigo = f.codigo; p.serie = f.serie; p.nome = f.nome; p.imagem = f.imagem;
+    p.codigo = f.codigo; p.serie = f.serie; p.tipo = f.tipo; p.nome = f.nome; p.imagem = f.imagem;
     p.dims = f.dims; p.fob = f.fob; p.margem = f.margem; p.oculto = f.oculto;
     if (f.precoInput != null) { p.preco = f.precoInput; p.travado = true; }   // preço travado manual
     else { p.travado = false; p.preco = r2(precoCalculado(p)); }              // volta ao automático
