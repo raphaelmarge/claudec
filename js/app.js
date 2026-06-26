@@ -2161,9 +2161,23 @@
     if (e.target.dataset.act === 'del-orc') {
       if (!confirm(`Excluir o orçamento de ${o.cliente_nome || 'cliente'}?`)) return;
       try { await Cloud.deleteOrcamento(id); dashData = dashData.filter(x => x.id !== id); renderDashboard(); toast('Orçamento excluído.'); }
-      catch (err) { console.error(err); toast('Erro ao excluir.'); }
+      catch (err) {
+        console.error(err);
+        if (err && err.code === 'NO_DELETE') {
+          toast('O banco bloqueou a exclusão (RLS).');
+          if (Cloud.isAdmin && Cloud.isAdmin()) alert(DELETE_RLS_HELP);
+        } else { toast('Erro ao excluir.'); }
+      }
     }
   });
+  const DELETE_RLS_HELP =
+    'A exclusão foi bloqueada pela segurança do banco (RLS): falta uma política de DELETE em "orcamentos" — por isso o orçamento some da tela mas volta ao recarregar.\n\n' +
+    'No Supabase → SQL Editor, crie a política (ajuste o nome da coluna de dono, ex.: user_id / vendedor_id, conforme sua tabela):\n\n' +
+    'create policy orcamentos_delete on public.orcamentos\n' +
+    '  for delete to authenticated using (\n' +
+    "    user_id = auth.uid()\n" +
+    "    or exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin')\n" +
+    '  );';
 
   // ---- acompanhamento (nota + próxima atividade) ----
   let orcEditId = null;
@@ -2303,8 +2317,10 @@
   // lista de tarefas pendentes dentro do painel do negócio
   function renderTaskbox(o) {
     if (!$('#taskPend')) return;
-    const supported = ativColumn !== false;
-    $('#taskTipo').disabled = $('#taskData').disabled = $('#taskHora').disabled = $('#taskTexto').disabled = $('#btnTaskAdd').disabled = !supported;
+    // tipo/hora/detalhe só valem no modo rico (coluna atividades); a DATA sempre funciona (cai no retorno_em)
+    const rico = ativColumn !== false;
+    $('#taskTipo').disabled = $('#taskHora').disabled = $('#taskTexto').disabled = !rico;
+    $('#taskData').disabled = $('#btnTaskAdd').disabled = false;
     const pend = tarefasPendentes(o);
     $('#taskPend').innerHTML = pend.length
       ? pend.map(t => {
@@ -2314,7 +2330,7 @@
           const done = t._legacy ? '' : `<button class="tk-x" data-act="tk-done-modal" data-key="${esc(taskKey(t))}" title="Concluir">✓</button>`;
           return `<div class="taskpend ${cls}">${ATV_ICON[t.t] || '📌'} <b>${esc(ATV_LABEL[t.t] || 'Atividade')}</b> · ${fmtDue(t.due, t._legacy)}${x}${done}</div>`;
         }).join('')
-      : (supported ? '<div class="taskpend none">⚠️ Sem próxima atividade agendada</div>' : '');
+      : '<div class="taskpend none">⚠️ Sem próxima atividade agendada</div>';
   }
   // agendar nova atividade
   $('#btnTaskAdd').addEventListener('click', async () => {
@@ -2323,19 +2339,30 @@
     const data = $('#taskData').value;
     if (!data) { toast('Escolha a data.'); return; }
     const hora = $('#taskHora').value || '09:00';
-    const entry = { id: newId(), t: $('#taskTipo').value, x: ($('#taskTexto').value || '').trim(), by: (Cloud.profile && Cloud.profile.nome) || '', at: new Date().toISOString(), due: `${data}T${hora}:00`, done: false };
-    const arr = atividadesDe(o).concat(entry);
     const btn = $('#btnTaskAdd'); btn.disabled = true;
     try {
-      await Cloud.updateOrcamento(orcEditId, { atividades: arr });
-      o.atividades = arr; ativColumn = true;
-      $('#taskTexto').value = '';
-      renderTaskbox(o); renderDashboard(); toast('Atividade agendada.');
-    } catch (err) {
-      if (isMissingCol(err)) { ativColumn = false; renderTaskbox(o); toast('Ative o histórico no Supabase para agendar.'); }
-      else { console.error(err); toast('Erro ao agendar.'); }
+      if (ativColumn === false) { await scheduleViaRetorno(o, data); return; }   // sem coluna atividades → data simples
+      const entry = { id: newId(), t: $('#taskTipo').value, x: ($('#taskTexto').value || '').trim(), by: (Cloud.profile && Cloud.profile.nome) || '', at: new Date().toISOString(), due: `${data}T${hora}:00`, done: false };
+      const arr = atividadesDe(o).concat(entry);
+      try {
+        await Cloud.updateOrcamento(orcEditId, { atividades: arr });
+        o.atividades = arr; ativColumn = true;
+        $('#taskTexto').value = '';
+        renderTaskbox(o); renderDashboard(); toast('Atividade agendada.');
+      } catch (err) {
+        if (isMissingCol(err)) { ativColumn = false; await scheduleViaRetorno(o, data); }   // coluna ausente → cai pro retorno_em
+        else { console.error(err); toast('Erro ao agendar.'); }
+      }
     } finally { btn.disabled = false; }
   });
+  // agendamento simples por DATA quando a coluna `atividades` não existe — grava no campo retorno_em
+  async function scheduleViaRetorno(o, data) {
+    try {
+      await Cloud.updateOrcamento(o.id, { retorno_em: data });
+      o.retorno_em = data;
+      renderTaskbox(o); renderDashboard(); toast('Retorno agendado para ' + dmy(data + 'T00:00:00') + '.');
+    } catch (e) { console.error(e); toast('Erro ao agendar.'); }
+  }
   // concluir tarefa pelo painel
   $('#taskPend').addEventListener('click', e => {
     const b = e.target.closest('[data-act="tk-done-modal"]'); if (!b || !orcEditId) return;
