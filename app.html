@@ -396,7 +396,24 @@
       <div class="modal__body">
         <p class="hint" id="orcCliente">—</p>
         <label class="field"><span>Anotação / próximo passo</span><textarea id="orcObs" rows="3"></textarea></label>
-        <label class="field"><span>Data de retorno</span><input id="orcRetorno" type="date" /></label>
+
+        <div class="taskbox">
+          <span class="taskbox__t">Próxima atividade</span>
+          <div class="taskbox__pend" id="taskPend"></div>
+          <div class="taskbox__add">
+            <select id="taskTipo" aria-label="Tipo de atividade">
+              <option value="ligacao">📞 Ligar</option>
+              <option value="whatsapp">📱 WhatsApp</option>
+              <option value="reuniao">🤝 Reunião</option>
+              <option value="email">✉️ E-mail</option>
+              <option value="tarefa">📌 Tarefa</option>
+            </select>
+            <input id="taskData" type="date" aria-label="Data" />
+            <input id="taskHora" type="time" aria-label="Hora" />
+            <input id="taskTexto" type="text" placeholder="Detalhe (opcional)" />
+            <button class="btn btn--primary" id="btnTaskAdd" type="button">Agendar</button>
+          </div>
+        </div>
 
         <div class="atv" id="orcAtv">
           <div class="atv__head"><span>Histórico de atividades</span></div>

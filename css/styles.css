@@ -471,6 +471,39 @@ body[data-auth="out"] .login { display: flex; }
 .loss__chip:hover { color: var(--txt); border-color: var(--line); }
 .loss__chip.sel { color: #fff; background: rgba(248,113,113,.18); border-color: var(--danger); }
 
+/* próxima atividade — selos nos cards */
+.dflag.next { color: var(--violet); border-color: var(--violet); background: rgba(139,92,246,.1); }
+.dflag.none { color: #F5A524; border-color: rgba(245,165,36,.5); background: rgba(245,165,36,.08); }
+
+/* agendador de próxima atividade (painel do negócio) */
+.taskbox { border: 1px solid var(--line-2); border-radius: 12px; padding: 12px; margin: 4px 0 14px; background: var(--panel); }
+.taskbox__t { display: block; font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--txt-dim); margin-bottom: 8px; }
+.taskbox__pend { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.taskbox__pend:empty { display: none; }
+.taskpend { display: flex; align-items: center; gap: 6px; font-size: .82rem; color: var(--txt); padding: 7px 10px; border-radius: 8px; background: rgba(255,255,255,.03); border: 1px solid var(--line-2); }
+.taskpend.late { border-color: rgba(248,113,113,.4); color: var(--danger); }
+.taskpend.today { border-color: rgba(245,165,36,.4); }
+.taskpend.none { color: #F5A524; background: rgba(245,165,36,.08); border-color: rgba(245,165,36,.3); }
+.taskpend .tk-x { margin-left: auto; width: 26px; height: 26px; border-radius: 7px; border: 1px solid rgba(52,211,153,.5); background: rgba(52,211,153,.12); color: var(--ok); cursor: pointer; font-weight: 700; }
+.taskbox__add { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.taskbox__add select, .taskbox__add input {
+  width: 100%; min-width: 0; background: var(--black); border: 1px solid var(--line-2); color: var(--txt);
+  border-radius: var(--radius-sm); padding: 10px 12px; font-size: .9rem;
+}
+.taskbox__add select:focus, .taskbox__add input:focus { outline: none; border-color: var(--violet); box-shadow: 0 0 0 3px var(--violet-glow); }
+.taskbox__add #taskTipo, .taskbox__add #taskTexto, .taskbox__add #btnTaskAdd { grid-column: 1 / -1; }
+@media (min-width: 560px) {
+  .taskbox__add { grid-template-columns: 1.3fr 1.1fr .9fr; }
+  .taskbox__add #taskTipo { grid-column: 1; }
+  .taskbox__add #taskData { grid-column: 2; }
+  .taskbox__add #taskHora { grid-column: 3; }
+  .taskbox__add #taskTexto, .taskbox__add #btnTaskAdd { grid-column: 1 / -1; }
+}
+
+/* botão concluir tarefa na agenda */
+.a-done { width: 30px; height: 30px; border-radius: 8px; border: 1px solid rgba(52,211,153,.5); background: rgba(52,211,153,.12); color: var(--ok); cursor: pointer; font-weight: 700; }
+.agenda__gh.attn { color: #F5A524; }
+
 /* barra de lembretes na agenda */
 .agenda__notif { display: inline-flex; align-items: center; gap: 6px; font-size: .8rem; font-weight: 600;
   padding: 8px 14px; border-radius: 10px; margin-bottom: 14px; cursor: pointer;
