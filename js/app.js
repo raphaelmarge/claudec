@@ -1588,7 +1588,7 @@
       await Cloud.updateOrcamento(id, { status });
       logActivityAuto(r, 'fase', `Movido para "${stageName(status)}"`);
       toast('Fase atualizada.');
-    } catch (err) { console.error(err); r.status = prev; renderDashboard(); toast('Erro ao mudar a fase.'); }
+    } catch (err) { r.status = prev; renderDashboard(); reportUpdErr(err, 'Erro ao mudar a fase.'); }
   }
 
   // ---- motivo da perda ----
@@ -2178,6 +2178,22 @@
     "    user_id = auth.uid()\n" +
     "    or exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin')\n" +
     '  );';
+  const UPDATE_RLS_HELP =
+    'O banco bloqueou a alteração (RLS): falta uma política de UPDATE em "orcamentos" — por isso agendar uma data ou mudar de fase não salva (some ao recarregar).\n\n' +
+    'No Supabase → SQL Editor, crie a política (ajuste a coluna de dono, ex.: user_id / vendedor_id):\n\n' +
+    'create policy orcamentos_update on public.orcamentos\n' +
+    '  for update to authenticated using (\n' +
+    "    user_id = auth.uid()\n" +
+    "    or exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin')\n" +
+    '  );';
+  // reporta erro de update: distingue bloqueio de RLS (NO_UPDATE) de erro genérico
+  function reportUpdErr(err, fallback) {
+    console.error(err);
+    if (err && err.code === 'NO_UPDATE') {
+      toast('Sem permissão para salvar no banco (RLS).');
+      if (Cloud.isAdmin && Cloud.isAdmin()) alert(UPDATE_RLS_HELP);
+    } else { toast(fallback); }
+  }
 
   // ---- acompanhamento (nota + próxima atividade) ----
   let orcEditId = null;
@@ -2351,7 +2367,7 @@
         renderTaskbox(o); renderDashboard(); toast('Atividade agendada.');
       } catch (err) {
         if (isMissingCol(err)) { ativColumn = false; await scheduleViaRetorno(o, data); }   // coluna ausente → cai pro retorno_em
-        else { console.error(err); toast('Erro ao agendar.'); }
+        else { reportUpdErr(err, 'Erro ao agendar.'); }
       }
     } finally { btn.disabled = false; }
   });
@@ -2361,7 +2377,7 @@
       await Cloud.updateOrcamento(o.id, { retorno_em: data });
       o.retorno_em = data;
       renderTaskbox(o); renderDashboard(); toast('Retorno agendado para ' + dmy(data + 'T00:00:00') + '.');
-    } catch (e) { console.error(e); toast('Erro ao agendar.'); }
+    } catch (e) { reportUpdErr(e, 'Erro ao agendar.'); }
   }
   // concluir tarefa pelo painel
   $('#taskPend').addEventListener('click', e => {
