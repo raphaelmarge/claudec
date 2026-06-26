@@ -132,6 +132,13 @@ window.Cloud = (function () {
     const { data } = sb.storage.from('produtos').getPublicUrl(path);
     return data.publicUrl;
   }
+  // publica o catálogo público como JSON no bucket (lido pelo site comercial, sem login)
+  async function publishCatalogJson(catalog) {
+    if (!sb) return;
+    const blob = new Blob([JSON.stringify({ products: catalog || [], at: new Date().toISOString() })], { type: 'application/json' });
+    const { error } = await sb.storage.from('produtos').upload('catalog.json', blob, { contentType: 'application/json', upsert: true });
+    if (error) throw error;
+  }
 
   // ---------- IA: sugestão de follow-up (Edge Function) ----------
   async function suggestReply(context) {
@@ -146,7 +153,7 @@ window.Cloud = (function () {
     signIn, signUp, signOut, loadProfile, updateMyProfile,
     listClientes, saveCliente, deleteCliente,
     saveOrcamento, updateOrcamento, deleteOrcamento, listOrcamentos, listVendedores,
-    loadSettings, saveSettings, suggestReply, uploadProductImage,
+    loadSettings, saveSettings, suggestReply, uploadProductImage, publishCatalogJson,
     get profile() { return profile; },
     isAdmin() { return !!profile && profile.role === 'admin'; }
   };
