@@ -1334,15 +1334,61 @@
     const diff = Math.round((dt - t) / DAY);
     return { dt, diff, atrasado: diff < 0 && emAberto(r) };
   }
-  // prioridade no funil (maior = mais urgente, vai pro topo da lista)
+  /* ===== Atividades agendadas (estilo Pipedrive) — guardadas no JSONB `atividades` =====
+     Uma TAREFA é uma atividade com `due` (data/hora) e `done`=false.
+     A "próxima atividade" de um negócio é a tarefa pendente mais próxima. */
+  function newId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+  const taskKey = a => a.id || a.at;
+  const atividadesDe = o => Array.isArray(o.atividades) ? o.atividades : [];
+  function dueInfo(due) {
+    const now = new Date();
+    const d = new Date(due);
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const dDay = new Date(d); dDay.setHours(0, 0, 0, 0);
+    return { d, diffDays: Math.round((dDay - today) / DAY), overdue: d < now, isToday: dDay.getTime() === today.getTime() };
+  }
+  function fmtDue(due, semHora) {
+    const { d, diffDays } = dueInfo(due);
+    const hora = semHora ? '' : ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    if (diffDays === 0) return 'hoje' + hora;
+    if (diffDays === 1) return 'amanhã' + hora;
+    if (diffDays === -1) return 'ontem' + hora;
+    if (diffDays < 0) return `há ${-diffDays}d`;
+    if (diffDays <= 7) return d.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '') + hora;
+    return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) + hora;
+  }
+  // tarefas pendentes do negócio (ordenadas por data); inclui o retorno_em legado como ponte
+  function tarefasPendentes(o) {
+    const tasks = atividadesDe(o).filter(a => a.due && !a.done).map(a => ({ ...a, _due: new Date(a.due), _orc: o }));
+    if (!tasks.length && o.retorno_em) {
+      const due = o.retorno_em + 'T09:00:00';
+      tasks.push({ t: 'retorno', x: '', due, _due: new Date(due), _orc: o, _legacy: true });
+    }
+    return tasks.sort((a, b) => a._due - b._due);
+  }
+  function proximaAtividade(o) { return emAberto(o) ? (tarefasPendentes(o)[0] || null) : null; }
+  // selo de próxima atividade / nudge "sem próxima atividade" (o coração do Pipedrive)
+  function proximaBadge(r) {
+    if (!emAberto(r)) return '';
+    const nx = proximaAtividade(r);
+    if (!nx) return '<span class="dflag none">⚠️ sem próxima atividade</span>';
+    const di = dueInfo(nx.due);
+    const cls = di.overdue ? 'late' : (di.isToday ? 'warn' : 'next');
+    const ic = ATV_ICON[nx.t] || '📌';
+    return `<span class="dflag ${cls}">${ic} ${esc(ATV_LABEL[nx.t] || 'Atividade')} · ${fmtDue(nx.due, nx._legacy)}</span>`;
+  }
+
+  // prioridade no funil (maior = mais urgente): tarefa atrasada > sem próxima atividade > futura
   function prioridade(r) {
     if (!emAberto(r)) return 0;
-    const ri = retornoInfo(r);
-    if (ri && ri.atrasado) return 1000 + (-ri.diff);
-    if (ri && ri.diff === 0) return 900;
-    const d = diasDesde(r.criado_em);
-    if (!ri && d >= 5) return 500 + d;
-    return ri ? Math.max(1, 100 - ri.diff) : 50;
+    const nx = proximaAtividade(r);
+    if (nx) {
+      const di = dueInfo(nx.due);
+      if (di.overdue) return 1000 + Math.min(500, Math.max(0, -di.diffDays));
+      if (di.isToday) return 900;
+      return Math.max(1, 200 - di.diffDays);
+    }
+    return 500 + Math.min(300, diasDesde(r.criado_em));   // sem próxima atividade: cobra o agendamento
   }
 
   // validade da proposta: criado_em + dias (snapshot no orçamento, ou parâmetro atual)
@@ -1539,16 +1585,14 @@
     }
     const badge = $('#agendaBadge');
     if (badge) {
-      const pend = base.filter(r => { const ri = retornoInfo(r); return ri && ri.diff <= 0 && emAberto(r); }).length;
+      const pend = pendentesRetorno(base).length;
       badge.textContent = pend; badge.hidden = pend === 0;
     }
   }
   function kcardHTML(r) {
-    const ri = retornoInfo(r);
     const flags = [];
     if (r.origem === 'site') flags.push('<span class="dflag site">🌐 Lead</span>');
-    if (ri && ri.atrasado) flags.push(`<span class="dflag late">⏰ ${dmy(r.retorno_em)}</span>`);
-    else if (ri && ri.diff === 0) flags.push('<span class="dflag warn">📞 hoje</span>');
+    const pb = proximaBadge(r); if (pb) flags.push(pb);
     const vb = validadeBadge(r); if (vb) flags.push(vb);
     const nItens = (r.itens || []).length;
     return `<div class="kcard" draggable="true" data-id="${r.id}">
@@ -1619,29 +1663,54 @@
       <div class="arow__act">${wpp}<button data-act="ag-open" data-id="${r.id}" title="Abrir">✎</button></div>
     </div>`;
   }
+  // linha de TAREFA na agenda (com botão de concluir)
+  function trow(t) {
+    const o = t._orc;
+    const di = dueInfo(t.due);
+    const cls = di.overdue ? 'late' : (di.isToday ? 'today' : '');
+    const d = t._due;
+    const dbox = `<div class="arow__date"><b>${d.getDate()}</b><span>${d.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}</span></div>`;
+    const titulo = `${ATV_ICON[t.t] || '📌'} ${esc(ATV_LABEL[t.t] || 'Atividade')}${t.x ? ' · ' + esc(t.x) : ''}`;
+    const done = t._legacy ? '' : `<button class="a-done" data-act="tk-done" data-id="${o.id}" data-key="${esc(taskKey(t))}" title="Concluir atividade">✓</button>`;
+    return `<div class="arow ${cls}" data-id="${o.id}">
+      ${dbox}
+      <div class="arow__main">
+        <div class="arow__cli">${esc(o.cliente_nome || '—')}</div>
+        <div class="arow__sub">${titulo} · ${fmtDue(t.due, t._legacy)}${o.vendedor_nome ? ` · <span class="vend">${esc(o.vendedor_nome)}</span>` : ''}</div>
+      </div>
+      <div class="arow__val">${money(o.total)}</div>
+      <div class="arow__act">${done}<button class="a-wpp" data-act="ag-wpp" data-id="${o.id}" title="Enviar follow-up no WhatsApp">📱</button><button data-act="ag-open" data-id="${o.id}" title="Abrir negócio">✎</button></div>
+    </div>`;
+  }
   function renderAgenda(base) {
     const open = base.filter(emAberto);
-    const g = { late: [], today: [], soon: [], later: [], none: [] };
-    open.forEach(r => {
-      const ri = retornoInfo(r);
-      if (!ri) g.none.push(r);
-      else if (ri.diff < 0) g.late.push(r);
-      else if (ri.diff === 0) g.today.push(r);
-      else if (ri.diff <= 7) g.soon.push(r);
-      else g.later.push(r);
+    const tasks = [], semAtv = [];
+    open.forEach(o => {
+      const pend = tarefasPendentes(o);
+      if (!pend.length) semAtv.push(o); else pend.forEach(t => tasks.push(t));
     });
-    const byDate = (a, b) => new Date(a.retorno_em) - new Date(b.retorno_em);
-    [g.late, g.today, g.soon, g.later].forEach(x => x.sort(byDate));
-    g.none.sort((a, b) => prioridade(b) - prioridade(a));
-    const grp = (cls, icon, title, rows) => rows.length
-      ? `<div class="agenda__grp"><h3 class="agenda__gh ${cls}">${icon} ${title} <b>${rows.length}</b></h3>${rows.map(arow).join('')}</div>` : '';
+    const g = { late: [], today: [], soon: [], later: [] };
+    tasks.forEach(t => {
+      const di = dueInfo(t.due);
+      if (di.overdue) g.late.push(t);
+      else if (di.isToday) g.today.push(t);
+      else if (di.diffDays <= 7) g.soon.push(t);
+      else g.later.push(t);
+    });
+    const byDue = (a, b) => a._due - b._due;
+    [g.late, g.today, g.soon, g.later].forEach(x => x.sort(byDue));
+    semAtv.sort((a, b) => prioridade(b) - prioridade(a));
+    const grpT = (cls, icon, title, arr) => arr.length
+      ? `<div class="agenda__grp"><h3 class="agenda__gh ${cls}">${icon} ${title} <b>${arr.length}</b></h3>${arr.map(trow).join('')}</div>` : '';
+    const grpO = (icon, title, arr) => arr.length
+      ? `<div class="agenda__grp"><h3 class="agenda__gh attn">${icon} ${title} <b>${arr.length}</b></h3>${arr.map(arow).join('')}</div>` : '';
     const html =
-      grp('late', '⏰', 'Atrasados', g.late) +
-      grp('today', '📞', 'Para hoje', g.today) +
-      grp('', '📅', 'Próximos 7 dias', g.soon) +
-      grp('', '🗓', 'Mais tarde', g.later) +
-      grp('', '•', 'Sem data de retorno', g.none);
-    $('#dashAgenda').innerHTML = notifBarHTML() + (html || '<p class="dash__empty">Nada em aberto na agenda. 🎉</p>');
+      grpT('late', '⏰', 'Atrasadas', g.late) +
+      grpT('today', '📞', 'Para hoje', g.today) +
+      grpT('', '📅', 'Próximos 7 dias', g.soon) +
+      grpT('', '🗓', 'Mais tarde', g.later) +
+      grpO('⚠️', 'Sem próxima atividade', semAtv);
+    $('#dashAgenda').innerHTML = notifBarHTML() + (html || '<p class="dash__empty">Tudo em dia. 🎉</p>');
   }
   const dagenda = $('#dashAgenda');
   if (dagenda) dagenda.addEventListener('click', e => {
@@ -1652,6 +1721,8 @@
       });
       return;
     }
+    const dk = e.target.closest('[data-act="tk-done"]');
+    if (dk) { concluirTarefa(dk.dataset.id, dk.dataset.key, true); return; }
     const el = e.target.closest('[data-id]'); if (!el) return;
     const o = dashData.find(x => x.id === el.dataset.id); if (!o) return;
     if (e.target.closest('[data-act="ag-wpp"]')) { openWppFor(o); return; }
@@ -1684,7 +1755,7 @@
   let notifShown = false;   // dispara no máx. 1× por sessão de uso
   function notifSupported() { return 'Notification' in window; }
   function pendentesRetorno(rows) {
-    return rows.filter(r => { const ri = retornoInfo(r); return ri && ri.diff <= 0 && emAberto(r); });
+    return rows.filter(emAberto).filter(o => tarefasPendentes(o).some(t => { const di = dueInfo(t.due); return di.overdue || di.isToday; }));
   }
   function maybeNotify(rows) {
     if (!notifSupported() || Notification.permission !== 'granted' || notifShown) return;
@@ -1804,8 +1875,8 @@
   }
 
   /* ====================== HISTÓRICO DE ATIVIDADES ====================== */
-  const ATV_ICON = { nota: '🗒', ligacao: '📞', whatsapp: '📱', email: '✉️', reuniao: '🤝', proposta: '📄', fase: '↗️', perda: '❌', sistema: '⚙️' };
-  const ATV_LABEL = { nota: 'Nota', ligacao: 'Ligação', whatsapp: 'WhatsApp', email: 'E-mail', reuniao: 'Reunião', proposta: 'Proposta', fase: 'Mudança de fase', perda: 'Motivo da perda', sistema: 'Sistema' };
+  const ATV_ICON = { nota: '🗒', ligacao: '📞', whatsapp: '📱', email: '✉️', reuniao: '🤝', proposta: '📄', tarefa: '📌', retorno: '🔔', fase: '↗️', perda: '❌', sistema: '⚙️' };
+  const ATV_LABEL = { nota: 'Nota', ligacao: 'Ligar', whatsapp: 'WhatsApp', email: 'E-mail', reuniao: 'Reunião', proposta: 'Proposta', tarefa: 'Tarefa', retorno: 'Retorno', fase: 'Mudança de fase', perda: 'Motivo da perda', sistema: 'Sistema' };
   // motivos de perda (rótulos centralizados; usados no modal e nas métricas)
   const LOSS = { preco: 'Preço', prazo: 'Prazo de entrega', concorrente: 'Concorrente', verba: 'Sem verba', timing: 'Adiou a compra', sumiu: 'Sem resposta', outro: 'Outro' };
   const ATV_SQL = "alter table public.orcamentos add column if not exists atividades jsonb not null default '[]'::jsonb;";
@@ -1817,10 +1888,10 @@
     const supported = ativColumn !== false;
     $('#atvOff').hidden = supported;
     $('#atvTipo').disabled = $('#atvTexto').disabled = $('#btnAtvAdd').disabled = !supported;
-    const list = atvOf(o).slice().sort((a, b) => new Date(b.at) - new Date(a.at));
+    const list = atvOf(o).filter(a => !(a.due && !a.done)).slice().sort((a, b) => new Date(b.doneAt || b.at) - new Date(a.doneAt || a.at));
     $('#atvList').innerHTML = list.length
-      ? list.map(a => `<li class="atv__it t-${a.t}"><div class="atv__meta">${ATV_ICON[a.t] || '•'} <b>${ATV_LABEL[a.t] || a.t}</b> · ${fmtAtv(a.at)}${a.by ? ` · ${esc(a.by)}` : ''}</div><div class="atv__txt">${esc(a.x || '')}</div></li>`).join('')
-      : (supported ? '<li class="atv__empty">Nenhuma atividade ainda. Registre o primeiro contato acima.</li>' : '');
+      ? list.map(a => `<li class="atv__it t-${a.t}"><div class="atv__meta">${a.done ? '✅ ' : ''}${ATV_ICON[a.t] || '•'} <b>${ATV_LABEL[a.t] || a.t}</b> · ${fmtAtv(a.doneAt || a.at)}${a.by ? ` · ${esc(a.by)}` : ''}</div><div class="atv__txt">${esc(a.x || '')}</div></li>`).join('')
+      : (supported ? '<li class="atv__empty">Nenhuma atividade no histórico ainda.</li>' : '');
   }
   async function logActivityAuto(o, t, x) {
     if (ativColumn === false) return;
@@ -1855,21 +1926,19 @@
     const d = r.criado_em ? dmy(r.criado_em) : '';
     const dias = diasDesde(r.criado_em);
     const itens = (r.itens || []).map(i => `${i.qtd}× ${esc(i.nome)}`).join(' · ');
-    const ri = retornoInfo(r);
     const ativo = emAberto(r);
+    const nx = proximaAtividade(r);
 
     const lead = r.origem === 'site';
     const flags = [];
     if (lead) flags.push(`<span class="dflag site">🌐 Lead do site</span>`);
-    if (ri && ri.atrasado) flags.push(`<span class="dflag late">⏰ retorno atrasado (${dmy(r.retorno_em)})</span>`);
-    else if (ri && ri.diff === 0) flags.push(`<span class="dflag warn">📞 retornar hoje</span>`);
-    else if (ri && ri.diff > 0 && ativo) flags.push(`<span class="dflag">📅 retorno ${dmy(r.retorno_em)}</span>`);
-    if (ativo && !ri && dias >= 5) flags.push(`<span class="dflag warn">⏳ parado há ${dias}d</span>`);
+    const pb = proximaBadge(r); if (pb) flags.push(pb);
     const vb = validadeBadge(r, true); if (vb) flags.push(vb);
     if (stageOf(r) === 'ganho') flags.push(`<span class="dflag ok">✅ venda fechada</span>`);
     const contato = lead ? [r.contato_telefone, r.contato_email].filter(Boolean).map(esc).join(' · ') : '';
 
-    const cardCls = (ri && ri.atrasado) ? 'overdue' : ((ativo && !ri && dias >= 5) ? 'attn' : '');
+    const nxOverdue = nx && dueInfo(nx.due).overdue;
+    const cardCls = nxOverdue ? 'overdue' : ((ativo && !nx) ? 'attn' : '');
     return `<div class="dcard ${cardCls}" data-id="${r.id}">
       <div class="dcard__top"><span class="dcard__cli">${esc(r.cliente_nome || '—')}</span><span class="dcard__val">${money(r.total)}</span></div>
       <div class="dcard__meta">
@@ -1912,19 +1981,23 @@
     }
   });
 
-  // ---- acompanhamento (nota + data de retorno) ----
+  // ---- acompanhamento (nota + próxima atividade) ----
   let orcEditId = null;
   function openOrc(o) {
     orcEditId = o.id;
     $('#orcCliente').textContent = (o.cliente_nome || 'Cliente') + (o.numero ? ' · ' + o.numero : '');
     $('#orcObs').value = o.obs || '';
-    $('#orcRetorno').value = o.retorno_em || '';
+    if ($('#taskData')) {
+      $('#taskData').value = new Date(Date.now() + DAY).toISOString().slice(0, 10);   // padrão: amanhã
+      $('#taskHora').value = '09:00'; $('#taskTexto').value = '';
+    }
+    renderTaskbox(o);
     renderAtv(o);
     openModal('#orcModal');
   }
   $('#btnSaveOrc').addEventListener('click', async () => {
     if (!orcEditId) return;
-    const fields = { obs: $('#orcObs').value.trim(), retorno_em: $('#orcRetorno').value || null };
+    const fields = { obs: $('#orcObs').value.trim() };
     try {
       await Cloud.updateOrcamento(orcEditId, fields);
       const r = dashData.find(x => x.id === orcEditId); if (r) Object.assign(r, fields);
@@ -1932,6 +2005,59 @@
       closeModal('#orcModal'); renderDashboard(); toast('Acompanhamento salvo.');
     } catch (e) { console.error(e); toast('Erro ao salvar.'); }
   });
+
+  // lista de tarefas pendentes dentro do painel do negócio
+  function renderTaskbox(o) {
+    if (!$('#taskPend')) return;
+    const supported = ativColumn !== false;
+    $('#taskTipo').disabled = $('#taskData').disabled = $('#taskHora').disabled = $('#taskTexto').disabled = $('#btnTaskAdd').disabled = !supported;
+    const pend = tarefasPendentes(o);
+    $('#taskPend').innerHTML = pend.length
+      ? pend.map(t => {
+          const di = dueInfo(t.due);
+          const cls = di.overdue ? 'late' : (di.isToday ? 'today' : '');
+          const x = t.x && ATV_LABEL[t.t] ? ' — ' + esc(t.x) : '';
+          const done = t._legacy ? '' : `<button class="tk-x" data-act="tk-done-modal" data-key="${esc(taskKey(t))}" title="Concluir">✓</button>`;
+          return `<div class="taskpend ${cls}">${ATV_ICON[t.t] || '📌'} <b>${esc(ATV_LABEL[t.t] || 'Atividade')}</b> · ${fmtDue(t.due, t._legacy)}${x}${done}</div>`;
+        }).join('')
+      : (supported ? '<div class="taskpend none">⚠️ Sem próxima atividade agendada</div>' : '');
+  }
+  // agendar nova atividade
+  $('#btnTaskAdd').addEventListener('click', async () => {
+    if (!orcEditId) return;
+    const o = dashData.find(x => x.id === orcEditId); if (!o) return;
+    const data = $('#taskData').value;
+    if (!data) { toast('Escolha a data.'); return; }
+    const hora = $('#taskHora').value || '09:00';
+    const entry = { id: newId(), t: $('#taskTipo').value, x: ($('#taskTexto').value || '').trim(), by: (Cloud.profile && Cloud.profile.nome) || '', at: new Date().toISOString(), due: `${data}T${hora}:00`, done: false };
+    const arr = atividadesDe(o).concat(entry);
+    const btn = $('#btnTaskAdd'); btn.disabled = true;
+    try {
+      await Cloud.updateOrcamento(orcEditId, { atividades: arr });
+      o.atividades = arr; ativColumn = true;
+      $('#taskTexto').value = '';
+      renderTaskbox(o); renderDashboard(); toast('Atividade agendada.');
+    } catch (err) {
+      if (isMissingCol(err)) { ativColumn = false; renderTaskbox(o); toast('Ative o histórico no Supabase para agendar.'); }
+      else { console.error(err); toast('Erro ao agendar.'); }
+    } finally { btn.disabled = false; }
+  });
+  // concluir tarefa pelo painel
+  $('#taskPend').addEventListener('click', e => {
+    const b = e.target.closest('[data-act="tk-done-modal"]'); if (!b || !orcEditId) return;
+    concluirTarefa(orcEditId, b.dataset.key, false);
+  });
+  // marca uma tarefa como concluída (vai pro histórico). reabrir=abre o painel p/ agendar a próxima
+  async function concluirTarefa(orcId, key, reabrir) {
+    const o = dashData.find(x => x.id === orcId); if (!o) return;
+    const arr = atividadesDe(o).map(a => (taskKey(a) === key && a.due && !a.done) ? { ...a, done: true, doneAt: new Date().toISOString() } : a);
+    try {
+      await Cloud.updateOrcamento(orcId, { atividades: arr });
+      o.atividades = arr; ativColumn = true; renderDashboard();
+      if (reabrir) { toast('Concluída! Agende a próxima 👇'); openOrc(o); }
+      else { renderTaskbox(o); renderAtv(o); toast('Atividade concluída.'); }
+    } catch (err) { console.error(err); toast('Erro ao concluir.'); }
+  }
 
   // Carrega um orçamento salvo de volta no montador para editar.
   function editOrcamento(o) {
