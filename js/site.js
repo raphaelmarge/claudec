@@ -85,7 +85,7 @@
   function renderMeta(count) {
     const total = PRODUCTS.length;
     const rc = $('#resultCount');
-    if (rc) rc.innerHTML = count === total ? `<b>${total}</b> produtos` : `<b>${count}</b> de ${total} produtos`;
+    if (rc) rc.innerHTML = (count === total) ? `<b>${total}</b> produtos` : `<b>${count}</b> produto${count === 1 ? '' : 's'} encontrado${count === 1 ? '' : 's'}`;
     const cf = $('#clearFilters');
     if (cf) cf.hidden = !filtersActive();
   }
@@ -317,13 +317,27 @@
     const d = $('#linhasMenu'); if (d) d.innerHTML = lineMenuHTML();
     const m = $('#mLinhas'); if (m) m.innerHTML = lineMenuHTML();
   }
+  function currentViewName() {
+    if (filterTipo !== 'all') return TIPO_LABEL[filterTipo] || null;
+    if (filterSerie && filterSerie !== 'all') return filterSerie;
+    return null;
+  }
+  function renderCatBanner() {
+    const b = $('#catBanner'); if (!b) return;
+    const nome = currentViewName();
+    if (!nome) { b.hidden = true; b.innerHTML = ''; return; }
+    b.hidden = false;
+    b.innerHTML = `<div class="catbanner__inner">
+      <nav class="catbanner__crumb"><a href="${BASE_URL}" data-serie="all">Início</a><span>›</span><b>${esc(nome)}</b></nav>
+      <h1 class="catbanner__title">${esc(nome)}</h1>
+    </div>`;
+  }
   function renderLinhaHead() {
     const t = $('#catTitle'), r = $('#linhaReset');
-    let titulo = 'Equipamentos', ativa = false;
-    if (filterTipo !== 'all') { titulo = TIPO_LABEL[filterTipo] || 'Equipamentos'; ativa = true; }
-    else if (filterSerie && filterSerie !== 'all') { titulo = filterSerie; ativa = true; }
-    if (t) t.textContent = titulo;
-    if (r) r.hidden = !ativa;
+    const nome = currentViewName();
+    if (t) t.textContent = nome || 'Equipamentos';
+    if (r) r.hidden = !nome;
+    renderCatBanner();
   }
   function closeLinhasDrop() {
     const d = $('#linhasMenu'); if (d) d.hidden = true;
