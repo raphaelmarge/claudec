@@ -116,6 +116,23 @@
     return m.includes('settings') && (m.includes('exist') || m.includes('relation') || m.includes('schema cache'))
       || (err && err.code === '42p01') || m.includes('pgrst205') || m.includes('pgrst204');
   }
+  // catálogo público compartilhado (sem custo/margem; imagens locais "data:" não sobem — só URLs)
+  function publicCatalog() {
+    return state.products.map(p => ({
+      id: p.id, codigo: p.codigo || '', nome: p.nome || '', serie: p.serie || 'Geral',
+      imagem: (p.imagem && !String(p.imagem).startsWith('data:')) ? p.imagem : '',
+      dims: p.dims || '', preco: Number(p.preco) || 0, oculto: !!p.oculto, travado: !!p.travado
+    }));
+  }
+  function applyCatalog(remote) {
+    if (!Array.isArray(remote) || !remote.length) return;   // catálogo vazio não apaga o do vendedor
+    state.products = remote.map(p => ({
+      id: p.id || uid(), codigo: p.codigo || '', nome: p.nome || '', serie: p.serie || 'Geral',
+      imagem: p.imagem || '', dims: p.dims || '', preco: Number(p.preco) || 0,
+      margem: null, travado: !!p.travado, oculto: !!p.oculto
+    }));
+    save();
+  }
   async function pullSettings() {
     if (!(Cloud.ready && Cloud.ready())) return;
     try {
@@ -123,6 +140,7 @@
       settingsSync = true;
       if (data && typeof data === 'object') {
         SHARED_PARAM_KEYS.forEach(k => { if (data[k] !== undefined) state.params[k] = data[k]; });
+        if (!(Cloud.isAdmin && Cloud.isAdmin())) applyCatalog(data.catalog);   // vendedor recebe o catálogo do admin
         save();
       }
     } catch (err) { if (isMissingTable(err)) settingsSync = false; else console.error(err); }
@@ -135,6 +153,7 @@
     _pushTimer = setTimeout(async () => {
       const payload = {};
       SHARED_PARAM_KEYS.forEach(k => { if (state.params[k] !== undefined) payload[k] = state.params[k]; });
+      payload.catalog = publicCatalog();                  // publica o catálogo junto (produtos + imagens hospedadas)
       try { await Cloud.saveSettings(payload); settingsSync = true; renderSyncStatus(); }
       catch (err) { if (isMissingTable(err)) { settingsSync = false; renderSyncStatus(); } else console.error(err); }
     }, 800);
@@ -813,14 +832,14 @@
     if (f.precoInput != null) { p.preco = f.precoInput; p.travado = true; }   // preço travado manual
     else { p.travado = false; p.preco = r2(precoCalculado(p)); }              // volta ao automático
     if (!editingId) state.products.push(p);
-    save(); closeModal('#editModal'); render(); toast('Produto salvo.');
+    save(); schedulePushSettings(); closeModal('#editModal'); render(); toast('Produto salvo.');
   });
   $('#btnDeleteProduct').addEventListener('click', () => {
     if (!editingId) return;
     if (confirm('Remover este produto definitivamente?')) {
       state.products = state.products.filter(x => x.id !== editingId);
       delete state.cart[editingId];
-      save(); closeModal('#editModal'); render(); toast('Produto removido.');
+      save(); schedulePushSettings(); closeModal('#editModal'); render(); toast('Produto removido.');
     }
   });
   $('#btnAddProduct').addEventListener('click', () => openEdit(null));
@@ -829,7 +848,7 @@
     if (confirm('Restaurar o catálogo original? Isso desfaz suas edições.')) {
       state = freshFromSeed(); state.mode = 'admin';
       mergeSecret();            // recupera custos do segredo já destravado
-      save(); render(); toast('Catálogo original restaurado.');
+      save(); schedulePushSettings(); render(); toast('Catálogo original restaurado.');
     }
   });
 
@@ -972,7 +991,7 @@
     if ($('#impReplace').checked) { state.products = imported; state.cart = {}; }
     else state.products = state.products.concat(imported);
     state._imported = true; // não sobrescrever import do usuário com catálogo embutido
-    save(); closeModal('#importModal'); render();
+    save(); schedulePushSettings(); closeModal('#importModal'); render();
     toast(`${imported.length} produto(s) importado(s).`);
   });
 
