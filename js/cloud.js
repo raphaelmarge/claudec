@@ -88,8 +88,10 @@ window.Cloud = (function () {
     if (error) throw error; return data;
   }
   async function deleteOrcamento(id) {
-    const { error } = await sb.from('orcamentos').delete().eq('id', id);
+    // .select() devolve as linhas excluídas: se vier vazio, o RLS bloqueou (apagou 0 linhas, sem erro)
+    const { data, error } = await sb.from('orcamentos').delete().eq('id', id).select('id');
     if (error) throw error;
+    if (!data || data.length === 0) { const e = new Error('Exclusão bloqueada pela segurança do banco (RLS).'); e.code = 'NO_DELETE'; throw e; }
   }
   async function listOrcamentos() {
     // RLS: vendedor recebe os seus; admin recebe todos.
