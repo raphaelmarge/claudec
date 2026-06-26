@@ -254,3 +254,22 @@ img{max-width:100%;display:block}
 /* ---------------- TOAST ---------------- */
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:100;background:var(--panel-2);border:1px solid var(--violet);color:var(--txt);padding:11px 18px;border-radius:999px;font-size:.86rem;box-shadow:0 10px 30px rgba(0,0,0,.45)}
 .toast[hidden]{display:none}
+
+/* ===== Menu de Linhas (dropdown) ===== */
+.nav__drop{position:relative}
+.nav__droptrig{background:none;border:none;color:var(--txt-dim);font-size:.9rem;font-weight:500;font-family:inherit;cursor:pointer;padding:0;display:inline-flex;align-items:center;gap:4px}
+.nav__droptrig:hover,.nav__droptrig[aria-expanded="true"]{color:var(--txt)}
+.nav__menu{position:absolute;top:calc(100% + 12px);left:50%;transform:translateX(-50%);min-width:230px;max-height:60vh;overflow:auto;
+  background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px;box-shadow:0 16px 40px rgba(0,0,0,.5);z-index:60}
+.nav__mi{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 12px;border-radius:9px;color:var(--txt);font-size:.86rem}
+.nav__mi:hover{background:var(--panel-2)}
+.nav__mi i{font-style:normal;font-size:.72rem;color:var(--txt-mut);font-family:var(--font-mono)}
+.nav__mi--all{color:var(--violet);font-weight:700;border-bottom:1px solid var(--line);border-radius:9px 9px 0 0;margin-bottom:4px}
+/* variante no menu mobile */
+.nav__menu--m{position:static;transform:none;min-width:0;max-height:none;box-shadow:none;background:none;border:none;padding:0;display:flex;flex-direction:column;gap:2px}
+.mmenu__sec{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--txt-mut);margin:14px 8px 4px;font-weight:700}
+
+/* título da linha + voltar */
+.catalog__head{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.linha-reset{background:none;border:1px solid var(--line-2);color:var(--txt-dim);font-size:.8rem;padding:6px 12px;border-radius:999px;cursor:pointer;font-family:inherit}
+.linha-reset:hover{color:var(--txt);border-color:var(--violet)}
