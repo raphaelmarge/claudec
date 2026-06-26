@@ -547,6 +547,12 @@ body[data-auth="out"] .login { display: flex; }
 .stagerow__prob { display: inline-flex; align-items: center; gap: 4px; color: var(--txt-dim); font-size: .85rem; }
 .stagerow__prob input { width: 64px; background: var(--black); border: 1px solid var(--line-2); color: var(--txt); border-radius: var(--radius-sm); padding: 9px 10px; font-size: .9rem; font-family: var(--font-mono); text-align: right; }
 .stagerow__name:focus, .stagerow__prob input:focus { outline: none; border-color: var(--violet); box-shadow: 0 0 0 3px var(--violet-glow); }
+/* sugestão de resposta por IA */
+#suggestText { width: 100%; background: var(--black); border: 1px solid var(--line-2); color: var(--txt);
+  border-radius: var(--radius-sm); padding: 11px 12px; font-size: .92rem; font-family: var(--font-body); line-height: 1.5; resize: vertical; min-height: 110px; }
+#suggestText:focus { outline: none; border-color: var(--violet); box-shadow: 0 0 0 3px var(--violet-glow); }
+.suggest__err { font-size: .78rem; color: var(--danger); margin: 8px 0 0; }
+
 .sync-status { font-size: .76rem; margin: 10px 0 0; max-width: 520px; }
 .sync-status.on { color: var(--ok); }
 .sync-status.off { color: #F5A524; }

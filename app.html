@@ -444,6 +444,29 @@
     </div>
   </div>
 
+  <!-- ===================== SUGESTÃO DE RESPOSTA (IA) MODAL ===================== -->
+  <div class="modal" id="suggestModal" hidden>
+    <div class="modal__backdrop" data-close></div>
+    <div class="modal__card modal__card--sm" role="dialog" aria-modal="true" aria-labelledby="suggestTitle">
+      <header class="modal__head">
+        <h2 id="suggestTitle">✨ Sugestão de resposta</h2>
+        <button class="modal__x" data-close type="button" aria-label="Fechar">✕</button>
+      </header>
+      <div class="modal__body">
+        <p class="hint" id="suggestCliente">—</p>
+        <label class="field"><span>Quer orientar a IA? (opcional)</span><input id="suggestHint" type="text" placeholder="ex.: ofereça 5% à vista e pergunte se recebeu o PDF" /></label>
+        <textarea id="suggestText" rows="5" placeholder="Gerando sugestão…"></textarea>
+        <p class="suggest__err" id="suggestErr" hidden></p>
+      </div>
+      <footer class="modal__foot">
+        <button class="btn btn--ghost" id="btnSuggestRegen" type="button">↻ Regenerar</button>
+        <span class="spacer"></span>
+        <button class="btn btn--ghost" id="btnSuggestCopy" type="button">Copiar</button>
+        <button class="btn btn--primary" id="btnSuggestSend" type="button">Enviar no WhatsApp</button>
+      </footer>
+    </div>
+  </div>
+
   <!-- ===================== MOTIVO DA PERDA MODAL ===================== -->
   <div class="modal" id="lossModal" hidden>
     <div class="modal__backdrop" data-close></div>

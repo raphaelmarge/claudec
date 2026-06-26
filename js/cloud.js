@@ -117,12 +117,20 @@ window.Cloud = (function () {
     if (error) throw error;
   }
 
+  // ---------- IA: sugestão de follow-up (Edge Function) ----------
+  async function suggestReply(context) {
+    if (!sb) throw new Error('Sem conexão.');
+    const { data, error } = await sb.functions.invoke('suggest-reply', { body: context });
+    if (error) throw error;
+    return data;   // { text } ou { error }
+  }
+
   return {
     configured, ready, init, getSession, onAuthChange,
     signIn, signUp, signOut, loadProfile, updateMyProfile,
     listClientes, saveCliente, deleteCliente,
     saveOrcamento, updateOrcamento, deleteOrcamento, listOrcamentos, listVendedores,
-    loadSettings, saveSettings,
+    loadSettings, saveSettings, suggestReply,
     get profile() { return profile; },
     isAdmin() { return !!profile && profile.role === 'admin'; }
   };

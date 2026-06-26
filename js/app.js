@@ -2192,6 +2192,7 @@
       ${itens ? `<ul class="orc__items">${itens}</ul>` : ''}
       <div class="orc__act">
         <button class="btn btn--ghost" data-act="orc-wpp" type="button">📱 Follow-up</button>
+        ${fechado ? '' : '<button class="btn btn--ghost" data-act="orc-suggest" type="button">✨ Sugerir resposta</button>'}
         ${fechado ? '' : '<button class="btn btn--ghost" data-act="orc-edit" type="button">✎ Editar orçamento</button>'}
       </div>`;
   }
@@ -2207,7 +2208,73 @@
     const o = dashData.find(x => x.id === orcEditId); if (!o) return;
     const st = e.target.closest('.dstage'); if (st) { panelSetStage(st.dataset.stage); return; }
     if (e.target.closest('[data-act="orc-wpp"]')) { openWppFor(o); return; }
+    if (e.target.closest('[data-act="orc-suggest"]')) { openSuggest(o); return; }
     if (e.target.closest('[data-act="orc-edit"]')) { closeModal('#orcModal'); editOrcamento(o); return; }
+  });
+
+  // ---- IA: sugestão de follow-up (revisada pelo vendedor antes de enviar) ----
+  let suggestOrcId = null;
+  function buildSuggestContext(o) {
+    const hist = atividadesDe(o).filter(a => !(a.due && !a.done));
+    const last = hist[hist.length - 1];
+    return {
+      cliente: o.cliente_nome || '',
+      vendedor: o.vendedor_nome || (Cloud.profile && Cloud.profile.nome) || '',
+      numero: o.numero || '',
+      total: o.total ? money(o.total) : '',
+      etapa: stageName(stageOf(o)),
+      itens: (o.itens || []).map(i => ({ qtd: i.qtd, nome: i.nome })),
+      nota: o.obs || '',
+      ultima: last ? `${ATV_LABEL[last.t] || ''}: ${last.x || ''}`.trim() : '',
+      instrucao: (($('#suggestHint') && $('#suggestHint').value) || '').trim()
+    };
+  }
+  async function runSuggest(o) {
+    const txt = $('#suggestText'), err = $('#suggestErr');
+    err.hidden = true; txt.value = ''; txt.placeholder = 'Gerando sugestão…';
+    $('#btnSuggestSend').disabled = $('#btnSuggestRegen').disabled = true;
+    try {
+      const res = await Cloud.suggestReply(buildSuggestContext(o));
+      if (res && res.error) throw new Error(res.error);
+      txt.value = (res && res.text) || '';
+      if (!txt.value) throw new Error('resposta vazia');
+    } catch (e) {
+      console.error(e);
+      err.hidden = false;
+      err.innerHTML = 'Não foi possível gerar agora. Verifique se a IA está ativa. <button type="button" id="suggestHelp" class="atv__help">Como ativar</button>';
+      txt.placeholder = 'Escreva a mensagem manualmente ou tente regenerar.';
+    } finally {
+      $('#btnSuggestSend').disabled = $('#btnSuggestRegen').disabled = false;
+    }
+  }
+  function openSuggest(o) {
+    suggestOrcId = o.id;
+    $('#suggestCliente').textContent = (o.cliente_nome || 'Cliente') + (o.numero ? ' · ' + o.numero : '');
+    $('#suggestHint').value = '';
+    openModal('#suggestModal');
+    runSuggest(o);
+  }
+  $('#btnSuggestRegen').addEventListener('click', () => { const o = dashData.find(x => x.id === suggestOrcId); if (o) runSuggest(o); });
+  $('#btnSuggestCopy').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText($('#suggestText').value || ''); toast('Copiado.'); }
+    catch (e) { toast('Não foi possível copiar.'); }
+  });
+  $('#btnSuggestSend').addEventListener('click', () => {
+    const o = dashData.find(x => x.id === suggestOrcId); if (!o) return;
+    const msg = ($('#suggestText').value || '').trim();
+    if (!msg) { toast('Sem mensagem para enviar.'); return; }
+    const num = whatsNumero(quotePhone(o));
+    window.open(num ? `https://wa.me/${num}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+    logActivityAuto(o, 'whatsapp', 'Follow-up (IA) enviado pelo WhatsApp');
+    closeModal('#suggestModal');
+  });
+  document.addEventListener('click', e => {
+    if (e.target && e.target.id === 'suggestHelp') {
+      alert('Para ativar a sugestão por IA (uma vez):\n\n' +
+        '1) Crie o segredo com sua chave da Anthropic:\n   supabase secrets set ANTHROPIC_API_KEY=sk-ant-...\n\n' +
+        '2) Faça o deploy da função:\n   supabase functions deploy suggest-reply\n\n' +
+        '(Opcional) escolha o modelo:\n   supabase secrets set CLAUDE_MODEL=claude-sonnet-4-6');
+    }
   });
 
   function openOrc(o) {
