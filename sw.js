@@ -1,11 +1,12 @@
 /* ============================================================
    TORQUE FITNESS — Service Worker (PWA offline)
-   Faz cache do "app shell" para abrir e montar orçamento sem
-   internet. Chamadas externas (Supabase, CDN, fontes) passam
-   direto pela rede — o app cai no localStorage quando offline.
-   Suba o número da versão ao mudar arquivos do shell.
+   Estratégia NETWORK-FIRST para os arquivos do app (mesma origem):
+   quando online, sempre baixa a versão mais nova (assim correções
+   entram na hora); o cache serve só de reserva para uso offline.
+   Chamadas externas (Supabase, CDN, fontes) passam direto pela rede.
+   Suba o número da versão ao mudar a estratégia.
    ============================================================ */
-const CACHE = 'torque-app-v1';
+const CACHE = 'torque-app-v2';
 const SHELL = [
   './app.html',
   './css/styles.css',
@@ -42,19 +43,17 @@ self.addEventListener('fetch', e => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;       // Supabase/CDN/fontes: rede direta
 
-  // mesma origem: stale-while-revalidate, com fallback p/ app.html na navegação
+  // mesma origem: NETWORK-FIRST — sempre a versão mais nova quando online,
+  // caindo no cache (e em app.html na navegação) apenas quando offline.
   e.respondWith(
-    caches.match(req).then(cached => {
-      const network = fetch(req)
-        .then(res => {
-          if (res && res.status === 200) {
-            const copy = res.clone();
-            caches.open(CACHE).then(c => c.put(req, copy));
-          }
-          return res;
-        })
-        .catch(() => cached || (req.mode === 'navigate' ? caches.match('./app.html') : Response.error()));
-      return cached || network;
-    })
+    fetch(req)
+      .then(res => {
+        if (res && res.status === 200) {
+          const copy = res.clone();
+          caches.open(CACHE).then(c => c.put(req, copy));
+        }
+        return res;
+      })
+      .catch(() => caches.match(req).then(c => c || (req.mode === 'navigate' ? caches.match('./app.html') : Response.error())))
   );
 });
