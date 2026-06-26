@@ -12,7 +12,7 @@
 
   const DATA = window.TORQUE_PUBLIC || { products: [], params: {} };
   const PARAMS = DATA.params || {};
-  const PRODUCTS = (DATA.products || []).filter(p => p.preco > 0);
+  let PRODUCTS = (DATA.products || []).filter(p => p.preco > 0);   // catálogo embutido (substituído pelo ao vivo, se houver)
   const SITE = window.TORQUE_SITE || {};
   const DESC = window.TORQUE_DESCRICOES || {};
   const normName = s => String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
@@ -399,6 +399,28 @@
   window.__plate = plate;
   $('#ano').textContent = new Date().getFullYear();
   renderSeries(); renderChips(); renderGrid(); refreshCounts();
+
+  // catálogo ao vivo: lê o catalog.json publicado pelo app (bucket público) e
+  // substitui a vitrine pelas edições do admin (nomes, preços e fotos atuais).
+  async function loadLiveCatalog() {
+    try {
+      const cfg = window.TORQUE_SUPABASE;
+      if (!cfg || !cfg.url) return;
+      const url = cfg.url.replace(/\/+$/, '') + '/storage/v1/object/public/produtos/catalog.json?t=' + Date.now();
+      const res = await fetch(url);
+      if (!res.ok) return;                          // sem catálogo publicado ainda → mantém o embutido
+      const data = await res.json();
+      const items = (data && Array.isArray(data.products)) ? data.products : (Array.isArray(data) ? data : null);
+      if (!items || !items.length) return;
+      const live = items
+        .filter(p => p && p.preco > 0 && !p.oculto)
+        .map(p => ({ id: p.id, codigo: p.codigo || '', nome: p.nome || '', serie: p.serie || 'Geral', imagem: p.imagem || '', dims: p.dims || '', preco: Number(p.preco) || 0 }));
+      if (!live.length) return;
+      PRODUCTS = live;
+      renderSeries(); renderChips(); renderGrid(); refreshCounts();
+    } catch (e) { /* offline ou bucket vazio → mantém o catálogo embutido */ }
+  }
+  loadLiveCatalog();
 
   // deep-link: se a URL já vier com ?p=codigo, abre o produto direto
   (function initDeepLink() {

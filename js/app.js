@@ -160,7 +160,10 @@
       const payload = {};
       SHARED_PARAM_KEYS.forEach(k => { if (state.params[k] !== undefined) payload[k] = state.params[k]; });
       payload.catalog = publicCatalog();                  // publica o catálogo junto (produtos + imagens hospedadas)
-      try { await Cloud.saveSettings(payload); settingsSync = true; renderSyncStatus(); }
+      try {
+        await Cloud.saveSettings(payload); settingsSync = true; renderSyncStatus();
+        try { await Cloud.publishCatalogJson(payload.catalog); } catch (e) { console.warn('catalog.json:', e); }   // espelha pro site público
+      }
       catch (err) { if (isMissingTable(err)) { settingsSync = false; renderSyncStatus(); } else console.error(err); }
     }, 800);
   }
