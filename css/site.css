@@ -276,12 +276,18 @@ img{max-width:100%;display:block}
 
 /* ===== Banner de categoria (linha/tipo) ===== */
 .catbanner{background:linear-gradient(135deg,#14121c,#1e1733);border:1px solid var(--line);border-radius:18px;
-  padding:34px 26px;margin:0 0 22px;text-align:center;position:relative;overflow:hidden}
-.catbanner::after{content:"";position:absolute;inset:0;background:radial-gradient(620px 220px at 50% -50%,var(--violet-glow),transparent);pointer-events:none}
+  padding:52px 26px;margin:0 0 22px;text-align:center;position:relative;overflow:hidden;min-height:150px;
+  display:flex;align-items:center;justify-content:center;background-size:cover;background-position:center}
+.catbanner::after{content:"";position:absolute;inset:0;background:radial-gradient(640px 240px at 50% -50%,var(--violet-glow),transparent);pointer-events:none}
+.catbanner--img::after{display:none}
+.catbanner__bg{position:absolute;right:-26px;top:50%;transform:translateY(-50%) rotate(-8deg);width:230px;opacity:.07;pointer-events:none;z-index:0}
+.catbanner__bg svg{width:100%;height:auto}
 .catbanner__inner{position:relative;z-index:1}
 .catbanner__crumb{display:flex;gap:8px;justify-content:center;align-items:center;font-size:.78rem;color:var(--txt-mut)}
 .catbanner__crumb a{color:var(--txt-dim)}
 .catbanner__crumb a:hover{color:var(--violet)}
 .catbanner__crumb b{color:var(--violet);font-weight:600}
-.catbanner__title{font-size:2.2rem;font-weight:800;margin:10px 0 0;letter-spacing:-.01em}
-@media(max-width:600px){.catbanner{padding:24px 16px}.catbanner__title{font-size:1.6rem}}
+.catbanner__title{font-size:2.6rem;font-weight:800;margin:12px 0 0;letter-spacing:.01em;text-transform:uppercase}
+.catbanner__sub{color:var(--txt-dim);font-size:.92rem;margin:8px 0 0}
+.catbanner--img .catbanner__sub{color:var(--txt)}
+@media(max-width:600px){.catbanner{padding:34px 16px;min-height:120px}.catbanner__title{font-size:1.7rem}.catbanner__bg{display:none}}
