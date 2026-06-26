@@ -103,11 +103,26 @@ window.Cloud = (function () {
     return data || [];
   }
 
+  // ---------- CONFIGURAÇÕES COMPARTILHADAS (settings) ----------
+  // Linha única (id=1) com um JSON de parâmetros públicos. RLS: todos leem, só admin escreve.
+  async function loadSettings() {
+    if (!sb) return null;
+    const { data, error } = await sb.from('settings').select('data').eq('id', 1).maybeSingle();
+    if (error) throw error;
+    return data ? data.data : null;
+  }
+  async function saveSettings(obj) {
+    if (!sb) return;
+    const { error } = await sb.from('settings').upsert({ id: 1, data: obj, updated_at: new Date().toISOString() });
+    if (error) throw error;
+  }
+
   return {
     configured, ready, init, getSession, onAuthChange,
     signIn, signUp, signOut, loadProfile, updateMyProfile,
     listClientes, saveCliente, deleteCliente,
     saveOrcamento, updateOrcamento, deleteOrcamento, listOrcamentos, listVendedores,
+    loadSettings, saveSettings,
     get profile() { return profile; },
     isAdmin() { return !!profile && profile.role === 'admin'; }
   };
