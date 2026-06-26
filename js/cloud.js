@@ -84,8 +84,11 @@ window.Cloud = (function () {
     if (error) throw error; return data;
   }
   async function updateOrcamento(id, fields) {
-    const { data, error } = await sb.from('orcamentos').update(fields).eq('id', id).select().single();
-    if (error) throw error; return data;
+    // .select() (sem .single) devolve as linhas alteradas: vazio = RLS bloqueou (0 linhas, sem erro)
+    const { data, error } = await sb.from('orcamentos').update(fields).eq('id', id).select();
+    if (error) throw error;
+    if (!data || data.length === 0) { const e = new Error('Atualização bloqueada pela segurança do banco (RLS).'); e.code = 'NO_UPDATE'; throw e; }
+    return data[0];
   }
   async function deleteOrcamento(id) {
     // .select() devolve as linhas excluídas: se vier vazio, o RLS bloqueou (apagou 0 linhas, sem erro)
