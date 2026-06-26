@@ -267,9 +267,37 @@
     setVal('#cfgFreteIntl', p.freteIntlUSD); setVal('#cfgFreteNac', p.freteNacionalBRL);
     setVal('#cfgParcelas', p.parcelasMax); setVal('#cfgJuros', p.juros);
     setVal('#cfgValidade', p.validade);
+    renderStagesEditor();
     $('#configPanel').hidden = state.mode !== 'admin';
   }
   function setVal(sel, v) { const el = $(sel); if (el && document.activeElement !== el) el.value = v; }
+
+  // editor das etapas do funil (nome + probabilidade) — admin
+  function renderStagesEditor() {
+    const box = $('#stagesEditor'); if (!box) return;
+    if (box.contains(document.activeElement)) return;   // não recria enquanto digita
+    box.innerHTML = STAGES.map(s => `
+      <div class="stagerow">
+        <span class="stagerow__dot st-${s.key}"></span>
+        <input class="stagerow__name" data-stage-name="${s.key}" type="text" value="${esc(stageName(s.key))}" aria-label="Nome da etapa" />
+        <span class="stagerow__prob"><input data-stage-prob="${s.key}" type="number" min="0" max="100" step="5" value="${stageProb(s.key)}" aria-label="Probabilidade" />%</span>
+      </div>`).join('');
+  }
+  (function wireStagesEditor() {
+    const box = $('#stagesEditor'); if (!box) return;
+    box.addEventListener('input', e => {
+      const nameEl = e.target.closest('[data-stage-name]');
+      const probEl = e.target.closest('[data-stage-prob]');
+      if (!nameEl && !probEl) return;
+      if (!P().stages) P().stages = {};
+      const k = (nameEl || probEl).dataset.stageName || (nameEl || probEl).dataset.stageProb;
+      const cur = P().stages[k] || {};
+      if (nameEl) cur.nome = nameEl.value;
+      if (probEl) cur.prob = Math.max(0, Math.min(100, parseInt(probEl.value, 10) || 0));
+      P().stages[k] = cur; save();
+      if (dashView === 'metrics' && !$('#dashScreen').hidden) renderDashboard();   // atualiza a previsão ao vivo
+    });
+  })();
 
   function renderChips() {
     const wrap = $('#serieChips');
@@ -1316,13 +1344,19 @@
   /* ---------- DASHBOARD + FUNIL DE VENDAS ---------- */
   // Fases do funil (boas práticas: do topo até ganho/perdido).
   const STAGES = [
-    { key: 'novo',        label: 'Aguardando contato', short: 'Aguardando' },
-    { key: 'negociacao',  label: 'Em negociação',      short: 'Negociação' },
-    { key: 'sem_retorno', label: 'Sem retorno',        short: 'Sem retorno' },
-    { key: 'ganho',       label: 'Fechado ✅',          short: 'Fechado' },
-    { key: 'perdido',     label: 'Não fechou ❌',       short: 'Perdido' }
+    { key: 'novo',        label: 'Aguardando contato', short: 'Aguardando',  prob: 20 },
+    { key: 'negociacao',  label: 'Em negociação',      short: 'Negociação',  prob: 50 },
+    { key: 'sem_retorno', label: 'Sem retorno',        short: 'Sem retorno', prob: 10 },
+    { key: 'ganho',       label: 'Fechado ✅',          short: 'Fechado',     prob: 100 },
+    { key: 'perdido',     label: 'Não fechou ❌',       short: 'Perdido',     prob: 0 }
   ];
   const STAGE_LABEL = STAGES.reduce((m, s) => (m[s.key] = s.label, m), {});
+  const STAGE_DEF = STAGES.reduce((m, s) => (m[s.key] = s, m), {});
+  const OPEN_STAGES = ['novo', 'negociacao', 'sem_retorno'];
+  // overrides do admin (nome + probabilidade de fechamento), guardados nos params
+  function stageCfg(key) { return (P().stages && P().stages[key]) || {}; }
+  function stageName(key) { const n = stageCfg(key).nome; return (n && String(n).trim()) || (STAGE_DEF[key] && STAGE_DEF[key].short) || key; }
+  function stageProb(key) { const p = stageCfg(key).prob; return (p == null || isNaN(p)) ? (STAGE_DEF[key] ? STAGE_DEF[key].prob : 0) : Math.max(0, Math.min(100, Number(p))); }
   function stageOf(r) { const s = r.status || 'novo'; return (s === 'enviado' || !STAGE_LABEL[s]) ? 'novo' : s; }
   const DAY = 86400000;
   function diasDesde(iso) { if (!iso) return 0; return Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / DAY)); }
@@ -1465,7 +1499,7 @@
     r.status = status; renderDashboard();                 // otimista
     try {
       await Cloud.updateOrcamento(id, { status });
-      logActivityAuto(r, 'fase', `Movido para "${STAGE_LABEL[status]}"`);
+      logActivityAuto(r, 'fase', `Movido para "${stageName(status)}"`);
       toast('Fase atualizada.');
     } catch (err) { console.error(err); r.status = prev; renderDashboard(); toast('Erro ao mudar a fase.'); }
   }
@@ -1561,7 +1595,7 @@
         <span class="fchip__n">${c}</span><span class="fchip__l">${label}</span><span class="fchip__v">${money(v)}</span></button>`;
     $('#dashFunnel').innerHTML =
       fchip('all', 'Todos', cnt.all, val.all) +
-      STAGES.map(s => fchip(s.key, s.short, cnt[s.key], val[s.key])).join('');
+      STAGES.map(s => fchip(s.key, stageName(s.key), cnt[s.key], val[s.key])).join('');
 
     // ---- métricas (boas práticas: pipeline aberto, fechado, conversão) ----
     const emAbertoVal = val.novo + val.negociacao + val.sem_retorno;
@@ -1624,7 +1658,7 @@
       const rows = byStage[s.key].slice().sort(sorter);
       const val = rows.reduce((t, r) => t + (Number(r.total) || 0), 0);
       return `<div class="kcol st-${s.key}" data-stage="${s.key}">
-        <div class="kcol__head"><span class="kcol__t">${s.short}</span><span class="kcol__n">${rows.length}</span><span class="kcol__v">${money(val)}</span></div>
+        <div class="kcol__head"><span class="kcol__t">${stageName(s.key)}</span><span class="kcol__n">${rows.length}</span><span class="kcol__v">${money(val)}</span></div>
         <div class="kcol__body">${rows.length ? rows.map(kcardHTML).join('') : '<p class="kempty">—</p>'}</div>
       </div>`;
     };
@@ -1672,7 +1706,7 @@
       ${dbox}
       <div class="arow__main">
         <div class="arow__cli">${esc(r.cliente_nome || '—')}</div>
-        <div class="arow__sub">${STAGE_LABEL[stageOf(r)]}${r.vendedor_nome ? ` · <span class="vend">${esc(r.vendedor_nome)}</span>` : ''}${r.obs ? ` · ${esc(r.obs)}` : ''}</div>
+        <div class="arow__sub">${stageName(stageOf(r))}${r.vendedor_nome ? ` · <span class="vend">${esc(r.vendedor_nome)}</span>` : ''}${r.obs ? ` · ${esc(r.obs)}` : ''}</div>
       </div>
       <div class="arow__val">${money(r.total)}</div>
       <div class="arow__act">${wpp}<button data-act="ag-open" data-id="${r.id}" title="Abrir">✎</button></div>
@@ -1809,11 +1843,22 @@
     const conv = fechados ? Math.round(cnt.ganho / fechados * 100) : 0;
     const ticket = cnt.ganho ? val.ganho / cnt.ganho : 0;
 
+    // ---- previsão ponderada: valor em aberto × probabilidade da etapa ----
+    const fcRows = OPEN_STAGES.map(k => ({ key: k, nome: stageName(k), prob: stageProb(k), bruto: val[k] || 0, pond: (val[k] || 0) * stageProb(k) / 100 }));
+    const fcTotal = fcRows.reduce((t, r) => t + r.pond, 0);
+
     const kpis = `<div class="mkpis">
       <div class="mkpi"><b>${money(abertoV)}</b><span>Pipeline aberto (${abertoC})</span></div>
+      <div class="mkpi"><b>${money(fcTotal)}</b><span>Previsão ponderada</span></div>
       <div class="mkpi"><b>${money(val.ganho)}</b><span>Fechado (${cnt.ganho})</span></div>
       <div class="mkpi"><b>${money(ticket)}</b><span>Ticket médio</span></div>
     </div>`;
+
+    // ---- card de previsão ponderada (contribuição por etapa) ----
+    const maxFc = Math.max(1, ...fcRows.map(r => r.bruto));
+    const fcBars = fcRows.map(r =>
+      `<div class="mbar"><span class="mbar__lab">${esc(r.nome)} <small class="mbar__prob">${r.prob}%</small></span><div class="mbar__track"><div class="mbar__fill" style="width:${Math.round(r.bruto / maxFc * 100)}%"></div></div><span class="mbar__val">${moneyK(r.pond)}</span></div>`).join('');
+    const fcCard = `<div class="mcard"><h3 class="mcard__t">Previsão ponderada · <b style="color:var(--violet)">${money(fcTotal)}</b></h3>${fcBars}<p class="mcard__hint">Receita esperada do pipeline aberto (valor × probabilidade de cada etapa).</p></div>`;
 
     // ---- card de conversão com donut ----
     const convCard = `<div class="mcard mcard--conv">
@@ -1833,7 +1878,7 @@
       const w = Math.round(cnt[s.key] / maxStage * 100);
       const pct = Math.round(cnt[s.key] / totalCount * 100);
       const cls = s.key === 'ganho' ? 'ok' : s.key === 'perdido' ? 'bad' : s.key === 'sem_retorno' ? 'warn' : '';
-      return `<div class="mbar"><span class="mbar__lab">${s.short}</span><div class="mbar__track"><div class="mbar__fill ${cls}" style="width:${w}%"></div></div><span class="mbar__val">${cnt[s.key]} · ${pct}%</span></div>`;
+      return `<div class="mbar"><span class="mbar__lab">${stageName(s.key)}</span><div class="mbar__track"><div class="mbar__fill ${cls}" style="width:${w}%"></div></div><span class="mbar__val">${cnt[s.key]} · ${pct}%</span></div>`;
     }).join('');
 
     // ---- fechado × perdido por mês (com eixo, linhas-guia e rótulos) ----
@@ -1882,7 +1927,7 @@
       `<div class="mbar"><span class="mbar__lab">${esc(n)}</span><div class="mbar__track"><div class="mbar__fill bad" style="width:${Math.round(c / maxL * 100)}%"></div></div><span class="mbar__val">${c}</span></div>`).join('');
     const lossCard = cnt.perdido ? `<div class="mcard"><h3 class="mcard__t">Motivos de perda (${cnt.perdido})</h3>${lossBars}</div>` : '';
 
-    $('#dashMetrics').innerHTML = kpis + convCard +
+    $('#dashMetrics').innerHTML = kpis + convCard + fcCard +
       `<div class="mcard"><h3 class="mcard__t">Distribuição do funil</h3>${funil}</div>` +
       lossCard +
       `<div class="mcard"><h3 class="mcard__t">Fechado × Perdido · últimos 6 meses</h3>${chart6}<div class="mlegend"><span><i style="background:var(--ok)"></i>Fechado</span><span><i style="background:var(--danger)"></i>Perdido</span></div></div>` +
@@ -1969,7 +2014,7 @@
       ${itens ? `<div class="dcard__items">${itens}</div>` : ''}
       ${r.obs ? `<div class="dcard__note"><b>Nota:</b> ${esc(r.obs)}</div>` : ''}
       <select class="dcard__stage st-${stageOf(r)}" data-act="stage" aria-label="Fase da venda">
-        ${STAGES.map(s => `<option value="${s.key}" ${stageOf(r) === s.key ? 'selected' : ''}>${s.label}</option>`).join('')}
+        ${STAGES.map(s => `<option value="${s.key}" ${stageOf(r) === s.key ? 'selected' : ''}>${stageName(s.key)}</option>`).join('')}
       </select>
       <div class="dcard__actions">
         ${lead && r.contato_telefone ? `<button class="dc-wpp" data-act="wpp-lead" type="button">📱 WhatsApp</button>` : ''}
@@ -2009,7 +2054,7 @@
     const dias = diasDesde(o.criado_em);
     const rot = rottingInfo(o);
     const fechado = !emAberto(o);
-    const stageBar = STAGES.map(s => `<button class="dstage st-${s.key} ${stageOf(o) === s.key ? 'on' : ''}" data-stage="${s.key}" type="button">${s.short}</button>`).join('');
+    const stageBar = STAGES.map(s => `<button class="dstage st-${s.key} ${stageOf(o) === s.key ? 'on' : ''}" data-stage="${s.key}" type="button">${stageName(s.key)}${OPEN_STAGES.includes(s.key) ? `<i>${stageProb(s.key)}%</i>` : ''}</button>`).join('');
     const itens = (o.itens || []).map(i => `<li><span>${i.qtd}× ${esc(i.nome)}</span><b>${money(i.total)}</b></li>`).join('');
     const facts = [
       o.vendedor_nome ? `<span>👤 ${esc(o.vendedor_nome)}</span>` : '',
