@@ -97,7 +97,7 @@
      fiscais (custo/margem) nunca saem daqui. Degrada para
      localStorage se a tabela não existir.
      ------------------------------------------------------------ */
-  const SHARED_PARAM_KEYS = ['parcelasMax', 'juros', 'validade', 'stages', 'metas', 'linhas'];
+  const SHARED_PARAM_KEYS = ['parcelasMax', 'juros', 'validade', 'stages', 'metas', 'linhas', 'linhaBanners'];
   const SETTINGS_SQL =
     "create table if not exists public.settings (\n" +
     "  id int primary key default 1,\n" +
@@ -123,6 +123,12 @@
       imagem: (p.imagem && !String(p.imagem).startsWith('data:')) ? p.imagem : '',
       dims: p.dims || '', preco: Number(p.preco) || 0, oculto: !!p.oculto, travado: !!p.travado
     }));
+  }
+  // banners de categoria publicáveis (só URLs hospedadas; data: local não vai pro site)
+  function publicBanners() {
+    const out = {}, b = P().linhaBanners || {};
+    Object.keys(b).forEach(k => { if (b[k] && !String(b[k]).startsWith('data:')) out[k] = b[k]; });
+    return out;
   }
   function applyCatalog(remote) {
     if (!Array.isArray(remote) || !remote.length) return;   // catálogo vazio não apaga o do vendedor
@@ -162,7 +168,7 @@
       payload.catalog = publicCatalog();                  // publica o catálogo junto (produtos + imagens hospedadas)
       try {
         await Cloud.saveSettings(payload); settingsSync = true; renderSyncStatus();
-        try { await Cloud.publishCatalogJson(payload.catalog); } catch (e) { console.warn('catalog.json:', e); }   // espelha pro site público
+        try { await Cloud.publishCatalogJson(payload.catalog, publicBanners()); } catch (e) { console.warn('catalog.json:', e); }   // espelha pro site público
       }
       catch (err) { if (isMissingTable(err)) { settingsSync = false; renderSyncStatus(); } else console.error(err); }
     }, 800);
@@ -512,12 +518,18 @@
     const box = $('#linhasEditor'); if (!box) return;
     if (box.contains(document.activeElement)) return;       // não recria enquanto digita
     const linhas = linhasDefinidas();
+    const banners = P().linhaBanners || {};
     box.innerHTML = linhas.length ? linhas.map(nome => {
       const n = state.products.filter(p => (p.serie || 'Geral') === nome).length;
+      const temBanner = !!banners[nome];
+      const bannerCtrl = temBanner
+        ? `<button class="linharow__banner on" type="button" data-banner-linha="${esc(nome)}" title="Trocar imagem do banner">🖼 ✓</button><button class="linharow__x" type="button" data-banner-rm="${esc(nome)}" title="Remover banner">✕</button>`
+        : `<button class="linharow__banner" type="button" data-banner-linha="${esc(nome)}" title="Definir imagem de banner">🖼 Banner</button>`;
       return `<div class="linharow">
         <input class="linharow__name" data-linha="${esc(nome)}" type="text" value="${esc(nome)}" aria-label="Nome da linha" />
         <span class="linharow__n">${n} item(ns)</span>
-        ${n === 0 ? `<button class="linharow__x" type="button" data-del-linha="${esc(nome)}" title="Remover linha vazia">✕</button>` : '<span class="linharow__x"></span>'}
+        ${bannerCtrl}
+        ${n === 0 ? `<button class="linharow__x" type="button" data-del-linha="${esc(nome)}" title="Remover linha vazia">✕</button>` : ''}
       </div>`;
     }).join('') : '<p class="atv__empty">Nenhuma linha ainda. Use “+ Nova linha”.</p>';
   }
@@ -532,13 +544,35 @@
     save(); schedulePushSettings();      // sincroniza p/ equipe e publica catalog.json (vitrine pega o novo nome)
     render(); toast('Linha renomeada.');
   }
+  // envia a imagem de banner de uma linha (vai pro Storage; aparece no site comercial)
+  function pickBanner(lineName) {
+    const inp = document.createElement('input');
+    inp.type = 'file'; inp.accept = 'image/*';
+    inp.onchange = async () => {
+      const file = inp.files && inp.files[0]; if (!file) return;
+      toast('Enviando banner…');
+      try {
+        const { blob, dataUrl } = await resizeImage(file, 1600, 0.78);
+        let url = dataUrl, naNuvem = false;
+        try { url = await Cloud.uploadProductImage(blob, 'jpg'); naNuvem = true; }
+        catch (err) { console.warn('banner storage:', err); }
+        if (!P().linhaBanners) P().linhaBanners = {};
+        P().linhaBanners[lineName] = url; save(); schedulePushSettings(); renderLinhasEditor();
+        toast(naNuvem ? ('Banner de "' + lineName + '" salvo.') : 'Banner local — ative o Storage para aparecer no site.');
+      } catch (err) { console.error(err); toast('Não foi possível ler a imagem.'); }
+    };
+    inp.click();
+  }
   (function wireLinhasEditor() {
     const box = $('#linhasEditor'); if (!box) return;
     box.addEventListener('change', e => { const inp = e.target.closest('[data-linha]'); if (inp) renameLinha(inp.dataset.linha, inp.value); });
     box.addEventListener('click', e => {
-      const del = e.target.closest('[data-del-linha]'); if (!del) return;
-      P().linhas = (Array.isArray(P().linhas) ? P().linhas : []).filter(x => x !== del.dataset.delLinha);
-      save(); schedulePushSettings(); renderLinhasEditor(); toast('Linha removida.');
+      const del = e.target.closest('[data-del-linha]');
+      if (del) { P().linhas = (Array.isArray(P().linhas) ? P().linhas : []).filter(x => x !== del.dataset.delLinha); save(); schedulePushSettings(); renderLinhasEditor(); toast('Linha removida.'); return; }
+      const bn = e.target.closest('[data-banner-linha]');
+      if (bn) { pickBanner(bn.dataset.bannerLinha); return; }
+      const brm = e.target.closest('[data-banner-rm]');
+      if (brm) { const b = P().linhaBanners || {}; delete b[brm.dataset.bannerRm]; P().linhaBanners = b; save(); schedulePushSettings(); renderLinhasEditor(); toast('Banner removido.'); return; }
     });
     const add = $('#btnAddLinha');
     if (add) add.addEventListener('click', () => {
