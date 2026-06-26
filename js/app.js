@@ -126,11 +126,17 @@
   }
   function applyCatalog(remote) {
     if (!Array.isArray(remote) || !remote.length) return;   // catálogo vazio não apaga o do vendedor
-    state.products = remote.map(p => ({
-      id: p.id || uid(), codigo: p.codigo || '', nome: p.nome || '', serie: p.serie || 'Geral',
-      imagem: p.imagem || '', dims: p.dims || '', preco: Number(p.preco) || 0,
-      margem: null, travado: !!p.travado, oculto: !!p.oculto
-    }));
+    const byId = {}, byCode = {};
+    (state.products || []).forEach(p => { byId[p.id] = p; if (p.codigo) byCode[p.codigo] = p; });
+    state.products = remote.map(p => {
+      const old = byId[p.id] || (p.codigo && byCode[p.codigo]) || {};
+      return {
+        id: p.id || old.id || uid(), codigo: p.codigo || '', nome: p.nome || '', serie: p.serie || 'Geral',
+        imagem: p.imagem || old.imagem || '',   // imagem vazia do servidor NÃO apaga a foto local existente
+        dims: p.dims || '', preco: Number(p.preco) || 0,
+        margem: null, travado: !!p.travado, oculto: !!p.oculto
+      };
+    });
     save();
   }
   async function pullSettings() {
