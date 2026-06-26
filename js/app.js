@@ -140,7 +140,7 @@
       settingsSync = true;
       if (data && typeof data === 'object') {
         SHARED_PARAM_KEYS.forEach(k => { if (data[k] !== undefined) state.params[k] = data[k]; });
-        if (!(Cloud.isAdmin && Cloud.isAdmin())) applyCatalog(data.catalog);   // vendedor recebe o catálogo do admin
+        applyCatalog(data.catalog);   // todos recebem o catálogo publicado (inclui admin em outro aparelho)
         save();
       }
     } catch (err) { if (isMissingTable(err)) settingsSync = false; else console.error(err); }
