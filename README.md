@@ -4,6 +4,11 @@ Ferramenta web (mobile-first) para montar orçamentos da Torque Fitness a partir
 da sua planilha de importação. Tudo roda no navegador, sem servidor e sem
 instalação — basta abrir o `index.html`.
 
+> **Também neste repositório:** um app separado de **gestão de academia**
+> (cadastro de alunos, planos, financeiro/inadimplência e **catraca com
+> reconhecimento facial**). Abra `academia.html` — docs em
+> [`docs/academia.md`](docs/academia.md).
+
 ## Como usar
 
 1. Abra `index.html` no celular ou no computador (ou hospede a pasta em qualquer
