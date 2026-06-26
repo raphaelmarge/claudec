@@ -814,11 +814,11 @@
     const btn = $('#btnPickImg'), old = btn.textContent; btn.disabled = true; btn.textContent = 'Processando…';
     try {
       const { blob, dataUrl } = await resizeImage(file, 1000, 0.72);
-      let url = dataUrl, naNuvem = false;
+      let url = dataUrl, naNuvem = false, motivo = '';
       try { url = await Cloud.uploadProductImage(blob, 'jpg'); naNuvem = true; }
-      catch (err) { console.warn('Storage indisponível, usando imagem local:', err); }
+      catch (err) { console.warn('Storage falhou:', err); motivo = (err && (err.message || err.error || err.name)) || 'erro'; }
       $('#edImagem').value = url; setImgPreview(url);
-      toast(naNuvem ? 'Imagem enviada.' : 'Imagem adicionada (local — ative o Storage para compartilhar com a equipe).');
+      toast(naNuvem ? 'Imagem enviada.' : ('Imagem local — Storage falhou: ' + motivo));
     } catch (err) { console.error(err); toast('Não foi possível ler a imagem.'); }
     finally { btn.disabled = false; btn.textContent = old; }
   });
