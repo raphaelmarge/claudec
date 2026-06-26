@@ -720,6 +720,7 @@
     $('#edSerie').value = p ? p.serie : (state.filters.serie !== 'all' ? state.filters.serie : '');
     $('#edNome').value = p ? p.nome : '';
     $('#edImagem').value = p ? p.imagem : '';
+    setImgPreview(p ? p.imagem : '');
     $('#edCusto').value = (p && temCusto(p)) ? fobDe(p) : '';
     $('#edDims').value = p ? (p.dims || '') : '';
     $('#edMargem').value = (p && p.margem != null) ? p.margem : '';
@@ -753,6 +754,55 @@
       (f.precoInput != null ? ' (preço travado)' : ' (automático)');
   }
   ['#edCusto', '#edMargem', '#edPreco'].forEach(s => $(s).addEventListener('input', updateEditPreview));
+
+  // ---- imagem do produto: escolher/tirar foto, redimensionar e enviar (Storage com fallback local) ----
+  function setImgPreview(url) {
+    const img = $('#edImgPreview'), ph = $('#edImgPh'), clr = $('#btnClearImg');
+    if (!img) return;
+    if (url) { img.src = url; img.hidden = false; if (ph) ph.hidden = true; if (clr) clr.hidden = false; }
+    else { img.removeAttribute('src'); img.hidden = true; if (ph) ph.hidden = false; if (clr) clr.hidden = true; }
+  }
+  function resizeImage(file, maxPx, quality) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, maxPx / Math.max(img.width, img.height));
+        const w = Math.max(1, Math.round(img.width * scale)), h = Math.max(1, Math.round(img.height * scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h);          // fundo branco p/ PNG transparente
+        ctx.drawImage(img, 0, 0, w, h);
+        URL.revokeObjectURL(img.src);
+        canvas.toBlob(blob => {
+          if (!blob) { reject(new Error('encode')); return; }
+          const fr = new FileReader();
+          fr.onload = () => resolve({ blob, dataUrl: fr.result });
+          fr.onerror = () => reject(fr.error);
+          fr.readAsDataURL(blob);
+        }, 'image/jpeg', quality);
+      };
+      img.onerror = () => reject(new Error('imagem inválida'));
+      img.src = URL.createObjectURL(file);
+    });
+  }
+  if ($('#btnPickImg')) $('#btnPickImg').addEventListener('click', () => $('#edImgFile').click());
+  if ($('#btnClearImg')) $('#btnClearImg').addEventListener('click', () => { $('#edImagem').value = ''; setImgPreview(''); });
+  if ($('#edImagem')) $('#edImagem').addEventListener('input', () => setImgPreview($('#edImagem').value.trim()));
+  if ($('#edImgFile')) $('#edImgFile').addEventListener('change', async e => {
+    const file = e.target.files && e.target.files[0]; e.target.value = '';
+    if (!file) return;
+    const btn = $('#btnPickImg'), old = btn.textContent; btn.disabled = true; btn.textContent = 'Processando…';
+    try {
+      const { blob, dataUrl } = await resizeImage(file, 1000, 0.72);
+      let url = dataUrl, naNuvem = false;
+      try { url = await Cloud.uploadProductImage(blob, 'jpg'); naNuvem = true; }
+      catch (err) { console.warn('Storage indisponível, usando imagem local:', err); }
+      $('#edImagem').value = url; setImgPreview(url);
+      toast(naNuvem ? 'Imagem enviada.' : 'Imagem adicionada (local — ative o Storage para compartilhar com a equipe).');
+    } catch (err) { console.error(err); toast('Não foi possível ler a imagem.'); }
+    finally { btn.disabled = false; btn.textContent = old; }
+  });
 
   $('#btnSaveProduct').addEventListener('click', () => {
     const f = readEditForm();
