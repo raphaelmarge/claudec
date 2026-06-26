@@ -299,6 +299,23 @@
     });
   })();
 
+  // edição ao vivo das metas mensais (atualiza a barra sem recriar o input)
+  (function wireMetas() {
+    const box = $('#dashMetrics'); if (!box) return;
+    box.addEventListener('input', e => {
+      const inp = e.target.closest('[data-meta]'); if (!inp) return;
+      const nome = inp.dataset.meta;
+      const target = Math.max(0, Number(inp.value) || 0);
+      if (!P().metas) P().metas = {};
+      P().metas[nome] = target; save();
+      const row = inp.closest('.metarow'); if (!row) return;
+      const done = Number(row.dataset.done) || 0;
+      const pct = target ? Math.min(100, Math.round(done / target * 100)) : 0;
+      const fill = row.querySelector('.mbar__fill'); if (fill) { fill.style.width = pct + '%'; fill.classList.toggle('ok', pct >= 100); }
+      const v = row.querySelector('.metarow__v'); if (v) v.innerHTML = `<b>${moneyK(done)}</b>${target ? ` / ${moneyK(target)} · ${pct}%` : ''}`;
+    });
+  })();
+
   function renderChips() {
     const wrap = $('#serieChips');
     const all = ['all', ...series()];
@@ -1860,6 +1877,39 @@
       `<div class="mbar"><span class="mbar__lab">${esc(r.nome)} <small class="mbar__prob">${r.prob}%</small></span><div class="mbar__track"><div class="mbar__fill" style="width:${Math.round(r.bruto / maxFc * 100)}%"></div></div><span class="mbar__val">${moneyK(r.pond)}</span></div>`).join('');
     const fcCard = `<div class="mcard"><h3 class="mcard__t">Previsão ponderada · <b style="color:var(--violet)">${money(fcTotal)}</b></h3>${fcBars}<p class="mcard__hint">Receita esperada do pipeline aberto (valor × probabilidade de cada etapa).</p></div>`;
 
+    // ---- metas do mês por vendedor (fechado no mês × meta) ----
+    const _now = new Date();
+    const mesAtual = _now.getFullYear() + '-' + String(_now.getMonth() + 1).padStart(2, '0');
+    const mesNome = _now.toLocaleDateString('pt-BR', { month: 'long' });
+    const ganhoMes = {};
+    base.forEach(r => {
+      if (stageOf(r) !== 'ganho') return;
+      if (String(r.criado_em || '').slice(0, 7) !== mesAtual) return;
+      const n = r.vendedor_nome || '—';
+      ganhoMes[n] = (ganhoMes[n] || 0) + (Number(r.total) || 0);
+    });
+    const metas = P().metas || {};
+    const ehAdmin = Cloud.isAdmin();
+    const vendNomes = Array.from(new Set([...Object.keys(metas), ...Object.keys(ganhoMes)]))
+      .filter(n => n && n !== '—').sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    let metasCard = '';
+    if (vendNomes.length || ehAdmin) {
+      const linha = (n, done, target, tot) => {
+        const pct = target ? Math.min(100, Math.round(done / target * 100)) : 0;
+        const inp = (ehAdmin && !tot) ? `<input class="metarow__in" data-meta="${esc(n)}" type="number" min="0" step="1000" value="${target || ''}" placeholder="meta" aria-label="Meta de ${esc(n)}" />` : '';
+        return `<div class="metarow ${tot ? 'metarow--tot' : ''}" data-done="${done}">
+          <span class="metarow__n">${esc(n)}</span>
+          <div class="mbar__track"><div class="mbar__fill ${pct >= 100 ? 'ok' : ''}" style="width:${pct}%"></div></div>
+          <span class="metarow__v"><b>${moneyK(done)}</b>${target ? ` / ${moneyK(target)} · ${pct}%` : ''}</span>${inp}</div>`;
+      };
+      const rows = vendNomes.map(n => linha(n, ganhoMes[n] || 0, Number(metas[n]) || 0, false)).join('');
+      const totT = vendNomes.reduce((t, n) => t + (Number(metas[n]) || 0), 0);
+      const totD = vendNomes.reduce((t, n) => t + (ganhoMes[n] || 0), 0);
+      const teamRow = totT ? linha('Equipe', totD, totT, true) : '';
+      const corpo = rows || '<p class="atv__empty">Defina a meta mensal de cada vendedor nos campos à direita.</p>';
+      metasCard = `<div class="mcard"><h3 class="mcard__t">Metas de ${mesNome}</h3>${corpo}${teamRow}<p class="mcard__hint">Valor fechado no mês × meta.</p></div>`;
+    }
+
     // ---- card de conversão com donut ----
     const convCard = `<div class="mcard mcard--conv">
       <div class="conv__gauge">${donut(conv)}</div>
@@ -1927,7 +1977,7 @@
       `<div class="mbar"><span class="mbar__lab">${esc(n)}</span><div class="mbar__track"><div class="mbar__fill bad" style="width:${Math.round(c / maxL * 100)}%"></div></div><span class="mbar__val">${c}</span></div>`).join('');
     const lossCard = cnt.perdido ? `<div class="mcard"><h3 class="mcard__t">Motivos de perda (${cnt.perdido})</h3>${lossBars}</div>` : '';
 
-    $('#dashMetrics').innerHTML = kpis + convCard + fcCard +
+    $('#dashMetrics').innerHTML = kpis + convCard + fcCard + metasCard +
       `<div class="mcard"><h3 class="mcard__t">Distribuição do funil</h3>${funil}</div>` +
       lossCard +
       `<div class="mcard"><h3 class="mcard__t">Fechado × Perdido · últimos 6 meses</h3>${chart6}<div class="mlegend"><span><i style="background:var(--ok)"></i>Fechado</span><span><i style="background:var(--danger)"></i>Perdido</span></div></div>` +
