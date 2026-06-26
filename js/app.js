@@ -97,7 +97,7 @@
      fiscais (custo/margem) nunca saem daqui. Degrada para
      localStorage se a tabela não existir.
      ------------------------------------------------------------ */
-  const SHARED_PARAM_KEYS = ['parcelasMax', 'juros', 'validade', 'stages', 'metas'];
+  const SHARED_PARAM_KEYS = ['parcelasMax', 'juros', 'validade', 'stages', 'metas', 'linhas'];
   const SETTINGS_SQL =
     "create table if not exists public.settings (\n" +
     "  id int primary key default 1,\n" +
@@ -308,6 +308,11 @@
     const set = new Set(state.products.map(p => p.serie || 'Geral'));
     return Array.from(set).sort((a, b) => a.localeCompare(b, 'pt-BR'));
   }
+  // linhas definidas pelo admin (P().linhas) + as que vêm dos produtos — usadas no editor e no seletor
+  function linhasDefinidas() {
+    const set = new Set([...(Array.isArray(P().linhas) ? P().linhas : []), ...series()]);
+    return Array.from(set).filter(Boolean).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  }
   function visibleProducts() {
     const isAdmin = state.mode === 'admin';
     const q = (state.filters.query || '').trim().toLowerCase();
@@ -357,6 +362,7 @@
     setVal('#cfgParcelas', p.parcelasMax); setVal('#cfgJuros', p.juros);
     setVal('#cfgValidade', p.validade);
     renderStagesEditor();
+    renderLinhasEditor();
     renderSyncStatus();
     $('#configPanel').hidden = state.mode !== 'admin';
   }
@@ -499,8 +505,51 @@
   }
 
   function renderSerieDatalist() {
-    $('#serieList').innerHTML = series().map(s => `<option value="${esc(s)}">`).join('');
+    $('#serieList').innerHTML = linhasDefinidas().map(s => `<option value="${esc(s)}">`).join('');
   }
+  // ---- gerenciador de LINHAS (séries): adicionar e renomear ----
+  function renderLinhasEditor() {
+    const box = $('#linhasEditor'); if (!box) return;
+    if (box.contains(document.activeElement)) return;       // não recria enquanto digita
+    const linhas = linhasDefinidas();
+    box.innerHTML = linhas.length ? linhas.map(nome => {
+      const n = state.products.filter(p => (p.serie || 'Geral') === nome).length;
+      return `<div class="linharow">
+        <input class="linharow__name" data-linha="${esc(nome)}" type="text" value="${esc(nome)}" aria-label="Nome da linha" />
+        <span class="linharow__n">${n} item(ns)</span>
+        ${n === 0 ? `<button class="linharow__x" type="button" data-del-linha="${esc(nome)}" title="Remover linha vazia">✕</button>` : '<span class="linharow__x"></span>'}
+      </div>`;
+    }).join('') : '<p class="atv__empty">Nenhuma linha ainda. Use “+ Nova linha”.</p>';
+  }
+  function renameLinha(antigo, novo) {
+    novo = (novo || '').trim();
+    if (!novo || novo === antigo) { renderLinhasEditor(); return; }
+    state.products.forEach(p => { if ((p.serie || 'Geral') === antigo) p.serie = novo; });   // cascata nos produtos
+    const set = new Set((Array.isArray(P().linhas) ? P().linhas : []).filter(x => x !== antigo));
+    set.add(novo);
+    P().linhas = Array.from(set).filter(Boolean);
+    if (state.filters.serie === antigo) state.filters.serie = novo;
+    save(); schedulePushSettings();      // sincroniza p/ equipe e publica catalog.json (vitrine pega o novo nome)
+    render(); toast('Linha renomeada.');
+  }
+  (function wireLinhasEditor() {
+    const box = $('#linhasEditor'); if (!box) return;
+    box.addEventListener('change', e => { const inp = e.target.closest('[data-linha]'); if (inp) renameLinha(inp.dataset.linha, inp.value); });
+    box.addEventListener('click', e => {
+      const del = e.target.closest('[data-del-linha]'); if (!del) return;
+      P().linhas = (Array.isArray(P().linhas) ? P().linhas : []).filter(x => x !== del.dataset.delLinha);
+      save(); schedulePushSettings(); renderLinhasEditor(); toast('Linha removida.');
+    });
+    const add = $('#btnAddLinha');
+    if (add) add.addEventListener('click', () => {
+      const nome = (prompt('Nome da nova linha:') || '').trim();
+      if (!nome) return;
+      const arr = (Array.isArray(P().linhas) ? P().linhas : []).slice();
+      if (!arr.includes(nome)) arr.push(nome);
+      P().linhas = arr; save(); schedulePushSettings(); renderLinhasEditor(); renderSerieDatalist();
+      toast('Linha criada. Atribua produtos a ela ao editar/criar um produto.');
+    });
+  })();
 
   function renderPeople() {
     const v = currentVendedor();

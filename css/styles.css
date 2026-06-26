@@ -563,6 +563,15 @@ body[data-auth="out"] .login { display: flex; }
 #suggestText:focus { outline: none; border-color: var(--violet); box-shadow: 0 0 0 3px var(--violet-glow); }
 .suggest__err { font-size: .78rem; color: var(--danger); margin: 8px 0 0; }
 
+/* gerenciador de linhas (séries) */
+.linharow { display: flex; align-items: center; gap: 10px; }
+.linharow__name { flex: 1 1 auto; min-width: 0; background: var(--black); border: 1px solid var(--line-2); color: var(--txt); border-radius: var(--radius-sm); padding: 9px 12px; font-size: .9rem; }
+.linharow__name:focus { outline: none; border-color: var(--violet); box-shadow: 0 0 0 3px var(--violet-glow); }
+.linharow__n { font-size: .76rem; color: var(--txt-dim); white-space: nowrap; min-width: 64px; text-align: right; }
+.linharow__x { width: 30px; height: 30px; flex: 0 0 auto; border-radius: 8px; border: 1px solid var(--line-2); background: var(--panel); color: var(--txt-dim); cursor: pointer; }
+button.linharow__x:hover { color: var(--danger); border-color: rgba(248,113,113,.4); }
+span.linharow__x { border: none; background: none; cursor: default; }
+
 .sync-status { font-size: .76rem; margin: 10px 0 0; max-width: 520px; }
 .sync-status.on { color: var(--ok); }
 .sync-status.off { color: #F5A524; }
