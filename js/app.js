@@ -1391,6 +1391,21 @@
     return 500 + Math.min(300, diasDesde(r.criado_em));   // sem próxima atividade: cobra o agendamento
   }
 
+  // "negócio parado" (rotting): aberto, sem atividade futura agendada e sem toque há ROT dias
+  const ROT_DIAS = 10;
+  function ultimoToque(o) {
+    const ts = atividadesDe(o).map(a => new Date(a.doneAt || a.at).getTime()).filter(n => !isNaN(n));
+    return ts.length ? Math.max(...ts) : (o.criado_em ? new Date(o.criado_em).getTime() : 0);
+  }
+  function rottingInfo(o) {
+    if (!emAberto(o)) return null;
+    const nx = proximaAtividade(o);
+    if (nx && !dueInfo(nx.due).overdue) return null;        // tem próxima atividade futura → não está frio
+    const base = ultimoToque(o); if (!base) return null;
+    const dias = Math.floor((Date.now() - base) / DAY);
+    return dias >= ROT_DIAS ? { dias } : null;
+  }
+
   // validade da proposta: criado_em + dias (snapshot no orçamento, ou parâmetro atual)
   function validadeInfo(r) {
     if (!r.criado_em) return null;
@@ -1933,12 +1948,14 @@
     const flags = [];
     if (lead) flags.push(`<span class="dflag site">🌐 Lead do site</span>`);
     const pb = proximaBadge(r); if (pb) flags.push(pb);
+    const rot = rottingInfo(r);
+    if (rot) flags.push(`<span class="dflag cold">🥶 parado há ${rot.dias}d</span>`);
     const vb = validadeBadge(r, true); if (vb) flags.push(vb);
     if (stageOf(r) === 'ganho') flags.push(`<span class="dflag ok">✅ venda fechada</span>`);
     const contato = lead ? [r.contato_telefone, r.contato_email].filter(Boolean).map(esc).join(' · ') : '';
 
     const nxOverdue = nx && dueInfo(nx.due).overdue;
-    const cardCls = nxOverdue ? 'overdue' : ((ativo && !nx) ? 'attn' : '');
+    const cardCls = nxOverdue ? 'overdue' : ((ativo && (!nx || rot)) ? 'attn' : '');
     return `<div class="dcard ${cardCls}" data-id="${r.id}">
       <div class="dcard__top"><span class="dcard__cli">${esc(r.cliente_nome || '—')}</span><span class="dcard__val">${money(r.total)}</span></div>
       <div class="dcard__meta">
@@ -1983,9 +2000,52 @@
 
   // ---- acompanhamento (nota + próxima atividade) ----
   let orcEditId = null;
+  // ---- cabeçalho rico do negócio (valor, etapas clicáveis, contatos, produtos) ----
+  function renderDealHead(o) {
+    const head = $('#orcHead'); if (!head) return;
+    const cli = o.cliente_id ? clienteById(o.cliente_id) : null;
+    const fone = quotePhone(o);
+    const email = (cli && cli.email) || o.contato_email || '';
+    const dias = diasDesde(o.criado_em);
+    const rot = rottingInfo(o);
+    const fechado = !emAberto(o);
+    const stageBar = STAGES.map(s => `<button class="dstage st-${s.key} ${stageOf(o) === s.key ? 'on' : ''}" data-stage="${s.key}" type="button">${s.short}</button>`).join('');
+    const itens = (o.itens || []).map(i => `<li><span>${i.qtd}× ${esc(i.nome)}</span><b>${money(i.total)}</b></li>`).join('');
+    const facts = [
+      o.vendedor_nome ? `<span>👤 ${esc(o.vendedor_nome)}</span>` : '',
+      `<span>🗓 ${dias === 0 ? 'criado hoje' : 'há ' + dias + 'd'}</span>`,
+      rot ? `<span class="rot">🥶 parado há ${rot.dias}d</span>` : '',
+      fone ? `<a href="https://wa.me/${whatsNumero(fone)}" target="_blank" rel="noopener">📱 ${esc(fone)}</a>` : '',
+      email ? `<span>✉️ ${esc(email)}</span>` : ''
+    ].filter(Boolean).join('');
+    head.innerHTML = `
+      <div class="orc__title"><span>${esc(o.cliente_nome || 'Cliente')}${o.numero ? ` · ${esc(o.numero)}` : ''}</span><b>${money(o.total)}</b></div>
+      <div class="orc__stages">${stageBar}</div>
+      <div class="orc__facts">${facts}</div>
+      ${itens ? `<ul class="orc__items">${itens}</ul>` : ''}
+      <div class="orc__act">
+        <button class="btn btn--ghost" data-act="orc-wpp" type="button">📱 Follow-up</button>
+        ${fechado ? '' : '<button class="btn btn--ghost" data-act="orc-edit" type="button">✎ Editar orçamento</button>'}
+      </div>`;
+  }
+  // mover etapa direto no painel (funciona no celular, ao contrário do arrastar)
+  function panelSetStage(status) {
+    const o = dashData.find(x => x.id === orcEditId); if (!o) return;
+    if (stageOf(o) === status) return;
+    if (status === 'perdido') { closeModal('#orcModal'); changeStage(o.id, status); return; }
+    changeStage(o.id, status);     // otimista: changeStage já ajusta o.status
+    renderDealHead(o);
+  }
+  $('#orcHead').addEventListener('click', e => {
+    const o = dashData.find(x => x.id === orcEditId); if (!o) return;
+    const st = e.target.closest('.dstage'); if (st) { panelSetStage(st.dataset.stage); return; }
+    if (e.target.closest('[data-act="orc-wpp"]')) { openWppFor(o); return; }
+    if (e.target.closest('[data-act="orc-edit"]')) { closeModal('#orcModal'); editOrcamento(o); return; }
+  });
+
   function openOrc(o) {
     orcEditId = o.id;
-    $('#orcCliente').textContent = (o.cliente_nome || 'Cliente') + (o.numero ? ' · ' + o.numero : '');
+    renderDealHead(o);
     $('#orcObs').value = o.obs || '';
     if ($('#taskData')) {
       $('#taskData').value = new Date(Date.now() + DAY).toISOString().slice(0, 10);   // padrão: amanhã
