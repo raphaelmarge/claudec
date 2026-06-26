@@ -27,6 +27,8 @@
 
   let cart = load();
   let filterSerie = 'all';
+  let filterTipo = 'all';   // 'all' | 'maquina' | 'acessorio'
+  const TIPO_LABEL = { maquina: 'Máquinas', acessorio: 'Acessórios' };
   let query = '';
   let priceBand = 'all';
   let sortBy = 'rel';
@@ -69,6 +71,7 @@
     const q = query.trim().toLowerCase();
     const list = PRODUCTS.filter(p => {
       if (filterSerie !== 'all' && (p.serie || 'Geral') !== filterSerie) return false;
+      if (filterTipo !== 'all') { const t = p.tipo || 'maquina'; if (filterTipo === 'acessorio' ? t !== 'acessorio' : t === 'acessorio') return false; }
       if (!inBand(p.preco)) return false;
       if (q && !((p.nome + ' ' + p.codigo + ' ' + p.serie).toLowerCase().includes(q))) return false;
       return true;
@@ -159,6 +162,8 @@
     if (act === 'dec' && code) { setQty(code, qtyOf(code) - 1); syncAll(); return; }
     const sc = e.target.closest('[data-serie]');
     if (sc) { e.preventDefault(); const scroll = sc.classList.contains('scard') || sc.classList.contains('nav__mi'); goToLinha(sc.dataset.serie, true, scroll); return; }
+    const tp = e.target.closest('[data-tipo]');
+    if (tp) { e.preventDefault(); goToTipo(tp.dataset.tipo, true, true); return; }
     if (e.target.closest('[data-dclose]')) closeDrawer();
     if (e.target.closest('[data-lclose]')) closeLead();
     if (e.target.closest('[data-pclose]')) closeProd();
@@ -303,6 +308,7 @@
 
   /* ---------- navegação por LINHA (cada linha tem seu link ?linha=) ---------- */
   const currentLinha = () => new URLSearchParams(location.search).get('linha');
+  const currentTipo = () => new URLSearchParams(location.search).get('tipo');
   function lineMenuHTML() {
     const items = series().map(s => `<a href="?linha=${encodeURIComponent(s)}" data-serie="${esc(s)}" class="nav__mi"><span>${esc(s)}</span><i>${countSerie(s)}</i></a>`).join('');
     return `<a href="${BASE_URL}" data-serie="all" class="nav__mi nav__mi--all">Todas as linhas</a>` + items;
@@ -313,27 +319,36 @@
   }
   function renderLinhaHead() {
     const t = $('#catTitle'), r = $('#linhaReset');
-    const ativa = filterSerie && filterSerie !== 'all';
-    if (t) t.textContent = ativa ? filterSerie : 'Equipamentos';
+    let titulo = 'Equipamentos', ativa = false;
+    if (filterTipo !== 'all') { titulo = TIPO_LABEL[filterTipo] || 'Equipamentos'; ativa = true; }
+    else if (filterSerie && filterSerie !== 'all') { titulo = filterSerie; ativa = true; }
+    if (t) t.textContent = titulo;
     if (r) r.hidden = !ativa;
   }
   function closeLinhasDrop() {
     const d = $('#linhasMenu'); if (d) d.hidden = true;
     const tr = $('#linhasTrig'); if (tr) tr.setAttribute('aria-expanded', 'false');
   }
-  function goToLinha(serie, push, scroll) {
-    filterSerie = serie || 'all';
+  function resetFiltros() {
     query = ''; priceBand = 'all'; sortBy = 'rel'; shown = PAGE;
     const si = $('#search'); if (si) si.value = '';
     const pb = $('#priceBand'); if (pb) pb.value = 'all';
     const so = $('#sortBy'); if (so) so.value = 'rel';
-    if (push !== false) {
-      const url = (filterSerie !== 'all') ? (BASE_URL + '?linha=' + encodeURIComponent(filterSerie)) : BASE_URL;
-      history[push === 'replace' ? 'replaceState' : 'pushState']({ linha: filterSerie }, '', url);
-    }
+  }
+  function afterNav(push, urlParam, scroll) {
+    if (push !== false) history[push === 'replace' ? 'replaceState' : 'pushState']({}, '', urlParam ? (BASE_URL + urlParam) : BASE_URL);
     renderSeries(); renderChips(); renderGrid(); renderLinhaHead();
     closeLinhasDrop(); closeMenu();
     if (scroll) { const el = document.getElementById('produtos'); if (el) el.scrollIntoView({ behavior: 'smooth' }); }
+  }
+  function goToLinha(serie, push, scroll) {
+    filterSerie = serie || 'all'; filterTipo = 'all'; resetFiltros();
+    afterNav(push, filterSerie !== 'all' ? '?linha=' + encodeURIComponent(filterSerie) : '', scroll);
+  }
+  function goToTipo(tipo, push, scroll) {
+    filterTipo = (tipo === 'maquina' || tipo === 'acessorio') ? tipo : 'all';
+    filterSerie = 'all'; resetFiltros();
+    afterNav(push, filterTipo !== 'all' ? '?tipo=' + filterTipo : '', scroll);
   }
   function prodImageAbs(p) { try { return p.imagem ? new URL(p.imagem, BASE_URL).href : DEFAULT_META.ogImage; } catch (e) { return DEFAULT_META.ogImage; } }
   function prodDesc(p) { return `${p.nome} — equipamento ${p.serie ? 'da linha ' + p.serie + ' ' : ''}Torque Fitness, padrão comercial. A partir de ${money(p.preco)}. Solicite o orçamento e fale com um consultor.`; }
@@ -397,8 +412,10 @@
     const code = currentCode();
     if (code && byCode(code)) { if (prodCode !== code) openProd(code, false); }
     else if (prodCode) closeProdDOM();
-    const linha = currentLinha() || 'all';        // voltar/avançar troca a linha
-    if (linha !== filterSerie) goToLinha(linha, false, false);
+    const tp = currentTipo(), ln = currentLinha();        // voltar/avançar troca a vista
+    if (tp) { if (filterTipo !== tp) goToTipo(tp, false, false); }
+    else if (ln) { if (filterSerie !== ln || filterTipo !== 'all') goToLinha(ln, false, false); }
+    else if (filterSerie !== 'all' || filterTipo !== 'all') goToLinha('all', false, false);
   });
 
   // compartilhar (Web Share API no celular; copia o link no desktop)
@@ -443,10 +460,12 @@
   $('#ano').textContent = new Date().getFullYear();
   renderSeries(); renderChips(); renderGrid(); refreshCounts();
   renderLinhasMenu(); renderLinhaHead();
-  // deep-link de linha: ?linha=Cardio já entra filtrado na linha
-  (function initLinha() {
-    const dl = currentLinha();
-    if (dl) { goToLinha(dl, 'replace', false); setTimeout(() => { const el = document.getElementById('produtos'); if (el) el.scrollIntoView({ behavior: 'smooth' }); }, 250); }
+  // deep-link: ?linha=Cardio ou ?tipo=acessorio já entram filtrados
+  (function initView() {
+    const tp = currentTipo(), dl = currentLinha();
+    if (tp) goToTipo(tp, 'replace', false);
+    else if (dl) goToLinha(dl, 'replace', false);
+    if (tp || dl) setTimeout(() => { const el = document.getElementById('produtos'); if (el) el.scrollIntoView({ behavior: 'smooth' }); }, 250);
   })();
 
   // catálogo ao vivo: lê o catalog.json publicado pelo app (bucket público) e
@@ -463,11 +482,12 @@
       if (!items || !items.length) return;
       const live = items
         .filter(p => p && p.preco > 0 && !p.oculto)
-        .map(p => ({ id: p.id, codigo: p.codigo || '', nome: p.nome || '', serie: p.serie || 'Geral', imagem: p.imagem || '', dims: p.dims || '', preco: Number(p.preco) || 0 }));
+        .map(p => ({ id: p.id, codigo: p.codigo || '', nome: p.nome || '', serie: p.serie || 'Geral', tipo: p.tipo || 'maquina', imagem: p.imagem || '', dims: p.dims || '', preco: Number(p.preco) || 0 }));
       if (!live.length) return;
       PRODUCTS = live;
       renderSeries(); renderChips(); renderGrid(); refreshCounts(); renderLinhasMenu();
-      const dl = currentLinha(); if (dl) goToLinha(dl, false, false);   // re-filtra na linha atual com o catálogo ao vivo
+      const tp = currentTipo(), dl = currentLinha();                    // re-aplica a vista com o catálogo ao vivo
+      if (tp) goToTipo(tp, false, false); else if (dl) goToLinha(dl, false, false);
       renderLinhaHead();
     } catch (e) { /* offline ou bucket vazio → mantém o catálogo embutido */ }
   }
