@@ -571,6 +571,9 @@ body[data-auth="out"] .login { display: flex; }
 .linharow__x { width: 30px; height: 30px; flex: 0 0 auto; border-radius: 8px; border: 1px solid var(--line-2); background: var(--panel); color: var(--txt-dim); cursor: pointer; }
 button.linharow__x:hover { color: var(--danger); border-color: rgba(248,113,113,.4); }
 span.linharow__x { border: none; background: none; cursor: default; }
+.linharow__banner { flex: 0 0 auto; border: 1px solid var(--line-2); background: var(--panel); color: var(--txt-dim); border-radius: 8px; padding: 8px 10px; font-size: .78rem; cursor: pointer; white-space: nowrap; }
+.linharow__banner:hover { color: var(--txt); border-color: var(--violet); }
+.linharow__banner.on { color: var(--ok); border-color: rgba(52,211,153,.4); }
 
 .sync-status { font-size: .76rem; margin: 10px 0 0; max-width: 520px; }
 .sync-status.on { color: var(--ok); }

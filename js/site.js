@@ -29,6 +29,8 @@
   let filterSerie = 'all';
   let filterTipo = 'all';   // 'all' | 'maquina' | 'acessorio'
   const TIPO_LABEL = { maquina: 'Máquinas', acessorio: 'Acessórios' };
+  let BANNERS = {};         // imagens de banner por categoria (nome → URL), vindas do catalog.json
+  const bannerImg = nome => BANNERS[nome] || '';
   let query = '';
   let priceBand = 'all';
   let sortBy = 'rel';
@@ -325,12 +327,24 @@
   function renderCatBanner() {
     const b = $('#catBanner'); if (!b) return;
     const nome = currentViewName();
-    if (!nome) { b.hidden = true; b.innerHTML = ''; return; }
+    if (!nome) { b.hidden = true; b.innerHTML = ''; b.className = 'catbanner'; b.style.backgroundImage = ''; return; }
+    const img = bannerImg(nome);
     b.hidden = false;
-    b.innerHTML = `<div class="catbanner__inner">
-      <nav class="catbanner__crumb"><a href="${BASE_URL}" data-serie="all">Início</a><span>›</span><b>${esc(nome)}</b></nav>
-      <h1 class="catbanner__title">${esc(nome)}</h1>
-    </div>`;
+    b.className = 'catbanner' + (img ? ' catbanner--img' : '');
+    b.style.backgroundImage = img ? `linear-gradient(to top, rgba(11,11,15,.86), rgba(11,11,15,.45)), url("${img}")` : '';
+    b.innerHTML = `
+      ${img ? '' : `<div class="catbanner__bg" aria-hidden="true">${plate}</div>`}
+      <div class="catbanner__inner">
+        <nav class="catbanner__crumb"><a href="${BASE_URL}" data-serie="all">Início</a><span>›</span><b>${esc(nome)}</b></nav>
+        <h1 class="catbanner__title">${esc(nome)}</h1>
+        <p class="catbanner__sub">Equipamentos profissionais Torque Fitness</p>
+      </div>`;
+  }
+  // página focada: dentro de uma categoria, esconde o hero e a seção "Nossas linhas"
+  function applyViewLayout() {
+    const cat = !!currentViewName();
+    ['topo', 'series'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = cat ? 'none' : ''; });
+    document.body.classList.toggle('cat-view', cat);
   }
   function renderLinhaHead() {
     const t = $('#catTitle'), r = $('#linhaReset');
@@ -338,6 +352,7 @@
     if (t) t.textContent = nome || 'Equipamentos';
     if (r) r.hidden = !nome;
     renderCatBanner();
+    applyViewLayout();
   }
   function closeLinhasDrop() {
     const d = $('#linhasMenu'); if (d) d.hidden = true;
@@ -499,6 +514,7 @@
         .map(p => ({ id: p.id, codigo: p.codigo || '', nome: p.nome || '', serie: p.serie || 'Geral', tipo: p.tipo || 'maquina', imagem: p.imagem || '', dims: p.dims || '', preco: Number(p.preco) || 0 }));
       if (!live.length) return;
       PRODUCTS = live;
+      if (data && data.banners && typeof data.banners === 'object') BANNERS = data.banners;   // banners por categoria
       renderSeries(); renderChips(); renderGrid(); refreshCounts(); renderLinhasMenu();
       const tp = currentTipo(), dl = currentLinha();                    // re-aplica a vista com o catálogo ao vivo
       if (tp) goToTipo(tp, false, false); else if (dl) goToLinha(dl, false, false);
