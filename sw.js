@@ -6,7 +6,7 @@
    Chamadas externas (Supabase, CDN, fontes) passam direto pela rede.
    Suba o número da versão ao mudar a estratégia.
    ============================================================ */
-const CACHE = 'torque-app-v2';
+const CACHE = 'torque-app-v3';
 const SHELL = [
   './app.html',
   './css/styles.css',
@@ -43,10 +43,11 @@ self.addEventListener('fetch', e => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;       // Supabase/CDN/fontes: rede direta
 
-  // mesma origem: NETWORK-FIRST — sempre a versão mais nova quando online,
-  // caindo no cache (e em app.html na navegação) apenas quando offline.
+  // mesma origem: NETWORK-FIRST com {cache:'no-store'} — ignora o cache HTTP
+  // do GitHub Pages e sempre traz a versão mais nova quando online; cai no
+  // cache do SW (e em app.html na navegação) apenas quando offline.
   e.respondWith(
-    fetch(req)
+    fetch(req, { cache: 'no-store' })
       .then(res => {
         if (res && res.status === 200) {
           const copy = res.clone();

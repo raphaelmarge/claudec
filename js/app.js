@@ -1110,7 +1110,16 @@
       return p;
     }).filter(Boolean);
     if (!imported.length) { toast('Nenhuma linha válida encontrada.'); return; }
-    if ($('#impReplace').checked) { state.products = imported; state.cart = {}; }
+    if ($('#impReplace').checked) {
+      const atuais = state.products.length;
+      if (!confirm(
+        '⚠️ SUBSTITUIR catálogo?\n\n' +
+        'Isto APAGA os ' + atuais + ' produto(s) atuais (e suas linhas) e deixa só os ' +
+        imported.length + ' da planilha.\n\n' +
+        'Para apenas ADICIONAR os itens da planilha, cancele e DESMARQUE "Substituir catálogo".'
+      )) return;
+      state.products = imported; state.cart = {};
+    }
     else state.products = state.products.concat(imported);
     state._imported = true; // não sobrescrever import do usuário com catálogo embutido
     save(); schedulePushSettings(); closeModal('#importModal'); render();
