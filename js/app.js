@@ -2545,9 +2545,32 @@
         <button class="dc-note" data-act="note-orc" type="button">🗒 Nota</button>
         <button class="dc-edit" data-act="edit-orc" type="button">✎ Editar</button>
         <button class="dc-dup" data-act="dup-orc" type="button">⧉ Duplicar</button>
+        <button class="dc-prop" data-act="prop-orc" type="button">🔗 Proposta</button>
         <button class="dc-del" data-act="del-orc" type="button">🗑 Excluir</button>
       </div>
     </div>`;
+  }
+  // ---- proposta online: link com os dados codificados (sem expor o banco) ----
+  function propostaLink(o) {
+    const w = String((Cloud.profile && (Cloud.profile.celular || Cloud.profile.telefone)) || (P().contato && P().contato.whatsapp) || '').replace(/\D/g, '');
+    const data = {
+      n: o.numero || '', c: o.cliente_nome || '', v: o.vendedor_nome || (Cloud.profile && Cloud.profile.nome) || '', w: w,
+      it: (o.itens || []).map(i => ({ n: i.nome, q: i.qtd, u: i.unitario || i.preco || 0 })),
+      s: Number(o.subtotal) || 0, d: Number(o.desconto) || 0, t: Number(o.total) || 0, e: Number(o.sinal) || 0,
+      p: { n: Number(o.parcelas) || 0, v: Number(o.valor_parcela) || 0 }
+    };
+    const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(data)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    const base = location.origin + location.pathname.replace(/[^/]*$/, '');   // .../ (sem app.html)
+    return base + 'proposta.html#d=' + b64;
+  }
+  async function compartilharProposta(o) {
+    if (!(o.itens || []).length) { toast('Adicione itens antes de gerar a proposta.'); return; }
+    const url = propostaLink(o);
+    const titulo = 'Proposta Torque Fitness' + (o.numero ? ' ' + o.numero : '');
+    try {
+      if (navigator.share) await navigator.share({ title: titulo, text: `Proposta para ${o.cliente_nome || 'você'}`, url: url });
+      else { await navigator.clipboard.writeText(url); toast('Link da proposta copiado!'); }
+    } catch (e) { /* usuário cancelou */ }
   }
   $('#dashList').addEventListener('click', async e => {
     const card = e.target.closest('.dcard'); if (!card) return;
@@ -2555,6 +2578,7 @@
     const o = dashData.find(x => x.id === id); if (!o) return;
     if (e.target.dataset.act === 'edit-orc') editOrcamento(o);
     if (e.target.dataset.act === 'dup-orc') duplicarOrcamento(o);
+    if (e.target.dataset.act === 'prop-orc') compartilharProposta(o);
     if (e.target.dataset.act === 'note-orc') openOrc(o);
     if (e.target.dataset.act === 'wpp-lead') {
       const num = whatsNumero(o.contato_telefone);
@@ -2886,6 +2910,31 @@
     toast(`Backup gerado: ${lista.length} orçamento(s)${extra}.`);
   }
   $('#btnBackup') && $('#btnBackup').addEventListener('click', exportBackup);
+
+  /* ------------------------------------------------------------
+     DISTRIBUIÇÃO DE LEADS — rodízio entre vendedores (admin)
+     ------------------------------------------------------------ */
+  async function distribuirLeads() {
+    if (!(Cloud.isAdmin && Cloud.isAdmin())) { toast('Apenas o admin distribui leads.'); return; }
+    const leads = dashData.filter(r => r.origem === 'site' && !String(r.vendedor_nome || '').trim() && emAberto(r));
+    if (!leads.length) { toast('Nenhum lead do site sem vendedor.'); return; }
+    let vends;
+    try { vends = (await Cloud.listVendedores()).filter(v => v.role !== 'admin' && v.ativo !== false); }
+    catch (e) { console.error(e); toast('Não foi possível carregar os vendedores.'); return; }
+    if (!vends.length) { toast('Cadastre vendedores para distribuir.'); return; }
+    if (!confirm(`Distribuir ${leads.length} lead(s) entre ${vends.length} vendedor(es) em rodízio?`)) return;
+    let ok = 0;
+    for (let i = 0; i < leads.length; i++) {
+      const v = vends[i % vends.length];
+      try {
+        await Cloud.updateOrcamento(leads[i].id, { vendedor_id: v.id, vendedor_nome: v.nome });
+        leads[i].vendedor_id = v.id; leads[i].vendedor_nome = v.nome; ok++;
+      } catch (err) { console.error(err); }
+    }
+    renderDashboard();
+    toast(`${ok} de ${leads.length} lead(s) distribuído(s).`);
+  }
+  $('#btnDistribuir') && $('#btnDistribuir').addEventListener('click', distribuirLeads);
 
   /* ------------------------------------------------------------
      INIT

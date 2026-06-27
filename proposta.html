@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0B0B0F" />
+  <title>Proposta · Torque Fitness</title>
+  <meta name="description" content="Proposta comercial Torque Fitness." />
+  <meta name="robots" content="noindex" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root{ --violet:#8B5CF6; --violet-700:#6D28D9; --black:#0B0B0F; --panel:#15151C; --panel-2:#1D1D27;
+      --line:#2A2A36; --line-2:#3A3A48; --txt:#F4F4F7; --txt-dim:#A9A9B8; --txt-mut:#6E6E80; --ok:#34D399; --violet-glow:rgba(139,92,246,.35); }
+    *{box-sizing:border-box} html{-webkit-text-size-adjust:100%}
+    body{margin:0;background:var(--black);color:var(--txt);font-family:'Inter',system-ui,sans-serif;
+      padding:24px 16px calc(120px + env(safe-area-inset-bottom,0px));-webkit-font-smoothing:antialiased}
+    .wrap{max-width:640px;margin:0 auto}
+    .brand{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+    .brand svg{width:34px;height:40px;fill:var(--violet);filter:drop-shadow(0 4px 10px var(--violet-glow))}
+    .brand b{font-family:'Archivo',sans-serif;font-weight:900;letter-spacing:.04em;font-size:1.02rem;display:block;line-height:1}
+    .brand em{font-style:normal;font-size:.58rem;letter-spacing:.34em;color:var(--violet)}
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:22px;margin-bottom:16px}
+    h1{font-family:'Archivo',sans-serif;font-size:1.5rem;margin:0 0 4px}
+    .sub{color:var(--txt-dim);font-size:.9rem;margin:0}
+    .meta{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:14px;font-size:.86rem;color:var(--txt-dim)}
+    .meta b{color:var(--txt);font-weight:600}
+    .items{margin:18px 0 0;border-top:1px solid var(--line);padding-top:14px}
+    .it{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line)}
+    .it__n{font-size:.92rem}
+    .it__q{color:var(--txt-mut);font-size:.78rem;margin-top:2px}
+    .it__v{font-family:'JetBrains Mono',monospace;white-space:nowrap;font-size:.9rem}
+    .tot{margin-top:16px;display:flex;flex-direction:column;gap:8px}
+    .row{display:flex;justify-content:space-between;font-size:.92rem;color:var(--txt-dim)}
+    .row b{color:var(--txt)}
+    .row--grand{border-top:1px solid var(--line);padding-top:12px;margin-top:4px;font-size:1.25rem}
+    .row--grand b{color:#fff;font-family:'JetBrains Mono',monospace}
+    .parc{margin-top:6px;color:var(--violet);font-weight:600;font-size:.92rem}
+    .foot{position:fixed;left:0;right:0;bottom:0;background:rgba(11,11,15,.92);backdrop-filter:blur(12px);
+      border-top:1px solid var(--line);padding:14px 16px calc(14px + env(safe-area-inset-bottom,0px))}
+    .foot__in{max-width:640px;margin:0 auto;display:flex;gap:10px}
+    .btn{flex:1;border:1px solid transparent;border-radius:12px;padding:15px;font-weight:700;font-size:1rem;cursor:pointer;
+      font-family:inherit;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none}
+    .btn--ok{background:linear-gradient(135deg,var(--violet),var(--violet-700));color:#fff;box-shadow:var(--violet-glow) 0 8px 26px}
+    .btn--ghost{background:transparent;border-color:var(--line-2);color:var(--txt);flex:none;padding:15px 18px}
+    .err{text-align:center;color:var(--txt-dim);padding:50px 20px}
+    .err a{color:var(--violet)}
+    .note{color:var(--txt-mut);font-size:.76rem;margin-top:14px;text-align:center}
+  </style>
+</head>
+<body>
+  <div class="wrap" id="app">
+    <div class="err">Carregando proposta…</div>
+  </div>
+  <div class="foot" id="foot" hidden>
+    <div class="foot__in">
+      <a class="btn btn--ghost" id="btnDuvida" href="#">💬 Dúvidas</a>
+      <a class="btn btn--ok" id="btnAceitar" href="#">✅ Aceitar proposta</a>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var BRL = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+      var money = function (n) { return BRL.format(Number(n) || 0); };
+      var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); };
+      var LOGO = '<svg viewBox="0 0 227 271"><g transform="translate(0,271) scale(0.1,-0.1)"><path d="M130 2617 c-50 -26 -50 -19 -50 -685 0 -686 -2 -669 61 -691 34 -12 367 -14 406 -3 12 4 105 84 205 178 533 498 494 463 524 455 38 -10 70 -54 58 -81 -5 -11 -268 -262 -584 -558 -586 -547 -620 -584 -652 -682 -6 -19 -13 -125 -15 -236 -6 -224 -3 -234 62 -234 30 0 96 59 706 630 601 563 677 630 703 628 18 -2 37 -14 50 -31 19 -26 19 -30 5 -55 -8 -15 -289 -283 -624 -597 l-609 -570 887 -3 c609 -1 894 1 908 8 19 11 20 24 17 973 -3 944 -4 963 -24 1023 -88 255 -268 427 -539 511 l-90 27 -690 3 c-546 3 -695 1 -715 -10z"/></g></svg>';
+
+      function decode() {
+        var h = location.hash || '';
+        var m = h.match(/d=([^&]+)/);
+        if (!m) return null;
+        try {
+          var b64 = m[1].replace(/-/g, '+').replace(/_/g, '/');
+          while (b64.length % 4) b64 += '=';
+          return JSON.parse(decodeURIComponent(escape(atob(b64))));
+        } catch (e) { return null; }
+      }
+
+      var d = decode();
+      var app = document.getElementById('app');
+      if (!d) {
+        app.innerHTML = '<div class="err">Não foi possível abrir esta proposta.<br>Peça um novo link ao seu consultor Torque Fitness.</div>';
+        return;
+      }
+
+      var itens = (d.it || []).map(function (i) {
+        return '<div class="it"><div><div class="it__n">' + esc(i.n) + '</div><div class="it__q">' + (i.q || 1) + ' × ' + money(i.u) + '</div></div>' +
+          '<div class="it__v">' + money((Number(i.q) || 1) * (Number(i.u) || 0)) + '</div></div>';
+      }).join('');
+
+      var parcLine = (d.p && d.p.n > 1 && d.p.v) ? '<div class="parc">ou em até ' + d.p.n + '× de ' + money(d.p.v) + '</div>' : '';
+      var descLine = (Number(d.d) > 0) ? '<div class="row"><span>Desconto</span><b>− ' + money(d.d) + '</b></div>' : '';
+      var sinalLine = (Number(d.e) > 0) ? '<div class="row"><span>Sinal / entrada</span><b>' + money(d.e) + '</b></div>' : '';
+
+      app.innerHTML =
+        '<div class="brand">' + LOGO + '<span><b>TORQUE FITNESS</b><em>EQUIPAMENTOS</em></span></div>' +
+        '<div class="card">' +
+          '<h1>Proposta comercial' + (d.n ? ' · ' + esc(d.n) : '') + '</h1>' +
+          '<p class="sub">Equipamentos profissionais de musculação e cardio.</p>' +
+          '<div class="meta">' +
+            (d.c ? '<span>Cliente: <b>' + esc(d.c) + '</b></span>' : '') +
+            (d.v ? '<span>Consultor: <b>' + esc(d.v) + '</b></span>' : '') +
+          '</div>' +
+          '<div class="items">' + (itens || '<p class="sub">Sem itens.</p>') + '</div>' +
+          '<div class="tot">' +
+            '<div class="row"><span>Subtotal</span><b>' + money(d.s) + '</b></div>' +
+            descLine +
+            '<div class="row row--grand"><span>Total</span><b>' + money(d.t) + '</b></div>' +
+            parcLine +
+            sinalLine +
+          '</div>' +
+          '<p class="note">Proposta sujeita a confirmação de estoque e prazo de entrega. Valores em reais (BRL).</p>' +
+        '</div>';
+
+      // ações: aceitar / dúvidas → WhatsApp do consultor
+      var num = String(d.w || '').replace(/\D/g, '');
+      var ref = d.n ? (' ' + d.n) : '';
+      var val = d.t ? (' no valor de ' + money(d.t)) : '';
+      var msgOk = encodeURIComponent('Olá! Aceito a proposta' + ref + val + '. Como seguimos? ✅');
+      var msgDuvida = encodeURIComponent('Olá! Tenho uma dúvida sobre a proposta' + ref + '.');
+      var base = num ? ('https://wa.me/' + num + '?text=') : ('https://wa.me/?text=');
+      var foot = document.getElementById('foot');
+      document.getElementById('btnAceitar').href = base + msgOk;
+      document.getElementById('btnDuvida').href = base + msgDuvida;
+      document.getElementById('btnAceitar').target = '_blank';
+      document.getElementById('btnDuvida').target = '_blank';
+      foot.hidden = false;
+      document.title = 'Proposta' + (d.n ? ' ' + d.n : '') + ' · Torque Fitness';
+    })();
+  </script>
+</body>
+</html>
