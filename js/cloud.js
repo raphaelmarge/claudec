@@ -103,9 +103,17 @@ window.Cloud = (function () {
     return data || [];
   }
   async function listVendedores() {
-    const { data, error } = await sb.from('profiles').select('id,nome,telefone,role').order('nome');
+    // select('*') p/ trazer a coluna "ativo" quando existir, sem quebrar se ela não existir
+    const { data, error } = await sb.from('profiles').select('*').order('nome');
     if (error) throw error;
     return data || [];
+  }
+  // admin atualiza o perfil de OUTRO usuário (papel/ativo). RLS precisa permitir.
+  async function updateVendedor(id, fields) {
+    const { data, error } = await sb.from('profiles').update(fields).eq('id', id).select();
+    if (error) throw error;
+    if (!data || data.length === 0) { const e = new Error('Atualização bloqueada pela segurança do banco (RLS).'); e.code = 'NO_UPDATE'; throw e; }
+    return data[0];
   }
 
   // ---------- CONFIGURAÇÕES COMPARTILHADAS (settings) ----------
@@ -152,7 +160,7 @@ window.Cloud = (function () {
     configured, ready, init, getSession, onAuthChange,
     signIn, signUp, signOut, loadProfile, updateMyProfile,
     listClientes, saveCliente, deleteCliente,
-    saveOrcamento, updateOrcamento, deleteOrcamento, listOrcamentos, listVendedores,
+    saveOrcamento, updateOrcamento, deleteOrcamento, listOrcamentos, listVendedores, updateVendedor,
     loadSettings, saveSettings, suggestReply, uploadProductImage, publishCatalogJson,
     get profile() { return profile; },
     isAdmin() { return !!profile && profile.role === 'admin'; }

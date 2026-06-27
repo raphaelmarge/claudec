@@ -578,6 +578,18 @@ body[data-auth="out"] .login { display: flex; }
 .kitrow__act { display: flex; align-items: center; gap: 8px; flex: none; }
 .kitrow__add { padding: 8px 14px; font-size: .82rem; }
 .kitrow__rm { background: none; border: 1px solid rgba(248,113,113,.4); color: var(--danger); border-radius: 9px; padding: 7px 9px; cursor: pointer; }
+.vendrow { display: flex; align-items: center; gap: 10px; border: 1px solid var(--line-2); border-radius: var(--radius-sm); padding: 10px 12px; background: var(--panel-2); margin-bottom: 8px; }
+.vendrow.is-off { opacity: .55; }
+.vendrow__info { flex: 1; min-width: 0; }
+.vendrow__info b { font-size: .92rem; display: block; }
+.vendrow__tags { display: inline-flex; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
+.vtag { font-style: normal; font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--txt-mut); border: 1px solid var(--line-2); border-radius: 999px; padding: 2px 8px; }
+.vtag--admin { color: var(--violet); border-color: var(--violet); }
+.vtag--off { color: var(--danger); border-color: rgba(248,113,113,.4); }
+.vendrow__act { display: flex; gap: 8px; flex: none; }
+.vendrow__btn { background: var(--panel); border: 1px solid var(--line-2); color: var(--txt); border-radius: 9px; padding: 7px 11px; font-size: .8rem; font-weight: 600; cursor: pointer; }
+.vendrow__btn.off { border-color: rgba(248,113,113,.4); color: var(--danger); }
+.vendrow__btn.on { border-color: var(--ok); color: var(--ok); }
 
 /* gerenciador de linhas (séries) */
 .linharow { display: flex; align-items: center; gap: 10px; }

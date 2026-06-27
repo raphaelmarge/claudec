@@ -393,6 +393,7 @@
     renderLinhasEditor();
     renderCarouselEditor();
     renderContatoEditor();
+    renderVendEditor();
     renderSyncStatus();
     $('#configPanel').hidden = state.mode !== 'admin';
   }
@@ -672,6 +673,69 @@
       if (img) { pickCarousel(img.dataset.carImg); return; }
       const rm = e.target.closest('[data-car-rm]');
       if (rm) { const c = P().carousel || {}; delete c[rm.dataset.carRm]; P().carousel = c; save(); schedulePushSettings(); renderCarouselEditor(); toast('Imagem removida.'); return; }
+    });
+  })();
+
+  // ---- gestão de EQUIPE (vendedores): promover/rebaixar e ativar/desativar ----
+  const VEND_SQL_HELP =
+    'Para ativar/desativar vendedores e mudar funções pelo painel, abra o Supabase → SQL Editor e rode:\n\n' +
+    '-- 1) coluna de status\n' +
+    'alter table public.profiles add column if not exists ativo boolean not null default true;\n\n' +
+    '-- 2) deixar o admin gerenciar os perfis (usa a função is_admin já criada antes)\n' +
+    'create policy profiles_admin_manage on public.profiles for update to authenticated\n' +
+    '  using (public.is_admin()) with check (public.is_admin());\n\n' +
+    'Depois recarregue a página.';
+  let vendCache = null;
+  function renderVendEditor() {
+    const box = $('#vendEditor'); if (!box) return;
+    if (!(Cloud.isAdmin && Cloud.isAdmin())) { box.innerHTML = ''; return; }
+    if (!vendCache) {
+      box.innerHTML = '<p class="atv__empty">Carregando equipe…</p>';
+      Cloud.listVendedores().then(l => { vendCache = l; renderVendList(); })
+        .catch(e => { console.error(e); box.innerHTML = '<p class="atv__empty">Não foi possível carregar a equipe.</p>'; });
+      return;
+    }
+    renderVendList();
+  }
+  function renderVendList() {
+    const box = $('#vendEditor'); if (!box) return;
+    const me = Cloud.profile && Cloud.profile.id;
+    box.innerHTML = (vendCache && vendCache.length) ? vendCache.map(v => {
+      const admin = v.role === 'admin', ativo = v.ativo !== false, ehEu = v.id === me;
+      const tags = `${admin ? '<i class="vtag vtag--admin">Admin</i>' : '<i class="vtag">Vendedor</i>'}` +
+        `${ativo ? '' : '<i class="vtag vtag--off">Inativo</i>'}${ehEu ? '<i class="vtag">você</i>' : ''}`;
+      const acts = ehEu ? '' :
+        `<button class="vendrow__btn" data-act="role" data-role="${admin ? 'vendedor' : 'admin'}" type="button">${admin ? 'Rebaixar' : 'Promover'}</button>` +
+        `<button class="vendrow__btn ${ativo ? 'off' : 'on'}" data-act="ativo" data-ativo="${ativo ? 'false' : 'true'}" type="button">${ativo ? 'Desativar' : 'Ativar'}</button>`;
+      return `<div class="vendrow ${ativo ? '' : 'is-off'}" data-vid="${v.id}">
+        <div class="vendrow__info"><b>${esc(v.nome || '—')}</b><span class="vendrow__tags">${tags}</span></div>
+        <div class="vendrow__act">${acts}</div>
+      </div>`;
+    }).join('') : '<p class="atv__empty">Nenhum vendedor cadastrado ainda.</p>';
+  }
+  (function wireVendEditor() {
+    const box = $('#vendEditor'); if (!box) return;
+    box.addEventListener('click', async e => {
+      const row = e.target.closest('[data-vid]'); if (!row) return;
+      const id = row.dataset.vid;
+      const roleBtn = e.target.closest('[data-act="role"]');
+      const ativoBtn = e.target.closest('[data-act="ativo"]');
+      try {
+        if (roleBtn) {
+          const novo = roleBtn.dataset.role;
+          if (!confirm(novo === 'admin' ? 'Promover a ADMIN? A pessoa passará a ver custos e poderá editar tudo.' : 'Rebaixar este admin para vendedor?')) return;
+          await Cloud.updateVendedor(id, { role: novo }); toast('Função atualizada.');
+        } else if (ativoBtn) {
+          const novo = ativoBtn.dataset.ativo === 'true';
+          await Cloud.updateVendedor(id, { ativo: novo }); toast(novo ? 'Vendedor ativado.' : 'Vendedor desativado.');
+        } else return;
+        vendCache = null; renderVendEditor();
+      } catch (err) {
+        console.error(err);
+        if (isMissingCol(err)) alert(VEND_SQL_HELP);
+        else if (err && err.code === 'NO_UPDATE') alert(VEND_SQL_HELP);
+        else toast('Não foi possível atualizar.');
+      }
     });
   })();
 
