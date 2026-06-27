@@ -612,7 +612,9 @@ span.linharow__x { border: none; background: none; cursor: default; }
 .dcard__actions .dc-note { border-color: var(--line-2); color: var(--txt-dim); }
 .dcard__actions button { flex: 1; padding: 8px; border-radius: 9px; border: 1px solid var(--line-2); background: var(--panel-2); color: var(--txt); font-size: .8rem; font-weight: 600; }
 .dcard__actions .dc-edit { border-color: var(--violet); color: var(--violet); }
+.dcard__actions .dc-dup { border-color: var(--line-2); color: var(--txt-dim); }
 .dcard__actions .dc-del { border-color: rgba(248,113,113,.4); color: var(--danger); }
+.dash__tools .dash__backup { flex: none; padding: 0 14px; font-size: .82rem; white-space: nowrap; }
 
 /* ---- abas do dashboard (CRM) ---- */
 .dash__tabs { display: flex; gap: 6px; padding: 2px 16px 10px; overflow-x: auto; scrollbar-width: none; }
