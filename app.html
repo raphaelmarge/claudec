@@ -187,6 +187,34 @@
     <div class="stages-cfg" id="linhasEditor"></div>
     <button class="btn btn--ghost" id="btnAddLinha" type="button" style="margin-top:10px">+ Nova linha</button>
 
+    <h3 class="config__sub">Localização &amp; contato <small>aparece no site comercial — endereço, mapa, telefone e horário</small></h3>
+    <div class="config__grid" id="contatoGrid">
+      <label class="field" style="grid-column:1/-1">
+        <span>Endereço completo</span>
+        <input type="text" id="ctEndereco" placeholder="Rua, nº, bairro, Cidade/UF, CEP" autocomplete="off" />
+      </label>
+      <label class="field" style="grid-column:1/-1">
+        <span>Link do Google Maps <small>abra o local no Maps → Compartilhar → Copiar link</small></span>
+        <input type="url" id="ctMaps" placeholder="https://maps.app.goo.gl/..." autocomplete="off" />
+      </label>
+      <label class="field">
+        <span>Telefone / WhatsApp <small>como aparece no site</small></span>
+        <input type="tel" id="ctTelefone" placeholder="(21) 99999-9999" autocomplete="off" />
+      </label>
+      <label class="field">
+        <span>WhatsApp p/ link <small>só números, com DDI 55</small></span>
+        <input type="tel" id="ctWhats" inputmode="numeric" placeholder="5521999999999" autocomplete="off" />
+      </label>
+      <label class="field">
+        <span>E-mail</span>
+        <input type="email" id="ctEmail" placeholder="contato@suaempresa.com.br" autocomplete="off" />
+      </label>
+      <label class="field">
+        <span>Horário de atendimento</span>
+        <input type="text" id="ctHorario" placeholder="Seg a Sex, 8h–18h" autocomplete="off" />
+      </label>
+    </div>
+
     <h3 class="config__sub">Funil de vendas <small>nome e probabilidade (%) de fechamento por etapa — alimenta a previsão ponderada</small></h3>
     <div class="stages-cfg" id="stagesEditor"></div>
     <p class="sync-status" id="syncStatus" hidden></p>

@@ -69,23 +69,19 @@
     <div class="nav__menu nav__menu--m" id="mLinhas"></div>
   </div>
 
-  <!-- ===================== HERO ===================== -->
+  <!-- ===================== HERO (carrossel) ===================== -->
   <section class="hero" id="topo">
-    <div class="hero__inner">
-      <span class="hero__tag">Linha profissional &amp; comercial</span>
-      <h1>Equipamentos de musculação de <span>alta performance</span></h1>
-      <p>Racks, máquinas de força, funcionais, cardio e acessórios para academias, studios e CrossFit. Monte seu orçamento online e fale direto com um consultor.</p>
-      <div class="hero__cta">
-        <a class="btn btn--primary" href="#produtos">Ver produtos</a>
-        <button class="btn btn--ghost" id="heroOrc" type="button">Solicitar orçamento</button>
-      </div>
-      <div class="hero__stats">
-        <div><b id="statProdutos">—</b><span>produtos</span></div>
-        <div><b id="statSeries">—</b><span>linhas</span></div>
-        <div><b>48×</b><span>parcelamento</span></div>
-      </div>
+    <div class="carousel" id="carousel" aria-label="Destaques">
+      <div class="carousel__track" id="carTrack"></div>
+      <button class="carousel__arrow carousel__arrow--prev" id="carPrev" type="button" aria-label="Slide anterior">‹</button>
+      <button class="carousel__arrow carousel__arrow--next" id="carNext" type="button" aria-label="Próximo slide">›</button>
+      <div class="carousel__dots" id="carDots"></div>
     </div>
-    <div class="hero__plate" aria-hidden="true"></div>
+    <div class="hero__stats hero__stats--bar">
+      <div><b id="statProdutos">—</b><span>produtos</span></div>
+      <div><b id="statSeries">—</b><span>linhas</span></div>
+      <div><b>48×</b><span>parcelamento</span></div>
+    </div>
   </section>
 
   <!-- ===================== SÉRIES ===================== -->
@@ -160,6 +156,21 @@
       <figure class="qcard"><blockquote>“Montamos toda a sala de musculação com a Torque. Equipamento robusto e atendimento direto no WhatsApp.”</blockquote><figcaption>— Studio fictício, São Paulo/SP</figcaption></figure>
       <figure class="qcard"><blockquote>“Pedi o orçamento pelo site de madrugada e no dia seguinte um consultor já tinha me chamado.”</blockquote><figcaption>— Box de CrossFit, Campinas/SP</figcaption></figure>
       <figure class="qcard"><blockquote>“Linha completa, do rack ao cardio. Facilitou muito montar a academia do zero.”</blockquote><figcaption>— Academia, Rio de Janeiro/RJ</figcaption></figure>
+    </div>
+  </section>
+
+  <!-- ===================== LOCALIZAÇÃO ===================== -->
+  <section class="local reveal" id="localizacao" hidden>
+    <div class="local__grid">
+      <div class="local__card">
+        <h2 class="sec-title">Onde estamos</h2>
+        <div class="local__info" id="locInfo"></div>
+        <a class="btn btn--primary local__mapbtn" id="locMap" href="#" target="_blank" rel="noopener" hidden>📍 Abrir no Google Maps</a>
+      </div>
+      <a class="local__map" id="locMapBox" href="#" target="_blank" rel="noopener" hidden aria-label="Abrir no Google Maps">
+        <span class="local__pin">📍</span>
+        <span class="local__maptxt">Ver localização no mapa</span>
+      </a>
     </div>
   </section>
 

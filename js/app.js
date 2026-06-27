@@ -97,7 +97,7 @@
      fiscais (custo/margem) nunca saem daqui. Degrada para
      localStorage se a tabela não existir.
      ------------------------------------------------------------ */
-  const SHARED_PARAM_KEYS = ['parcelasMax', 'juros', 'validade', 'stages', 'metas', 'linhas', 'linhaBanners'];
+  const SHARED_PARAM_KEYS = ['parcelasMax', 'juros', 'validade', 'stages', 'metas', 'linhas', 'linhaBanners', 'contato'];
   const SETTINGS_SQL =
     "create table if not exists public.settings (\n" +
     "  id int primary key default 1,\n" +
@@ -129,6 +129,14 @@
     const out = {}, b = P().linhaBanners || {};
     Object.keys(b).forEach(k => { if (b[k] && !String(b[k]).startsWith('data:')) out[k] = b[k]; });
     return out;
+  }
+  // dados de contato/localização para o site comercial (endereço, mapa, telefone, horário)
+  function publicSite() {
+    const c = P().contato || {};
+    return {
+      endereco: c.endereco || '', mapsUrl: c.mapsUrl || '', telefone: c.telefone || '',
+      whatsapp: c.whatsapp || '', email: c.email || '', horario: c.horario || ''
+    };
   }
   function applyCatalog(remote) {
     if (!Array.isArray(remote) || !remote.length) return;   // catálogo vazio não apaga o do vendedor
@@ -168,7 +176,7 @@
       payload.catalog = publicCatalog();                  // publica o catálogo junto (produtos + imagens hospedadas)
       try {
         await Cloud.saveSettings(payload); settingsSync = true; renderSyncStatus();
-        try { await Cloud.publishCatalogJson(payload.catalog, publicBanners()); } catch (e) { console.warn('catalog.json:', e); }   // espelha pro site público
+        try { await Cloud.publishCatalogJson(payload.catalog, publicBanners(), publicSite()); } catch (e) { console.warn('catalog.json:', e); }   // espelha pro site público
       }
       catch (err) { if (isMissingTable(err)) { settingsSync = false; renderSyncStatus(); } else console.error(err); }
     }, 800);
@@ -369,6 +377,7 @@
     setVal('#cfgValidade', p.validade);
     renderStagesEditor();
     renderLinhasEditor();
+    renderContatoEditor();
     renderSyncStatus();
     $('#configPanel').hidden = state.mode !== 'admin';
   }
@@ -582,6 +591,25 @@
       if (!arr.includes(nome)) arr.push(nome);
       P().linhas = arr; save(); schedulePushSettings(); renderLinhasEditor(); renderSerieDatalist();
       toast('Linha criada. Atribua produtos a ela ao editar/criar um produto.');
+    });
+  })();
+
+  // ---- editor de LOCALIZAÇÃO / CONTATO (sincroniza p/ o site comercial) ----
+  const CONTATO_FIELDS = { '#ctEndereco': 'endereco', '#ctMaps': 'mapsUrl', '#ctTelefone': 'telefone', '#ctWhats': 'whatsapp', '#ctEmail': 'email', '#ctHorario': 'horario' };
+  function renderContatoEditor() {
+    const c = P().contato || {};
+    Object.keys(CONTATO_FIELDS).forEach(sel => { const el = $(sel); if (el && el !== document.activeElement) el.value = c[CONTATO_FIELDS[sel]] || ''; });
+  }
+  (function wireContatoEditor() {
+    Object.keys(CONTATO_FIELDS).forEach(sel => {
+      const el = $(sel); if (!el) return;
+      el.addEventListener('input', () => {
+        if (!P().contato) P().contato = {};
+        let v = el.value.trim();
+        if (CONTATO_FIELDS[sel] === 'whatsapp') v = v.replace(/\D/g, '');
+        P().contato[CONTATO_FIELDS[sel]] = v;
+        save(); schedulePushSettings();
+      });
     });
   })();
 
