@@ -864,7 +864,9 @@
     $('#edCusto').value = (p && temCusto(p)) ? fobDe(p) : '';
     $('#edDims').value = p ? (p.dims || '') : '';
     $('#edMargem').value = (p && p.margem != null) ? p.margem : '';
-    $('#edPreco').value = (p && p.travado) ? p.preco : '';
+    // mostra o preço atual quando ele é travado OU quando não há custo para recalcular
+    // (produtos do catálogo público têm preço direto, sem custo) — evita o campo vir vazio
+    $('#edPreco').value = (p && (p.travado || !temCusto(p)) && p.preco != null) ? p.preco : '';
     $('#edOculto').checked = p ? !!p.oculto : false;
     $('#btnDeleteProduct').style.display = p ? '' : 'none';
     updateEditPreview();
@@ -952,7 +954,8 @@
     p.codigo = f.codigo; p.serie = f.serie; p.tipo = f.tipo; p.nome = f.nome; p.imagem = f.imagem;
     p.dims = f.dims; p.fob = f.fob; p.margem = f.margem; p.oculto = f.oculto;
     if (f.precoInput != null) { p.preco = f.precoInput; p.travado = true; }   // preço travado manual
-    else { p.travado = false; p.preco = r2(precoCalculado(p)); }              // volta ao automático
+    else if (custoBRL(f) > 0) { p.travado = false; p.preco = r2(precoCalculado(p)); }  // automático a partir do custo
+    else { p.travado = false; if (p.preco == null) p.preco = 0; }             // sem custo nem preço digitado: preserva o preço atual
     if (!editingId) state.products.push(p);
     save(); schedulePushSettings(); closeModal('#editModal'); render(); toast('Produto salvo.');
   });
