@@ -31,6 +31,8 @@
   const TIPO_LABEL = { maquina: 'Máquinas', acessorio: 'Acessórios' };
   let BANNERS = {};         // imagens de banner por categoria (nome → URL), vindas do catalog.json
   const bannerImg = nome => BANNERS[nome] || '';
+  // dados de localização/contato (default + ao vivo via catalog.json → data.site)
+  let SITEINFO = Object.assign({ endereco: '', mapsUrl: '', telefone: '', whatsapp: SITE.whatsapp || '', email: '', horario: '' }, window.TORQUE_SITE_INFO || {});
   let query = '';
   let priceBand = 'all';
   let sortBy = 'rel';
@@ -159,6 +161,7 @@
     const act = e.target.dataset.act;
     const codeEl = e.target.closest('[data-code]');
     const code = codeEl && codeEl.dataset.code;
+    if (e.target.closest('[data-cact="orc"]')) { e.preventDefault(); askOrc(); return; }
     if (act === 'add' && code) { setQty(code, 1); syncAll(); toast('Adicionado ao orçamento'); return; }
     if (act === 'inc' && code) { setQty(code, qtyOf(code) + 1); syncAll(); return; }
     if (act === 'dec' && code) { setQty(code, qtyOf(code) - 1); syncAll(); return; }
@@ -186,8 +189,9 @@
 
   /* ---------- lead ---------- */
   $('#btnSolicitar').addEventListener('click', openLead);
-  $('#heroOrc').addEventListener('click', () => { if (cartCount()) openLead(); else { document.getElementById('produtos').scrollIntoView({ behavior: 'smooth' }); toast('Escolha alguns equipamentos primeiro'); } });
-  $('#ctaOrc').addEventListener('click', () => { if (cartCount()) openLead(); else { document.getElementById('produtos').scrollIntoView({ behavior: 'smooth' }); toast('Escolha alguns equipamentos primeiro'); } });
+  function askOrc() { if (cartCount()) openLead(); else { document.getElementById('produtos').scrollIntoView({ behavior: 'smooth' }); toast('Escolha alguns equipamentos primeiro'); } }
+  const ctaOrcBtn = $('#ctaOrc'); if (ctaOrcBtn) ctaOrcBtn.addEventListener('click', askOrc);
+  const heroOrcBtn = $('#heroOrc'); if (heroOrcBtn) heroOrcBtn.addEventListener('click', askOrc);
 
   function openLead() {
     if (!cartCount()) { toast('Seu orçamento está vazio'); return; }
@@ -462,13 +466,99 @@
   const _sync = syncAll;
   syncAll = function () { _sync(); refreshProd(); };
 
-  /* ---------- WhatsApp flutuante ---------- */
-  (function () {
-    const num = String(SITE.whatsapp || '').replace(/\D/g, '');
-    const msg = encodeURIComponent(SITE.whatsappMsg || 'Olá! Quero um orçamento.');
-    const el = $('#wppFloat');
-    if (el) el.href = num ? `https://wa.me/${num}?text=${msg}` : `https://wa.me/?text=${msg}`;
+  /* ---------- carrossel (hero) ---------- */
+  function wppHref() {
+    const n = String(SITEINFO.whatsapp || SITE.whatsapp || '').replace(/\D/g, '');
+    const m = encodeURIComponent(SITE.whatsappMsg || 'Olá! Quero um orçamento.');
+    return n ? `https://wa.me/${n}?text=${m}` : `https://wa.me/?text=${m}`;
+  }
+  function applyWpp() { const el = $('#wppFloat'); if (el) el.href = wppHref(); }
+  const SLIDES = [
+    { kind: 'home', grad: 'linear-gradient(135deg,#14121c,#1f1733)',
+      tag: 'Linha profissional & comercial',
+      title: 'Equipamentos de <span>alta performance</span>',
+      sub: 'Racks, máquinas de força, funcionais, cardio e acessórios para academias, studios e CrossFit.',
+      cta: [{ label: 'Ver produtos', act: 'scroll' }, { label: 'Solicitar orçamento', act: 'orc', ghost: true }] },
+    { kind: 'linha', linha: 'HM', grad: 'linear-gradient(135deg,#161226,#241a3d)',
+      tag: 'Musculação', title: 'Linha HM',
+      sub: 'Força e durabilidade para alta performance — máquinas robustas para uso intenso.',
+      cta: [{ label: 'Conhecer a linha', act: 'linha', linha: 'HM' }] },
+    { kind: 'linha', linha: 'Cardio', grad: 'linear-gradient(135deg,#101a26,#16263d)',
+      tag: 'Cardio', title: 'Linha Cardio',
+      sub: 'Esteiras, bikes e elípticos de padrão academia, prontos para alta rotatividade.',
+      cta: [{ label: 'Ver cardio', act: 'linha', linha: 'Cardio' }] },
+    { kind: 'contato', grad: 'linear-gradient(135deg,#1a1326,#2a1840)',
+      tag: 'Atendimento', title: 'Seu projeto, nossa experiência',
+      sub: 'Monte sua academia do zero com quem entende. Fale com um consultor agora.',
+      cta: [{ label: 'Falar no WhatsApp', act: 'wpp' }, { label: 'Montar orçamento', act: 'orc', ghost: true }] }
+  ];
+  let carIdx = 0, carTimer = null;
+  function slideBg(s) {
+    if (s.kind === 'linha') { const img = bannerImg(s.linha); if (img) return `linear-gradient(to right, rgba(11,11,15,.92), rgba(11,11,15,.38)), url("${img}")`; }
+    return s.grad;
+  }
+  function ctaBtnHTML(c) {
+    const cls = 'btn ' + (c.ghost ? 'btn--ghost' : 'btn--primary');
+    if (c.act === 'scroll') return `<a class="${cls}" href="#produtos">${esc(c.label)}</a>`;
+    if (c.act === 'linha') return `<a class="${cls}" href="?linha=${encodeURIComponent(c.linha)}" data-serie="${esc(c.linha)}">${esc(c.label)}</a>`;
+    if (c.act === 'wpp') return `<a class="${cls}" href="${wppHref()}" target="_blank" rel="noopener">${esc(c.label)}</a>`;
+    if (c.act === 'orc') return `<button class="${cls}" type="button" data-cact="orc">${esc(c.label)}</button>`;
+    return `<button class="${cls}" type="button">${esc(c.label)}</button>`;
+  }
+  function renderCarousel() {
+    const track = $('#carTrack'); if (!track) return;
+    track.innerHTML = SLIDES.map((s, i) => {
+      const hasImg = s.kind === 'linha' && !!bannerImg(s.linha);
+      return `<div class="slide ${i === carIdx ? 'slide--active' : ''}" style="background-image:${slideBg(s)}">
+        ${hasImg ? '' : `<div class="slide__deco" aria-hidden="true">${plate}</div>`}
+        <div class="slide__inner">
+          ${s.tag ? `<span class="slide__tag">${esc(s.tag)}</span>` : ''}
+          <h1 class="slide__title">${s.title}</h1>
+          <p class="slide__sub">${esc(s.sub)}</p>
+          <div class="slide__cta">${s.cta.map(ctaBtnHTML).join('')}</div>
+        </div>
+      </div>`;
+    }).join('');
+    const dots = $('#carDots');
+    if (dots) dots.innerHTML = SLIDES.map((s, i) => `<button type="button" class="${i === carIdx ? 'on' : ''}" data-cdot="${i}" aria-label="Slide ${i + 1}"></button>`).join('');
+  }
+  function goSlide(i) {
+    carIdx = (i + SLIDES.length) % SLIDES.length;
+    $$('.slide', $('#carTrack')).forEach((el, idx) => el.classList.toggle('slide--active', idx === carIdx));
+    $$('#carDots button').forEach((el, idx) => el.classList.toggle('on', idx === carIdx));
+  }
+  function startCar() { stopCar(); if (SLIDES.length > 1) carTimer = setInterval(() => goSlide(carIdx + 1), 6000); }
+  function stopCar() { if (carTimer) { clearInterval(carTimer); carTimer = null; } }
+  (function wireCarousel() {
+    const prev = $('#carPrev'), next = $('#carNext'), wrap = $('#carousel');
+    if (prev) prev.addEventListener('click', () => { goSlide(carIdx - 1); startCar(); });
+    if (next) next.addEventListener('click', () => { goSlide(carIdx + 1); startCar(); });
+    if (wrap) {
+      wrap.addEventListener('click', e => { const d = e.target.closest('[data-cdot]'); if (d) { goSlide(+d.dataset.cdot); startCar(); } });
+      wrap.addEventListener('mouseenter', stopCar);
+      wrap.addEventListener('mouseleave', startCar);
+    }
   })();
+
+  /* ---------- localização / contato ---------- */
+  function renderContato() {
+    const sec = $('#localizacao'); if (!sec) return;
+    const i = SITEINFO;
+    const has = i.endereco || i.telefone || i.mapsUrl || i.horario || i.email;
+    if (!has) { sec.hidden = true; return; }
+    sec.hidden = false;
+    const rows = [];
+    if (i.endereco) rows.push(`<div class="local__row"><span class="local__ic">📍</span><div><b>Endereço</b><p>${esc(i.endereco)}</p></div></div>`);
+    if (i.telefone) rows.push(`<div class="local__row"><span class="local__ic">📞</span><div><b>Telefone / WhatsApp</b><p><a href="tel:${esc(i.telefone.replace(/[^\d+]/g, ''))}">${esc(i.telefone)}</a></p></div></div>`);
+    if (i.email) rows.push(`<div class="local__row"><span class="local__ic">✉️</span><div><b>E-mail</b><p><a href="mailto:${esc(i.email)}">${esc(i.email)}</a></p></div></div>`);
+    if (i.horario) rows.push(`<div class="local__row"><span class="local__ic">🕐</span><div><b>Atendimento</b><p>${esc(i.horario)}</p></div></div>`);
+    const info = $('#locInfo'); if (info) info.innerHTML = rows.join('');
+    const btn = $('#locMap'); if (btn) { if (i.mapsUrl) { btn.hidden = false; btn.href = i.mapsUrl; } else btn.hidden = true; }
+    const box = $('#locMapBox'); if (box) { if (i.mapsUrl) { box.hidden = false; box.href = i.mapsUrl; } else box.hidden = true; }
+  }
+
+  /* ---------- WhatsApp flutuante ---------- */
+  applyWpp();
 
   /* ---------- animações de rolagem ---------- */
   (function () {
@@ -489,6 +579,7 @@
   $('#ano').textContent = new Date().getFullYear();
   renderSeries(); renderChips(); renderGrid(); refreshCounts();
   renderLinhasMenu(); renderLinhaHead();
+  renderCarousel(); startCar(); renderContato();
   // deep-link: ?linha=Cardio ou ?tipo=acessorio já entram filtrados
   (function initView() {
     const tp = currentTipo(), dl = currentLinha();
@@ -515,10 +606,11 @@
       if (!live.length) return;
       PRODUCTS = live;
       if (data && data.banners && typeof data.banners === 'object') BANNERS = data.banners;   // banners por categoria
+      if (data && data.site && typeof data.site === 'object') SITEINFO = Object.assign(SITEINFO, data.site);   // contato/localização
       renderSeries(); renderChips(); renderGrid(); refreshCounts(); renderLinhasMenu();
       const tp = currentTipo(), dl = currentLinha();                    // re-aplica a vista com o catálogo ao vivo
       if (tp) goToTipo(tp, false, false); else if (dl) goToLinha(dl, false, false);
-      renderLinhaHead();
+      renderLinhaHead(); renderCarousel(); renderContato(); applyWpp();
     } catch (e) { /* offline ou bucket vazio → mantém o catálogo embutido */ }
   }
   loadLiveCatalog();
