@@ -97,7 +97,7 @@
      fiscais (custo/margem) nunca saem daqui. Degrada para
      localStorage se a tabela não existir.
      ------------------------------------------------------------ */
-  const SHARED_PARAM_KEYS = ['parcelasMax', 'juros', 'validade', 'stages', 'metas', 'linhas', 'linhaBanners', 'contato'];
+  const SHARED_PARAM_KEYS = ['parcelasMax', 'juros', 'validade', 'stages', 'metas', 'linhas', 'linhaBanners', 'contato', 'carousel'];
   const SETTINGS_SQL =
     "create table if not exists public.settings (\n" +
     "  id int primary key default 1,\n" +
@@ -128,6 +128,12 @@
   function publicBanners() {
     const out = {}, b = P().linhaBanners || {};
     Object.keys(b).forEach(k => { if (b[k] && !String(b[k]).startsWith('data:')) out[k] = b[k]; });
+    return out;
+  }
+  // imagens do carrossel publicáveis (só URLs hospedadas; data: local não vai pro site)
+  function publicCarousel() {
+    const out = {}, c = P().carousel || {};
+    Object.keys(c).forEach(k => { if (c[k] && !String(c[k]).startsWith('data:')) out[k] = c[k]; });
     return out;
   }
   // dados de contato/localização para o site comercial (endereço, mapa, telefone, horário)
@@ -176,7 +182,7 @@
       payload.catalog = publicCatalog();                  // publica o catálogo junto (produtos + imagens hospedadas)
       try {
         await Cloud.saveSettings(payload); settingsSync = true; renderSyncStatus();
-        try { await Cloud.publishCatalogJson(payload.catalog, publicBanners(), publicSite()); } catch (e) { console.warn('catalog.json:', e); }   // espelha pro site público
+        try { await Cloud.publishCatalogJson(payload.catalog, publicBanners(), publicSite(), publicCarousel()); } catch (e) { console.warn('catalog.json:', e); }   // espelha pro site público
       }
       catch (err) { if (isMissingTable(err)) { settingsSync = false; renderSyncStatus(); } else console.error(err); }
     }, 800);
@@ -384,6 +390,7 @@
     setVal('#cfgValidade', p.validade);
     renderStagesEditor();
     renderLinhasEditor();
+    renderCarouselEditor();
     renderContatoEditor();
     renderSyncStatus();
     $('#configPanel').hidden = state.mode !== 'admin';
@@ -617,6 +624,53 @@
         P().contato[CONTATO_FIELDS[sel]] = v;
         save(); schedulePushSettings();
       });
+    });
+  })();
+
+  // ---- editor do CARROSSEL da vitrine (imagem de fundo por slide) ----
+  const CAROUSEL_SLIDES = [
+    { id: 'home', label: 'Slide 1 · Institucional' },
+    { id: 'hm', label: 'Slide 2 · Linha HM' },
+    { id: 'cardio', label: 'Slide 3 · Linha Cardio' },
+    { id: 'contato', label: 'Slide 4 · Contato' }
+  ];
+  function renderCarouselEditor() {
+    const box = $('#carouselEditor'); if (!box) return;
+    const imgs = P().carousel || {};
+    box.innerHTML = CAROUSEL_SLIDES.map(s => {
+      const tem = !!imgs[s.id];
+      const ctrl = tem
+        ? `<button class="linharow__banner on" type="button" data-car-img="${s.id}" title="Trocar imagem">🖼 ✓</button><button class="linharow__x" type="button" data-car-rm="${s.id}" title="Remover imagem">✕</button>`
+        : `<button class="linharow__banner" type="button" data-car-img="${s.id}" title="Definir imagem">🖼 Imagem</button>`;
+      return `<div class="linharow"><span class="linharow__n" style="flex:1;text-align:left">${esc(s.label)}</span>${ctrl}</div>`;
+    }).join('');
+  }
+  // envia a imagem de um slide do carrossel (vai pro Storage; aparece no site)
+  function pickCarousel(slideId) {
+    const inp = document.createElement('input');
+    inp.type = 'file'; inp.accept = 'image/*';
+    inp.onchange = async () => {
+      const file = inp.files && inp.files[0]; if (!file) return;
+      toast('Enviando imagem…');
+      try {
+        const { blob, dataUrl } = await resizeImage(file, 1600, 0.78);
+        let url = dataUrl, naNuvem = false;
+        try { url = await Cloud.uploadProductImage(blob, 'jpg'); naNuvem = true; }
+        catch (err) { console.warn('carousel storage:', err); }
+        if (!P().carousel) P().carousel = {};
+        P().carousel[slideId] = url; save(); schedulePushSettings(); renderCarouselEditor();
+        toast(naNuvem ? 'Imagem do slide salva.' : 'Imagem local — ative o Storage para aparecer no site.');
+      } catch (err) { console.error(err); toast('Não foi possível ler a imagem.'); }
+    };
+    inp.click();
+  }
+  (function wireCarouselEditor() {
+    const box = $('#carouselEditor'); if (!box) return;
+    box.addEventListener('click', e => {
+      const img = e.target.closest('[data-car-img]');
+      if (img) { pickCarousel(img.dataset.carImg); return; }
+      const rm = e.target.closest('[data-car-rm]');
+      if (rm) { const c = P().carousel || {}; delete c[rm.dataset.carRm]; P().carousel = c; save(); schedulePushSettings(); renderCarouselEditor(); toast('Imagem removida.'); return; }
     });
   })();
 

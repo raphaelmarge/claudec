@@ -133,9 +133,9 @@ window.Cloud = (function () {
     return data.publicUrl;
   }
   // publica o catálogo público como JSON no bucket (lido pelo site comercial, sem login)
-  async function publishCatalogJson(catalog, banners, site) {
+  async function publishCatalogJson(catalog, banners, site, carousel) {
     if (!sb) return;
-    const blob = new Blob([JSON.stringify({ products: catalog || [], banners: banners || {}, site: site || {}, at: new Date().toISOString() })], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify({ products: catalog || [], banners: banners || {}, site: site || {}, carousel: carousel || {}, at: new Date().toISOString() })], { type: 'application/json' });
     const { error } = await sb.storage.from('produtos').upload('catalog.json', blob, { contentType: 'application/json', upsert: true });
     if (error) throw error;
   }

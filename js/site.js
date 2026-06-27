@@ -33,6 +33,7 @@
   const bannerImg = nome => BANNERS[nome] || '';
   // dados de localização/contato (default + ao vivo via catalog.json → data.site)
   let SITEINFO = Object.assign({ endereco: '', mapsUrl: '', telefone: '', whatsapp: SITE.whatsapp || '', email: '', horario: '' }, window.TORQUE_SITE_INFO || {});
+  let CAROUSEL = {};        // imagem por slide do carrossel (id → URL), vinda do catalog.json
   let query = '';
   let priceBand = 'all';
   let sortBy = 'rel';
@@ -474,28 +475,30 @@
   }
   function applyWpp() { const el = $('#wppFloat'); if (el) el.href = wppHref(); }
   const SLIDES = [
-    { kind: 'home', grad: 'linear-gradient(135deg,#14121c,#1f1733)',
+    { id: 'home', kind: 'home', grad: 'linear-gradient(135deg,#14121c,#1f1733)',
       tag: 'Linha profissional & comercial',
       title: 'Equipamentos de <span>alta performance</span>',
       sub: 'Racks, máquinas de força, funcionais, cardio e acessórios para academias, studios e CrossFit.',
       cta: [{ label: 'Ver produtos', act: 'scroll' }, { label: 'Solicitar orçamento', act: 'orc', ghost: true }] },
-    { kind: 'linha', linha: 'HM', grad: 'linear-gradient(135deg,#161226,#241a3d)',
+    { id: 'hm', kind: 'linha', linha: 'HM', grad: 'linear-gradient(135deg,#161226,#241a3d)',
       tag: 'Musculação', title: 'Linha HM',
       sub: 'Força e durabilidade para alta performance — máquinas robustas para uso intenso.',
       cta: [{ label: 'Conhecer a linha', act: 'linha', linha: 'HM' }] },
-    { kind: 'linha', linha: 'Cardio', grad: 'linear-gradient(135deg,#101a26,#16263d)',
+    { id: 'cardio', kind: 'linha', linha: 'Cardio', grad: 'linear-gradient(135deg,#101a26,#16263d)',
       tag: 'Cardio', title: 'Linha Cardio',
       sub: 'Esteiras, bikes e elípticos de padrão academia, prontos para alta rotatividade.',
       cta: [{ label: 'Ver cardio', act: 'linha', linha: 'Cardio' }] },
-    { kind: 'contato', grad: 'linear-gradient(135deg,#1a1326,#2a1840)',
+    { id: 'contato', kind: 'contato', grad: 'linear-gradient(135deg,#1a1326,#2a1840)',
       tag: 'Atendimento', title: 'Seu projeto, nossa experiência',
       sub: 'Monte sua academia do zero com quem entende. Fale com um consultor agora.',
       cta: [{ label: 'Falar no WhatsApp', act: 'wpp' }, { label: 'Montar orçamento', act: 'orc', ghost: true }] }
   ];
   let carIdx = 0, carTimer = null;
+  // imagem do slide: a definida no carrossel tem prioridade; senão, o banner da linha (HM/Cardio)
+  function slideImg(s) { return CAROUSEL[s.id] || (s.kind === 'linha' ? bannerImg(s.linha) : ''); }
   function slideBg(s) {
-    if (s.kind === 'linha') { const img = bannerImg(s.linha); if (img) return `linear-gradient(to right, rgba(11,11,15,.92), rgba(11,11,15,.38)), url("${img}")`; }
-    return s.grad;
+    const img = slideImg(s);
+    return img ? `linear-gradient(to right, rgba(11,11,15,.92), rgba(11,11,15,.38)), url("${img}")` : s.grad;
   }
   function ctaBtnHTML(c) {
     const cls = 'btn ' + (c.ghost ? 'btn--ghost' : 'btn--primary');
@@ -508,7 +511,7 @@
   function renderCarousel() {
     const track = $('#carTrack'); if (!track) return;
     track.innerHTML = SLIDES.map((s, i) => {
-      const hasImg = s.kind === 'linha' && !!bannerImg(s.linha);
+      const hasImg = !!slideImg(s);
       return `<div class="slide ${i === carIdx ? 'slide--active' : ''}" style="background-image:${slideBg(s)}">
         ${hasImg ? '' : `<div class="slide__deco" aria-hidden="true">${plate}</div>`}
         <div class="slide__inner">
@@ -606,6 +609,7 @@
       if (!live.length) return;
       PRODUCTS = live;
       if (data && data.banners && typeof data.banners === 'object') BANNERS = data.banners;   // banners por categoria
+      if (data && data.carousel && typeof data.carousel === 'object') CAROUSEL = data.carousel;   // imagens do carrossel
       if (data && data.site && typeof data.site === 'object') SITEINFO = Object.assign(SITEINFO, data.site);   // contato/localização
       renderSeries(); renderChips(); renderGrid(); refreshCounts(); renderLinhasMenu();
       const tp = currentTipo(), dl = currentLinha();                    // re-aplica a vista com o catálogo ao vivo
