@@ -2763,8 +2763,9 @@
     } catch (e) {
       console.error(e);
       err.hidden = false;
-      err.innerHTML = 'Não foi possível gerar agora. Verifique se a IA está ativa. <button type="button" id="suggestHelp" class="atv__help">Como ativar</button>';
-      txt.placeholder = 'Escreva a mensagem manualmente ou tente regenerar.';
+      err.innerHTML = 'IA indisponível — usei um modelo pronto. Escolha outro modelo acima, edite, ou ative a IA. <button type="button" id="suggestHelp" class="atv__help">Como ativar</button>';
+      if (!txt.value) txt.value = followupTexto(o);   // fallback: nunca deixa a caixa vazia
+      txt.placeholder = 'Escolha um modelo acima ou escreva sua mensagem.';
     } finally {
       $('#btnSuggestSend').disabled = $('#btnSuggestRegen').disabled = false;
     }
