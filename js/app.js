@@ -2435,6 +2435,7 @@
         ${lead && r.contato_telefone ? `<button class="dc-wpp" data-act="wpp-lead" type="button">📱 WhatsApp</button>` : ''}
         <button class="dc-note" data-act="note-orc" type="button">🗒 Nota</button>
         <button class="dc-edit" data-act="edit-orc" type="button">✎ Editar</button>
+        <button class="dc-dup" data-act="dup-orc" type="button">⧉ Duplicar</button>
         <button class="dc-del" data-act="del-orc" type="button">🗑 Excluir</button>
       </div>
     </div>`;
@@ -2444,6 +2445,7 @@
     const id = card.dataset.id;
     const o = dashData.find(x => x.id === id); if (!o) return;
     if (e.target.dataset.act === 'edit-orc') editOrcamento(o);
+    if (e.target.dataset.act === 'dup-orc') duplicarOrcamento(o);
     if (e.target.dataset.act === 'note-orc') openOrc(o);
     if (e.target.dataset.act === 'wpp-lead') {
       const num = whatsNumero(o.contato_telefone);
@@ -2711,6 +2713,68 @@
     $('#summaryBar').classList.add('open');
     if (faltando) toast(`${faltando} item(ns) não estão mais no catálogo e foram ignorados.`);
   }
+
+  // Duplicar: carrega itens/cliente/condições num NOVO orçamento (não altera o original)
+  function duplicarOrcamento(o) {
+    state.cart = {};
+    let faltando = 0;
+    (o.itens || []).forEach(it => {
+      const p = state.products.find(x => x.codigo && x.codigo === it.codigo);
+      if (p) state.cart[p.id] = (state.cart[p.id] || 0) + (Number(it.qtd) || 0);
+      else faltando++;
+    });
+    state.quote.clienteId = o.cliente_id || null;
+    state.quote.descMode = 'brl';
+    state.quote.descValue = Number(o.desconto) || 0;
+    state.quote.sinal = Number(o.sinal) || 0;
+    editingOrcamentoId = null; editingNumero = ''; editingObs = '';   // NOVO orçamento
+    $('#dashScreen').hidden = true; document.body.style.overflow = '';
+    save(); render();
+    if (o.parcelas) { $('#installSelect').value = String(o.parcelas); updateInstallValue(saldoFinanciar()); }
+    $('#summaryBar').classList.add('open');
+    toast('Cópia carregada — revise e gere um novo orçamento.' + (faltando ? ` (${faltando} item fora do catálogo)` : ''));
+  }
+
+  /* ------------------------------------------------------------
+     BACKUP / EXPORTAÇÃO (CSV) — baixa uma cópia dos dados
+     ------------------------------------------------------------ */
+  const csvCell = v => { const s = String(v == null ? '' : v); return /[";\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  const numBR = n => (Number(n) || 0).toFixed(2).replace('.', ',');
+  const toCSV = rows => '﻿' + rows.map(r => r.map(csvCell).join(';')).join('\r\n');
+  function downloadText(name, text, type) {
+    const blob = new Blob([text], { type: type || 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+  }
+  function exportBackup() {
+    const stamp = new Date().toISOString().slice(0, 10);
+    const lista = baseRows();
+    if (!lista.length) { toast('Nada para exportar nesta visão.'); return; }
+    const head = ['Número', 'Data', 'Cliente', 'Vendedor', 'Fase', 'Total', 'Subtotal', 'Desconto', 'Sinal', 'Parcelas', 'Valor parcela', 'Telefone', 'E-mail', 'Origem', 'Observação', 'Itens'];
+    const rows = [head];
+    lista.forEach(r => {
+      const itens = (r.itens || []).map(i => `${i.qtd}x ${i.nome} (${numBR(i.unitario || i.preco || 0)})`).join(' | ');
+      rows.push([
+        r.numero || '', r.criado_em ? dmy(r.criado_em) : '', r.cliente_nome || '', r.vendedor_nome || '',
+        stageName(stageOf(r)), numBR(r.total), numBR(r.subtotal), numBR(r.desconto), numBR(r.sinal),
+        r.parcelas || '', numBR(r.valor_parcela), r.contato_telefone || '', r.contato_email || '',
+        r.origem || '', r.obs || '', itens
+      ]);
+    });
+    downloadText(`torque-orcamentos-${stamp}.csv`, toCSV(rows));
+    let extra = '';
+    if ((state.clientes || []).length) {
+      const ch = ['Nome', 'Empresa', 'Telefone', 'E-mail', 'Documento', 'Cidade', 'Observação'];
+      const cr = [ch];
+      state.clientes.forEach(c => cr.push([c.nome || '', c.empresa || '', c.telefone || '', c.email || '', c.doc || '', c.cidade || '', c.obs || '']));
+      setTimeout(() => downloadText(`torque-clientes-${stamp}.csv`, toCSV(cr)), 500);
+      extra = ` + ${state.clientes.length} cliente(s)`;
+    }
+    toast(`Backup gerado: ${lista.length} orçamento(s)${extra}.`);
+  }
+  $('#btnBackup') && $('#btnBackup').addEventListener('click', exportBackup);
 
   /* ------------------------------------------------------------
      INIT
