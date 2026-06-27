@@ -568,6 +568,16 @@ body[data-auth="out"] .login { display: flex; }
 .wpp-tpl:hover { border-color: var(--violet); }
 .wpp-tpl.on { border-color: var(--violet); color: var(--violet); background: var(--violet-glow); }
 .metarow__com { font-size: .76rem; color: var(--ok); font-weight: 700; white-space: nowrap; margin-left: 6px; }
+.kit-bar { display: flex; gap: 8px; margin: 10px 0 0; }
+.kit-bar__btn { flex: 1; padding: 9px; font-size: .85rem; }
+.kits-list { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+.kitrow { display: flex; align-items: center; gap: 10px; border: 1px solid var(--line-2); border-radius: var(--radius-sm); padding: 11px 12px; background: var(--panel-2); }
+.kitrow__info { flex: 1; min-width: 0; }
+.kitrow__name { display: block; font-size: .92rem; }
+.kitrow__items { display: block; font-size: .76rem; color: var(--txt-dim); margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kitrow__act { display: flex; align-items: center; gap: 8px; flex: none; }
+.kitrow__add { padding: 8px 14px; font-size: .82rem; }
+.kitrow__rm { background: none; border: 1px solid rgba(248,113,113,.4); color: var(--danger); border-radius: 9px; padding: 7px 9px; cursor: pointer; }
 
 /* gerenciador de linhas (séries) */
 .linharow { display: flex; align-items: center; gap: 10px; }

@@ -97,7 +97,7 @@
      fiscais (custo/margem) nunca saem daqui. Degrada para
      localStorage se a tabela não existir.
      ------------------------------------------------------------ */
-  const SHARED_PARAM_KEYS = ['parcelasMax', 'juros', 'validade', 'stages', 'metas', 'linhas', 'linhaBanners', 'contato', 'carousel', 'comissao'];
+  const SHARED_PARAM_KEYS = ['parcelasMax', 'juros', 'validade', 'stages', 'metas', 'linhas', 'linhaBanners', 'contato', 'carousel', 'comissao', 'kits', 'descontoMaxVendedor'];
   const SETTINGS_SQL =
     "create table if not exists public.settings (\n" +
     "  id int primary key default 1,\n" +
@@ -388,6 +388,7 @@
     setVal('#cfgFreteIntl', p.freteIntlUSD); setVal('#cfgFreteNac', p.freteNacionalBRL);
     setVal('#cfgParcelas', p.parcelasMax); setVal('#cfgJuros', p.juros);
     setVal('#cfgValidade', p.validade); setVal('#cfgComissao', p.comissao);
+    setVal('#cfgDescMaxVend', p.descontoMaxVendedor);
     renderStagesEditor();
     renderLinhasEditor();
     renderCarouselEditor();
@@ -684,6 +685,7 @@
   }
 
   function renderSummary() {
+    clampDescVendedor();          // garante a alçada do vendedor também ao carregar/editar
     const lines = cartLines();
     const subtotal = cartTotal();
     const desc = descontoReais(subtotal);
@@ -799,6 +801,7 @@
   $('#cfgParcelas').addEventListener('input', () => { P().parcelasMax = Math.max(1, parseInt($('#cfgParcelas').value, 10) || 1); save(); renderSummary(); schedulePushSettings(); });
   $('#cfgValidade').addEventListener('input', () => { P().validade = Math.max(1, parseInt($('#cfgValidade').value, 10) || 1); save(); schedulePushSettings(); });
   $('#cfgComissao') && $('#cfgComissao').addEventListener('input', () => { P().comissao = Math.max(0, num($('#cfgComissao').value) || 0); save(); schedulePushSettings(); if (dashView === 'metrics' && !$('#dashScreen').hidden) renderDashboard(); });
+  $('#cfgDescMaxVend') && $('#cfgDescMaxVend').addEventListener('input', () => { P().descontoMaxVendedor = Math.max(0, num($('#cfgDescMaxVend').value) || 0); save(); schedulePushSettings(); });
 
   // grid interactions (delegation)
   $('#productGrid').addEventListener('click', e => {
@@ -848,12 +851,81 @@
     if (!cartCount() || confirm('Descartar edições e começar um novo orçamento?')) novoOrcamento();
   });
 
+  // alçada de desconto: limita o desconto do vendedor (admin não tem limite)
+  function clampDescVendedor() {
+    const cap = Number(P().descontoMaxVendedor) || 0;
+    if (cap <= 0 || (Cloud.isAdmin && Cloud.isAdmin())) return false;
+    const q = Q(), subtotal = cartTotal();
+    if (q.descMode === 'brl') {
+      const capBRL = Math.round(subtotal * cap) / 100;
+      if (q.descValue > capBRL) { q.descValue = capBRL; return true; }
+    } else if (q.descValue > cap) { q.descValue = cap; return true; }
+    return false;
+  }
   // desconto / sinal (vendedor)
-  $('#inpDesconto').addEventListener('input', e => { state.quote.descValue = num(e.target.value) || 0; save(); renderSummary(); });
+  $('#inpDesconto').addEventListener('input', e => {
+    state.quote.descValue = num(e.target.value) || 0;
+    const clamped = clampDescVendedor();
+    save(); renderSummary();
+    if (clamped) toast(`Desconto máximo de ${P().descontoMaxVendedor}% para vendedor — ajustado.`);
+  });
   $('#inpSinal').addEventListener('input', e => { state.quote.sinal = num(e.target.value) || 0; save(); renderSummary(); });
   $('#discToggle').addEventListener('click', () => {
     state.quote.descMode = state.quote.descMode === 'brl' ? 'pct' : 'brl';
-    save(); renderSummary();
+    clampDescVendedor(); save(); renderSummary();
+  });
+
+  /* ------------------------------------------------------------
+     KITS / COMBOS — salvar o carrinho atual e reaplicar com 1 toque
+     ------------------------------------------------------------ */
+  const kitsArr = () => Array.isArray(P().kits) ? P().kits : [];
+  function saveKitFromCart() {
+    const lines = cartLines();
+    if (!lines.length) { toast('Adicione produtos ao carrinho para salvar como kit.'); return; }
+    const nome = (prompt('Nome do kit (ex.: Academia 100m²):') || '').trim();
+    if (!nome) return;
+    const itens = lines.map(l => ({ codigo: l.p.codigo, qtd: l.q })).filter(i => i.codigo);
+    if (!itens.length) { toast('Os itens precisam ter código para virar kit.'); return; }
+    const arr = kitsArr().slice(); arr.push({ id: uid(), nome, itens });
+    P().kits = arr; save(); schedulePushSettings();
+    toast(`Kit "${nome}" salvo (${itens.length} item(ns)).`);
+  }
+  function kitResumo(k) {
+    return (k.itens || []).map(i => { const p = state.products.find(x => x.codigo === i.codigo); return `${i.qtd}× ${p ? p.nome : i.codigo}`; }).join(' · ');
+  }
+  function renderKitsList() {
+    const box = $('#kitsList'); if (!box) return;
+    const arr = kitsArr(), admin = Cloud.isAdmin && Cloud.isAdmin();
+    box.innerHTML = arr.length ? arr.map(k => `
+      <div class="kitrow" data-kit="${k.id}">
+        <div class="kitrow__info"><b class="kitrow__name">${esc(k.nome)}</b><span class="kitrow__items">${esc(kitResumo(k))}</span></div>
+        <div class="kitrow__act">
+          <button class="btn btn--primary kitrow__add" data-act="kit-add" type="button">Adicionar</button>
+          ${admin ? `<button class="kitrow__rm" data-act="kit-rm" type="button" title="Excluir kit">🗑</button>` : ''}
+        </div>
+      </div>`).join('')
+      : `<p class="atv__empty">Nenhum kit salvo ainda.${(admin ? ' Monte um carrinho e use “💾 Salvar kit”.' : '')}</p>`;
+  }
+  function applyKit(k) {
+    let faltando = 0;
+    (k.itens || []).forEach(i => {
+      const p = state.products.find(x => x.codigo === i.codigo);
+      if (p) state.cart[p.id] = (state.cart[p.id] || 0) + (Number(i.qtd) || 0); else faltando++;
+    });
+    save(); render();
+    $('#summaryBar').classList.add('open');
+    toast(`Kit "${k.nome}" adicionado.${faltando ? ` (${faltando} item fora do catálogo)` : ''}`);
+  }
+  $('#btnKits') && $('#btnKits').addEventListener('click', () => { renderKitsList(); openModal('#kitsModal'); });
+  $('#btnSaveKit') && $('#btnSaveKit').addEventListener('click', saveKitFromCart);
+  $('#kitsList') && $('#kitsList').addEventListener('click', e => {
+    const row = e.target.closest('[data-kit]'); if (!row) return;
+    const k = kitsArr().find(x => x.id === row.dataset.kit); if (!k) return;
+    if (e.target.closest('[data-act="kit-add"]')) { applyKit(k); closeModal('#kitsModal'); return; }
+    if (e.target.closest('[data-act="kit-rm"]')) {
+      if (!confirm(`Excluir o kit "${k.nome}"?`)) return;
+      P().kits = kitsArr().filter(x => x.id !== k.id); save(); schedulePushSettings(); renderKitsList(); toast('Kit excluído.');
+    }
   });
 
   // seleção de cliente
