@@ -97,7 +97,7 @@
      fiscais (custo/margem) nunca saem daqui. Degrada para
      localStorage se a tabela não existir.
      ------------------------------------------------------------ */
-  const SHARED_PARAM_KEYS = ['parcelasMax', 'juros', 'validade', 'stages', 'metas', 'linhas', 'linhaBanners', 'contato', 'carousel'];
+  const SHARED_PARAM_KEYS = ['parcelasMax', 'juros', 'validade', 'stages', 'metas', 'linhas', 'linhaBanners', 'contato', 'carousel', 'comissao'];
   const SETTINGS_SQL =
     "create table if not exists public.settings (\n" +
     "  id int primary key default 1,\n" +
@@ -387,7 +387,7 @@
     setVal('#cfgICMS', p.icms); setVal('#cfgIOF', p.iof); setVal('#cfgSeguro', p.seguroPct);
     setVal('#cfgFreteIntl', p.freteIntlUSD); setVal('#cfgFreteNac', p.freteNacionalBRL);
     setVal('#cfgParcelas', p.parcelasMax); setVal('#cfgJuros', p.juros);
-    setVal('#cfgValidade', p.validade);
+    setVal('#cfgValidade', p.validade); setVal('#cfgComissao', p.comissao);
     renderStagesEditor();
     renderLinhasEditor();
     renderCarouselEditor();
@@ -798,6 +798,7 @@
   });
   $('#cfgParcelas').addEventListener('input', () => { P().parcelasMax = Math.max(1, parseInt($('#cfgParcelas').value, 10) || 1); save(); renderSummary(); schedulePushSettings(); });
   $('#cfgValidade').addEventListener('input', () => { P().validade = Math.max(1, parseInt($('#cfgValidade').value, 10) || 1); save(); schedulePushSettings(); });
+  $('#cfgComissao') && $('#cfgComissao').addEventListener('input', () => { P().comissao = Math.max(0, num($('#cfgComissao').value) || 0); save(); schedulePushSettings(); if (dashView === 'metrics' && !$('#dashScreen').hidden) renderDashboard(); });
 
   // grid interactions (delegation)
   $('#productGrid').addEventListener('click', e => {
@@ -1948,6 +1949,10 @@
       }
       renderDashboard();
       maybeNotify(dashData);
+      if (!remindShown) {
+        const pend = pendentesRetorno(dashData);
+        if (pend.length) { remindShown = true; toast(`📅 ${pend.length} retorno(s) atrasado(s) ou para hoje — veja a aba Agenda.`); }
+      }
     } catch (e) { console.error(e); $('#dashList').innerHTML = '<p class="dash__empty">Erro ao carregar os orçamentos.</p>'; }
   }
   function baseRows() {
@@ -2165,25 +2170,54 @@
     const c = o.cliente_id ? clienteById(o.cliente_id) : null;
     return (c && c.telefone) || '';
   }
-  // mensagem pronta de retomada (follow-up)
+  // ---- modelos de mensagem de WhatsApp (prontos, o vendedor revisa antes de enviar) ----
+  const primeiroNome = s => String(s || '').trim().split(' ')[0] || '';
   function followupTexto(o) {
-    const nome = String(o.cliente_nome || '').trim().split(' ')[0] || '';
-    const vend = (Cloud.profile && Cloud.profile.nome) ? Cloud.profile.nome.split(' ')[0] : '';
+    const nome = primeiroNome(o.cliente_nome);
+    const vend = primeiroNome(Cloud.profile && Cloud.profile.nome);
     const ref = o.numero ? ` ${o.numero}` : '';
     const valor = o.total ? ` (${money(o.total)})` : '';
     return `Olá ${nome}, tudo bem? Aqui é ${vend ? vend + ' da' : 'da'} Torque Fitness 💪 ` +
       `Passando para saber se você conseguiu avaliar o orçamento${ref}${valor}. ` +
       `Posso esclarecer qualquer dúvida ou ajustar as condições. Podemos seguir?`;
   }
+  const WPP_TEMPLATES = [
+    { key: 'contato', label: '👋 1º contato', build: o => {
+        const nome = primeiroNome(o.cliente_nome), vend = primeiroNome(Cloud.profile && Cloud.profile.nome);
+        const itens = (o.itens || []).map(i => `• ${i.qtd}× ${i.nome}`).join('\n');
+        return `Olá ${nome}! Aqui é ${vend ? vend + ' da' : 'da'} Torque Fitness 💪 Recebi seu interesse` +
+          (itens ? `:\n\n${itens}` : '') + `\n\nPosso te enviar o orçamento e tirar suas dúvidas?`;
+      } },
+    { key: 'followup', label: '🔁 Follow-up', build: o => followupTexto(o) },
+    { key: 'proposta', label: '📄 Proposta enviada', build: o => {
+        const nome = primeiroNome(o.cliente_nome), ref = o.numero ? ` ${o.numero}` : '';
+        const val = o.total ? ` no valor de ${money(o.total)}` : '';
+        const parc = (o.parcelas && o.valor_parcela) ? ` (ou em até ${o.parcelas}× de ${money(o.valor_parcela)})` : '';
+        return `Olá ${nome}! Segue a proposta${ref}${val}${parc}. Qualquer dúvida sobre os equipamentos ou as condições, estou à disposição. O que achou?`;
+      } },
+    { key: 'fechamento', label: '✅ Fechamento', build: o => {
+        const nome = primeiroNome(o.cliente_nome), val = o.total ? ` de ${money(o.total)}` : '';
+        return `Olá ${nome}! Para garantir as condições${val}, posso já reservar e te enviar os próximos passos? Conseguimos fechar essa semana?`;
+      } }
+  ];
+  function renderWppTpls() {
+    const box = $('#wppTpls'); if (!box) return;
+    box.innerHTML = WPP_TEMPLATES.map(t => `<button type="button" class="wpp-tpl" data-tpl="${t.key}">${t.label}</button>`).join('');
+  }
+  // abre o modal de mensagem (modelos + IA + edição) já com o follow-up preenchido
   function openWppFor(o) {
-    const num = whatsNumero(quotePhone(o));
-    const txt = encodeURIComponent(followupTexto(o));
-    window.open(num ? `https://wa.me/${num}?text=${txt}` : `https://wa.me/?text=${txt}`, '_blank');
-    logActivityAuto(o, 'whatsapp', 'Follow-up enviado pelo WhatsApp');
+    suggestOrcId = o.id;
+    $('#suggestCliente').textContent = (o.cliente_nome || 'Cliente') + (o.numero ? ' · ' + o.numero : '');
+    $('#suggestHint').value = '';
+    $('#suggestErr').hidden = true;
+    renderWppTpls();
+    $('#suggestText').value = followupTexto(o);
+    openModal('#suggestModal');
   }
 
   /* ============ LEMBRETES DE RETORNO (notificações PWA) ============ */
   let notifShown = false;   // dispara no máx. 1× por sessão de uso
+  let remindShown = false;  // aviso in-app de retornos pendentes (1× por sessão)
   function notifSupported() { return 'Notification' in window; }
   function pendentesRetorno(rows) {
     return rows.filter(emAberto).filter(o => tarefasPendentes(o).some(t => { const di = dueInfo(t.due); return di.overdue || di.isToday; }));
@@ -2255,6 +2289,7 @@
     });
     const metas = P().metas || {};
     const ehAdmin = Cloud.isAdmin();
+    const comPct = Number(P().comissao) || 0;
     const vendNomes = Array.from(new Set([...Object.keys(metas), ...Object.keys(ganhoMes)]))
       .filter(n => n && n !== '—').sort((a, b) => a.localeCompare(b, 'pt-BR'));
     let metasCard = '';
@@ -2262,17 +2297,19 @@
       const linha = (n, done, target, tot) => {
         const pct = target ? Math.min(100, Math.round(done / target * 100)) : 0;
         const inp = (ehAdmin && !tot) ? `<input class="metarow__in" data-meta="${esc(n)}" type="number" min="0" step="1000" value="${target || ''}" placeholder="meta" aria-label="Meta de ${esc(n)}" />` : '';
+        const com = comPct ? `<span class="metarow__com" title="Comissão estimada (${comPct}%)">💰 ${moneyK(done * comPct / 100)}</span>` : '';
         return `<div class="metarow ${tot ? 'metarow--tot' : ''}" data-done="${done}">
           <span class="metarow__n">${esc(n)}</span>
           <div class="mbar__track"><div class="mbar__fill ${pct >= 100 ? 'ok' : ''}" style="width:${pct}%"></div></div>
-          <span class="metarow__v"><b>${moneyK(done)}</b>${target ? ` / ${moneyK(target)} · ${pct}%` : ''}</span>${inp}</div>`;
+          <span class="metarow__v"><b>${moneyK(done)}</b>${target ? ` / ${moneyK(target)} · ${pct}%` : ''}</span>${com}${inp}</div>`;
       };
       const rows = vendNomes.map(n => linha(n, ganhoMes[n] || 0, Number(metas[n]) || 0, false)).join('');
       const totT = vendNomes.reduce((t, n) => t + (Number(metas[n]) || 0), 0);
       const totD = vendNomes.reduce((t, n) => t + (ganhoMes[n] || 0), 0);
       const teamRow = totT ? linha('Equipe', totD, totT, true) : '';
       const corpo = rows || '<p class="atv__empty">Defina a meta mensal de cada vendedor nos campos à direita.</p>';
-      metasCard = `<div class="mcard"><h3 class="mcard__t">Metas de ${mesNome}</h3>${corpo}${teamRow}<p class="mcard__hint">Valor fechado no mês × meta.</p></div>`;
+      const hint = comPct ? `Valor fechado no mês × meta · 💰 comissão estimada (${comPct}%).` : 'Valor fechado no mês × meta.';
+      metasCard = `<div class="mcard"><h3 class="mcard__t">Metas de ${mesNome}</h3>${corpo}${teamRow}<p class="mcard__hint">${hint}</p></div>`;
     }
 
     // ---- card de conversão com donut ----
@@ -2572,13 +2609,15 @@
       $('#btnSuggestSend').disabled = $('#btnSuggestRegen').disabled = false;
     }
   }
-  function openSuggest(o) {
-    suggestOrcId = o.id;
-    $('#suggestCliente').textContent = (o.cliente_nome || 'Cliente') + (o.numero ? ' · ' + o.numero : '');
-    $('#suggestHint').value = '';
-    openModal('#suggestModal');
-    runSuggest(o);
-  }
+  function openSuggest(o) { openWppFor(o); }   // mesmo modal: modelos + IA + edição
+  // modelos: preenche o texto com a mensagem escolhida
+  $('#wppTpls') && $('#wppTpls').addEventListener('click', e => {
+    const b = e.target.closest('[data-tpl]'); if (!b) return;
+    const o = dashData.find(x => x.id === suggestOrcId); if (!o) return;
+    const t = WPP_TEMPLATES.find(x => x.key === b.dataset.tpl); if (!t) return;
+    $('#suggestText').value = t.build(o); $('#suggestErr').hidden = true;
+    $$('#wppTpls .wpp-tpl').forEach(el => el.classList.toggle('on', el === b));
+  });
   $('#btnSuggestRegen').addEventListener('click', () => { const o = dashData.find(x => x.id === suggestOrcId); if (o) runSuggest(o); });
   $('#btnSuggestCopy').addEventListener('click', async () => {
     try { await navigator.clipboard.writeText($('#suggestText').value || ''); toast('Copiado.'); }

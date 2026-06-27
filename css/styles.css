@@ -562,6 +562,12 @@ body[data-auth="out"] .login { display: flex; }
   border-radius: var(--radius-sm); padding: 11px 12px; font-size: .92rem; font-family: var(--font-body); line-height: 1.5; resize: vertical; min-height: 110px; }
 #suggestText:focus { outline: none; border-color: var(--violet); box-shadow: 0 0 0 3px var(--violet-glow); }
 .suggest__err { font-size: .78rem; color: var(--danger); margin: 8px 0 0; }
+.wpp-tpls { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 12px; }
+.wpp-tpl { border: 1px solid var(--line-2); background: var(--panel-2); color: var(--txt); border-radius: 999px;
+  padding: 7px 13px; font-size: .82rem; font-weight: 600; cursor: pointer; transition: border-color .15s, color .15s; }
+.wpp-tpl:hover { border-color: var(--violet); }
+.wpp-tpl.on { border-color: var(--violet); color: var(--violet); background: var(--violet-glow); }
+.metarow__com { font-size: .76rem; color: var(--ok); font-weight: 700; white-space: nowrap; margin-left: 6px; }
 
 /* gerenciador de linhas (séries) */
 .linharow { display: flex; align-items: center; gap: 10px; }
