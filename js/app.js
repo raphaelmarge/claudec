@@ -260,10 +260,17 @@
     if (!c) return 0; return ((v - c) / c) * 100;
   }
   // Recalcula os preços de venda a partir dos custos (só destravado).
+  // Devolve um resumo do que aconteceu para dar retorno ao usuário.
   function recalcAll() {
-    if (!unlocked) return;
-    state.products.forEach(p => { if (temCusto(p) && !p.travado) p.preco = r2(precoCalculado(p)); });
+    let updated = 0, locked = 0, noCost = 0;
+    if (!unlocked) return { updated, locked, noCost, total: state.products.length, costsLoaded: false };
+    state.products.forEach(p => {
+      if (!temCusto(p)) { noCost++; return; }       // sem custo (FOB) → câmbio/margem não tem base
+      if (p.travado) { locked++; return; }          // preço manual travado → não mexe
+      p.preco = r2(precoCalculado(p)); updated++;
+    });
     save();
+    return { updated, locked, noCost, total: state.products.length, costsLoaded: state.products.some(temCusto) };
   }
 
   /* ------------------------------------------------------------
@@ -714,10 +721,23 @@
     '#cfgIOF': 'iof', '#cfgSeguro': 'seguroPct', '#cfgFreteIntl': 'freteIntlUSD',
     '#cfgFreteNac': 'freteNacionalBRL', '#cfgJuros': 'juros'
   };
+  let _repriceMsgT = null;
+  function repriceFeedback(r) {
+    clearTimeout(_repriceMsgT);
+    _repriceMsgT = setTimeout(() => {
+      if (r.updated > 0) toast(r.updated + ' máquina(s) reprecificada(s).');
+      else if (!r.costsLoaded) toast('Custos não carregados — destrave com a senha para o câmbio/margem valer.');
+      else if (r.locked > 0) toast('Preços travados — use “Recalcular preços pelo custo”.');
+    }, 700);
+  }
   Object.keys(CFG_MAP).forEach(sel => {
     $(sel).addEventListener('input', () => {
       P()[CFG_MAP[sel]] = num($(sel).value) || 0;
-      if (sel !== '#cfgJuros') recalcAll();   // juros não altera preço, só parcela
+      if (sel !== '#cfgJuros') {
+        const r = recalcAll();                 // juros não altera preço, só parcela
+        if (r.updated > 0) schedulePushSettings();   // publica os preços novos p/ equipe e site
+        repriceFeedback(r);
+      }
       save(); renderGrid(); renderSummary();
       if (sel === '#cfgJuros') schedulePushSettings();   // juros é parâmetro compartilhado
     });
@@ -958,6 +978,22 @@
     else { p.travado = false; if (p.preco == null) p.preco = 0; }             // sem custo nem preço digitado: preserva o preço atual
     if (!editingId) state.products.push(p);
     save(); schedulePushSettings(); closeModal('#editModal'); render(); toast('Produto salvo.');
+  });
+  // Recalcular preços pelo custo: destrava os itens COM custo e aplica câmbio × margem atuais.
+  $('#btnRecalcPrices') && $('#btnRecalcPrices').addEventListener('click', () => {
+    if (!unlocked) { toast('Destrave com a senha para carregar os custos.'); openPasswordModal(); return; }
+    const comCusto = state.products.filter(temCusto).length;
+    if (!comCusto) { toast('Nenhum produto tem custo carregado. Destrave com a senha.'); return; }
+    const travados = state.products.filter(p => temCusto(p) && p.travado).length;
+    if (!confirm(
+      'Recalcular os preços de venda a partir do custo (câmbio × margem atuais)?\n\n' +
+      'Recalcula ' + comCusto + ' máquina(s) com custo' + (travados ? ' e destrava ' + travados + ' preço(s) manual(is)' : '') + '.\n' +
+      'Produtos sem custo não são alterados.'
+    )) return;
+    state.products.forEach(p => { if (temCusto(p)) p.travado = false; });
+    const r = recalcAll();
+    schedulePushSettings(); render();
+    toast(r.updated + ' máquina(s) recalculada(s).');
   });
   $('#btnDeleteProduct').addEventListener('click', () => {
     if (!editingId) return;
