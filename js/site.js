@@ -604,6 +604,79 @@
     els.forEach(e => io.observe(e));
   })();
 
+  /* ---------- catálogo em PDF (jsPDF via CDN, sob demanda) ---------- */
+  function loadScript(src) {
+    return new Promise((res, rej) => {
+      if (document.querySelector(`script[src="${src}"]`)) return res();
+      const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+  }
+  async function baixarCatalogoPDF() {
+    const btn = $('#btnCatalogoPdf');
+    const list = filtered();
+    if (!list.length) { toast('Nenhum produto para exportar.'); return; }
+    let old = '';
+    if (btn) { btn.disabled = true; old = btn.textContent; btn.textContent = 'Gerando…'; }
+    try {
+      await loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js');
+      const Ctor = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+      if (!Ctor) throw new Error('jsPDF indisponível');
+      const doc = new Ctor({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight();
+      const M = 14, violet = [139, 92, 246], gray = [110, 110, 128];
+      const hoje = new Date().toLocaleDateString('pt-BR');
+      const viewName = currentViewName();
+      let y = 0, page = 1;
+      const header = () => {
+        doc.setFillColor(11, 11, 15); doc.rect(0, 0, W, 26, 'F');
+        doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(15);
+        doc.text('TORQUE FITNESS', M, 12);
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(180, 180, 200);
+        doc.text('Catálogo de equipamentos' + (viewName ? (' · ' + viewName) : ''), M, 18.5);
+        doc.setTextColor(violet[0], violet[1], violet[2]); doc.text(hoje, W - M, 12, { align: 'right' });
+        y = 34;
+      };
+      const footer = (n) => {
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(gray[0], gray[1], gray[2]);
+        const c = [SITEINFO.telefone, SITEINFO.email].filter(Boolean).join('   ·   ') || 'raphaelmarge.github.io/claudec';
+        doc.text(c, M, H - 8); doc.text('Página ' + n, W - M, H - 8, { align: 'right' });
+      };
+      const ensure = (h) => { if (y + h > H - 14) { footer(page); doc.addPage(); page++; header(); } };
+      header();
+      const groups = {};
+      list.forEach(p => { const s = p.serie || 'Geral'; (groups[s] = groups[s] || []).push(p); });
+      Object.keys(groups).sort((a, b) => a.localeCompare(b, 'pt-BR')).forEach(ln => {
+        ensure(14);
+        doc.setFillColor(244, 242, 250); doc.rect(M, y - 5, W - 2 * M, 9, 'F');
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(violet[0], violet[1], violet[2]);
+        doc.text(`${ln} (${groups[ln].length})`, M + 2, y + 1); y += 11;
+        groups[ln].forEach(p => {
+          ensure(8);
+          doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(40, 40, 50);
+          const nome = p.nome.length > 56 ? p.nome.slice(0, 55) + '…' : p.nome;
+          doc.text(nome, M + 2, y);
+          doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(gray[0], gray[1], gray[2]);
+          doc.text(String(p.codigo || ''), M + 2, y + 3.6);
+          doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(violet[0], violet[1], violet[2]);
+          doc.text(money(p.preco), W - M - 2, y, { align: 'right' });
+          y += 8; doc.setDrawColor(232, 232, 238); doc.line(M + 2, y - 2.5, W - M - 2, y - 2.5);
+        });
+        y += 3;
+      });
+      footer(page);
+      const nm = 'catalogo-torque-fitness' + (viewName ? '-' + viewName.replace(/\s+/g, '-').toLowerCase() : '') + '.pdf';
+      doc.save(nm);
+      toast('Catálogo gerado!');
+    } catch (e) {
+      console.error(e); toast('Não foi possível gerar o PDF agora.');
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = old || '📄 Baixar catálogo (PDF)'; }
+    }
+  }
+  const btnPdf = $('#btnCatalogoPdf');
+  if (btnPdf) btnPdf.addEventListener('click', baixarCatalogoPDF);
+
   /* ---------- toast ---------- */
   let tT;
   function toast(m) { const t = $('#toast'); t.textContent = m; t.hidden = false; clearTimeout(tT); tT = setTimeout(() => t.hidden = true, 2200); }
