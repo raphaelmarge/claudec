@@ -409,24 +409,32 @@
   function renderStagesEditor() {
     const box = $('#stagesEditor'); if (!box) return;
     if (box.contains(document.activeElement)) return;   // não recria enquanto digita
-    box.innerHTML = STAGES.map(s => `
-      <div class="stagerow">
+    box.innerHTML = STAGES.map(s => {
+      const cad = OPEN_STAGES.includes(s.key)
+        ? `<span class="stagerow__dias" title="Cadência: dias até o próximo retorno (0 = não agenda)">↻<input data-stage-dias="${s.key}" type="number" min="0" step="1" value="${cadenciaDias(s.key)}" aria-label="Cadência em dias" />d</span>`
+        : '';
+      return `<div class="stagerow">
         <span class="stagerow__dot st-${s.key}"></span>
         <input class="stagerow__name" data-stage-name="${s.key}" type="text" value="${esc(stageName(s.key))}" aria-label="Nome da etapa" />
         <span class="stagerow__prob"><input data-stage-prob="${s.key}" type="number" min="0" max="100" step="5" value="${stageProb(s.key)}" aria-label="Probabilidade" />%</span>
-      </div>`).join('');
+        ${cad}
+      </div>`;
+    }).join('');
   }
   (function wireStagesEditor() {
     const box = $('#stagesEditor'); if (!box) return;
     box.addEventListener('input', e => {
       const nameEl = e.target.closest('[data-stage-name]');
       const probEl = e.target.closest('[data-stage-prob]');
-      if (!nameEl && !probEl) return;
+      const diasEl = e.target.closest('[data-stage-dias]');
+      if (!nameEl && !probEl && !diasEl) return;
       if (!P().stages) P().stages = {};
-      const k = (nameEl || probEl).dataset.stageName || (nameEl || probEl).dataset.stageProb;
+      const src = nameEl || probEl || diasEl;
+      const k = src.dataset.stageName || src.dataset.stageProb || src.dataset.stageDias;
       const cur = P().stages[k] || {};
       if (nameEl) cur.nome = nameEl.value;
       if (probEl) cur.prob = Math.max(0, Math.min(100, parseInt(probEl.value, 10) || 0));
+      if (diasEl) cur.dias = Math.max(0, parseInt(diasEl.value, 10) || 0);
       P().stages[k] = cur; save(); schedulePushSettings();
       if (dashView === 'metrics' && !$('#dashScreen').hidden) renderDashboard();   // atualiza a previsão ao vivo
     });
@@ -2008,6 +2016,25 @@
   });
 
   // troca de fase unificada (lista + kanban). "Não fechou" pede o motivo antes.
+  // cadência: dias até o próximo retorno por etapa (admin ajusta; estes são os padrões)
+  const CADENCIA_DEF = { novo: 1, negociacao: 2, sem_retorno: 3 };
+  function cadenciaDias(key) {
+    const c = stageCfg(key).dias;
+    if (c != null && c !== '' && !isNaN(c)) return Math.max(0, parseInt(c, 10));
+    return CADENCIA_DEF[key] != null ? CADENCIA_DEF[key] : 0;
+  }
+  // agenda automaticamente o próximo retorno ao entrar numa etapa aberta (se ainda não houver um)
+  async function aplicarCadencia(r) {
+    const key = stageOf(r);
+    if (!OPEN_STAGES.includes(key)) return null;
+    if (tarefasPendentes(r).length) return null;          // já tem follow-up agendado → respeita
+    const dias = cadenciaDias(key);
+    if (dias <= 0) return null;
+    const d = new Date(Date.now() + dias * DAY);
+    const data = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    try { await Cloud.updateOrcamento(r.id, { retorno_em: data }); r.retorno_em = data; return d.toLocaleDateString('pt-BR'); }
+    catch (e) { console.warn('cadência:', e); return null; }   // sem coluna retorno_em → ignora
+  }
   async function changeStage(id, status) {
     const r = dashData.find(x => x.id === id); if (!r) return;
     if (stageOf(r) === status) { renderDashboard(); return; }
@@ -2017,7 +2044,9 @@
     try {
       await Cloud.updateOrcamento(id, { status });
       logActivityAuto(r, 'fase', `Movido para "${stageName(status)}"`);
-      toast('Fase atualizada.');
+      const quando = await aplicarCadencia(r);
+      renderDashboard();
+      toast(quando ? `Fase atualizada · retorno em ${quando}` : 'Fase atualizada.');
     } catch (err) { r.status = prev; renderDashboard(); reportUpdErr(err, 'Erro ao mudar a fase.'); }
   }
 
@@ -2085,7 +2114,11 @@
       }
       renderDashboard();
       maybeNotify(dashData);
-      if (!remindShown) {
+      const novos = novosLeads(dashData);
+      if (novos.length) {
+        notifyNewLeads(novos); markLeadsSeen(novos.map(r => r.id));
+        toast(`🌐 ${novos.length} novo(s) lead(s) do site! Veja no funil.`);
+      } else if (!remindShown) {
         const pend = pendentesRetorno(dashData);
         if (pend.length) { remindShown = true; toast(`📅 ${pend.length} retorno(s) atrasado(s) ou para hoje — veja a aba Agenda.`); }
       }
@@ -2369,6 +2402,16 @@
         icon: 'icons/icon-192.png', tag: 'torque-retornos'
       });
     } catch (e) { /* alguns navegadores exigem SW para notificar */ }
+  }
+  // ---- aviso de LEAD NOVO (pedido pela vitrine ainda não visto) ----
+  const SEEN_LEADS_KEY = 'torque_seen_leads';
+  function seenLeads() { try { return new Set(JSON.parse(localStorage.getItem(SEEN_LEADS_KEY) || '[]')); } catch (e) { return new Set(); } }
+  function markLeadsSeen(ids) { try { const s = seenLeads(); ids.forEach(i => s.add(i)); localStorage.setItem(SEEN_LEADS_KEY, JSON.stringify(Array.from(s).slice(-800))); } catch (e) {} }
+  function novosLeads(rows) { const s = seenLeads(); return rows.filter(r => r.origem === 'site' && stageOf(r) === 'novo' && !s.has(r.id)); }
+  function notifyNewLeads(novos) {
+    if (notifSupported() && Notification.permission === 'granted') {
+      try { new Notification('Torque CRM · novo lead', { body: `${novos.length} pedido(s) novo(s) pela vitrine.`, icon: 'icons/icon-192.png', tag: 'torque-leads' }); } catch (e) {}
+    }
   }
   function notifBarHTML() {
     if (!notifSupported()) return '';
