@@ -358,6 +358,7 @@
     if (r) r.hidden = !nome;
     renderCatBanner();
     applyViewLayout();
+    applyCategoryMeta();
   }
   function closeLinhasDrop() {
     const d = $('#linhasMenu'); if (d) d.hidden = true;
@@ -387,6 +388,19 @@
   function prodImageAbs(p) { try { return p.imagem ? new URL(p.imagem, BASE_URL).href : DEFAULT_META.ogImage; } catch (e) { return DEFAULT_META.ogImage; } }
   function prodDesc(p) { return `${p.nome} — equipamento ${p.serie ? 'da linha ' + p.serie + ' ' : ''}Torque Fitness, padrão comercial. A partir de ${money(p.preco)}. Solicite o orçamento e fale com um consultor.`; }
 
+  // dados estruturados de Produto (Google) — injeta ao abrir o produto, remove ao fechar
+  function setProductLd(p) {
+    let s = document.getElementById('ldProd');
+    if (!p) { if (s) s.remove(); return; }
+    if (!s) { s = document.createElement('script'); s.type = 'application/ld+json'; s.id = 'ldProd'; document.head.appendChild(s); }
+    s.textContent = JSON.stringify({
+      '@context': 'https://schema.org', '@type': 'Product',
+      name: p.nome, image: prodImageAbs(p), sku: p.codigo || undefined,
+      category: p.serie || undefined,
+      brand: { '@type': 'Brand', name: 'Torque Fitness' },
+      offers: { '@type': 'Offer', priceCurrency: 'BRL', price: Number(p.preco) || 0, availability: 'https://schema.org/InStock', url: prodURL(p) }
+    });
+  }
   function applyProdMeta(p) {
     const t = `${p.nome} · Torque Fitness`, d = prodDesc(p), u = prodURL(p), img = prodImageAbs(p);
     document.title = t;
@@ -395,6 +409,7 @@
     setProp('og:url', u); setProp('og:image', img);
     setNameMeta('twitter:title', t); setNameMeta('twitter:description', d); setNameMeta('twitter:image', img);
     setCanonical(u);
+    setProductLd(p);
   }
   function restoreMeta() {
     document.title = DEFAULT_META.title;
@@ -403,6 +418,22 @@
     setProp('og:url', DEFAULT_META.ogUrl); setProp('og:image', DEFAULT_META.ogImage);
     setNameMeta('twitter:title', DEFAULT_META.ogTitle); setNameMeta('twitter:description', DEFAULT_META.ogDesc); setNameMeta('twitter:image', DEFAULT_META.ogImage);
     setCanonical(DEFAULT_META.canonical);
+    setProductLd(null);
+  }
+  // título/descrição por categoria (linha ou tipo) — melhora busca e compartilhamento
+  function applyCategoryMeta() {
+    if (currentCode()) return;                 // produto aberto tem prioridade
+    const nome = currentViewName();
+    if (!nome) { restoreMeta(); return; }
+    const n = filtered().length;
+    const t = `${nome} · Torque Fitness`;
+    const d = `${nome}: ${n} equipamento${n === 1 ? '' : 's'} Torque Fitness de padrão comercial. Veja preços, monte seu orçamento e fale com um consultor.`;
+    const u = BASE_URL + (currentTipo() ? '?tipo=' + currentTipo() : (currentLinha() ? '?linha=' + encodeURIComponent(currentLinha()) : ''));
+    document.title = t;
+    setNameMeta('description', d);
+    setProp('og:type', 'website'); setProp('og:title', t); setProp('og:description', d); setProp('og:url', u);
+    setNameMeta('twitter:title', t); setNameMeta('twitter:description', d);
+    setCanonical(u);
   }
 
   function prodCtrlHTML(p) {
