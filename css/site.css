@@ -92,6 +92,10 @@ img{max-width:100%;display:block}
 .catalog__count b{color:var(--txt);font-weight:700}
 .catalog__clear{background:none;border:1px solid var(--line-2);color:var(--txt-mut);border-radius:999px;padding:5px 12px;font-size:.8rem;cursor:pointer;font-family:var(--font-body);transition:border-color .15s,color .15s}
 .catalog__clear:hover{border-color:var(--violet);color:var(--txt)}
+.catalog__pdf{margin-left:auto;background:none;border:1px solid var(--violet);color:var(--violet);border-radius:999px;padding:6px 14px;font-size:.82rem;font-weight:600;cursor:pointer;font-family:var(--font-body);transition:background .15s,color .15s}
+.catalog__pdf:hover{background:var(--violet);color:#fff}
+.catalog__pdf:disabled{opacity:.6;cursor:default}
+@media(max-width:560px){.catalog__pdf{margin-left:0;width:100%;justify-content:center}}
 .chip{flex:none;padding:8px 14px;border-radius:999px;border:1px solid var(--line-2);background:var(--panel);color:var(--txt-dim);font-size:.8rem;font-weight:600;white-space:nowrap;cursor:pointer}
 .chip.active{background:linear-gradient(135deg,var(--violet),var(--violet-700));color:#fff;border-color:transparent}
 
