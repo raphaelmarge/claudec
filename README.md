@@ -120,3 +120,48 @@ As bibliotecas de leitura de XLSX (SheetJS) e geração de imagem (html2canvas) 
 as fontes são carregadas por CDN sob demanda — exigem internet apenas para
 importar `.xlsx` e exportar PNG. CSV, PDF (impressão) e todo o resto funcionam
 offline.
+
+## App separado: Montar Treino por IA 🏋️
+
+Além da ferramenta de orçamento, este repositório inclui um **app independente**
+de autoatendimento onde o aluno monta a própria **série de treino** com IA. Abra
+`treino.html` (ou instale como PWA).
+
+### Como funciona
+
+1. O aluno responde um **questionário curto** — objetivo (hipertrofia,
+   emagrecimento, força, condicionamento ou saúde), nível, dias por semana,
+   tempo por treino, local/equipamentos, ênfase muscular e eventuais
+   limitações/lesões.
+2. Ao tocar em **Montar meu treino**, o app chama a Edge Function
+   `generate-workout`, que usa o **Claude** para montar uma série coerente
+   (divisão, exercícios, séries × repetições, descanso, aquecimento, progressão
+   e avisos de segurança).
+3. A série aparece pronta na tela, com botões para **salvar/imprimir (PDF)** e
+   **compartilhar** (WhatsApp etc.). É só sugestão educativa — não substitui
+   avaliação profissional.
+
+### Arquivos
+
+```
+treino.html                              UI do questionário e do resultado
+css/treino.css                           identidade visual (mesma paleta)
+js/treino.js                             questionário → chamada à IA → render
+treino.webmanifest                       PWA do app de treino
+supabase/functions/generate-workout/     Edge Function (guarda a chave da IA)
+```
+
+### IA protegida (mesma arquitetura do follow-up)
+
+A chave da Anthropic **nunca** vai para o navegador: fica como segredo no
+Supabase e só a Edge Function a usa. Como o app é aberto (sem login), a função é
+publicada sem exigência de JWT:
+
+```
+supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
+supabase functions deploy generate-workout --no-verify-jwt
+# opcional: supabase secrets set CLAUDE_MODEL=claude-sonnet-4-6
+```
+
+O Claude responde via **tool use**, garantindo que a série sempre chega no
+formato estruturado que o app espera renderizar.
