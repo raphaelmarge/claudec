@@ -5,3 +5,6 @@ assets/products/_backup/
 # Python
 __pycache__/
 *.pyc
+
+# Artefatos de build / pacotes de entrega gerados localmente
+scratch-*.zip
