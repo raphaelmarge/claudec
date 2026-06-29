@@ -97,7 +97,8 @@
      fiscais (custo/margem) nunca saem daqui. Degrada para
      localStorage se a tabela não existir.
      ------------------------------------------------------------ */
-  const SHARED_PARAM_KEYS = ['parcelasMax', 'juros', 'validade', 'stages', 'metas', 'linhas', 'linhaBanners', 'contato', 'carousel', 'comissao', 'kits', 'descontoMaxVendedor', 'faq', 'depoimentos'];
+  const SHARED_PARAM_KEYS = ['parcelasMax', 'juros', 'validade', 'stages', 'metas', 'linhas', 'linhaBanners', 'contato', 'carousel', 'comissao', 'kits', 'descontoMaxVendedor', 'faq', 'depoimentos', 'blog'];
+  const slugify = s => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
   const SETTINGS_SQL =
     "create table if not exists public.settings (\n" +
     "  id int primary key default 1,\n" +
@@ -146,7 +147,12 @@
       whatsapp: c.whatsapp || '', email: c.email || '', horario: c.horario || '',
       gaId: c.gaId || '', metaPixel: c.metaPixel || '',
       faq: (Array.isArray(P().faq) ? P().faq : []).filter(x => x && (x.q || '').trim()).map(x => ({ q: x.q || '', a: x.a || '' })),
-      depoimentos: (Array.isArray(P().depoimentos) ? P().depoimentos : []).filter(x => x && (x.texto || '').trim()).map(x => ({ nome: x.nome || '', local: x.local || '', texto: x.texto || '' }))
+      depoimentos: (Array.isArray(P().depoimentos) ? P().depoimentos : []).filter(x => x && (x.texto || '').trim()).map(x => ({ nome: x.nome || '', local: x.local || '', texto: x.texto || '' })),
+      blog: (Array.isArray(P().blog) ? P().blog : []).filter(x => x && x.publicado && (x.titulo || '').trim()).map(x => ({
+        slug: slugify(x.slug || x.titulo), titulo: x.titulo || '', resumo: x.resumo || '',
+        capa: (x.capa && !String(x.capa).startsWith('data:')) ? x.capa : '', conteudo: x.conteudo || '',
+        autor: x.autor || 'Torque Fitness', data: x.data || ''
+      }))
     };
   }
   function applyCatalog(remote) {
@@ -402,6 +408,7 @@
     renderContatoEditor();
     renderFaqEditor();
     renderDepoEditor();
+    renderBlogEditor();
     renderVendEditor();
     renderSyncStatus();
     $('#configPanel').hidden = state.mode !== 'admin';
@@ -757,6 +764,63 @@
     });
     const add = $('#btnAddDepo');
     if (add) add.addEventListener('click', () => { depoArr().push({ nome: '', local: '', texto: '' }); save(); renderDepoEditor(); });
+  })();
+
+  // ---- editor de BLOG (artigos) ----
+  const blogArr = () => Array.isArray(P().blog) ? P().blog : (P().blog = []);
+  let postCapaIdx = -1;
+  function renderBlogEditor() {
+    const box = $('#blogEditor'); if (!box) return;
+    if (box.contains(document.activeElement)) return;
+    const arr = blogArr();
+    box.innerHTML = arr.length ? arr.map((p, i) => `
+      <div class="postrow" data-i="${i}">
+        <input class="postrow__t" data-post-titulo="${i}" type="text" value="${esc(p.titulo || '')}" placeholder="Título do artigo" />
+        <input class="postrow__r" data-post-resumo="${i}" type="text" value="${esc(p.resumo || '')}" placeholder="Resumo (1 linha, aparece na lista)" />
+        <textarea class="postrow__c" data-post-conteudo="${i}" rows="4" placeholder="Conteúdo. Deixe uma linha em branco entre parágrafos. Use ## para subtítulos e - para listas.">${esc(p.conteudo || '')}</textarea>
+        <div class="postrow__meta">
+          <input class="postrow__a" data-post-autor="${i}" type="text" value="${esc(p.autor || '')}" placeholder="Autor" />
+          <input class="postrow__d" data-post-data="${i}" type="date" value="${esc(p.data || '')}" />
+          <button class="postrow__capa ${p.capa ? 'on' : ''}" type="button" data-post-capa="${i}">${p.capa ? '🖼 ✓' : '🖼 Capa'}</button>
+          <label class="postrow__pub"><input type="checkbox" data-post-pub="${i}" ${p.publicado ? 'checked' : ''} /> Publicado</label>
+          <button class="postrow__x" type="button" data-post-rm="${i}" title="Remover">✕</button>
+        </div>
+      </div>`).join('') : '<p class="atv__empty">Nenhum artigo ainda.</p>';
+  }
+  (function wireBlogEditor() {
+    const box = $('#blogEditor'); if (!box) return;
+    const field = { 'postTitulo': 'titulo', 'postResumo': 'resumo', 'postConteudo': 'conteudo', 'postAutor': 'autor', 'postData': 'data' };
+    box.addEventListener('input', e => {
+      for (const key in field) {
+        const el = e.target.closest(`[data-${key.replace(/([A-Z])/g, '-$1').toLowerCase()}]`);
+        if (el) { const i = parseInt(el.dataset[key], 10); if (!blogArr()[i]) blogArr()[i] = {}; blogArr()[i][field[key]] = el.value; save(); schedulePushSettings(); return; }
+      }
+    });
+    box.addEventListener('change', e => {
+      const pub = e.target.closest('[data-post-pub]');
+      if (pub) { const i = parseInt(pub.dataset.postPub, 10); if (!blogArr()[i]) blogArr()[i] = {}; blogArr()[i].publicado = pub.checked; if (pub.checked && !blogArr()[i].slug) blogArr()[i].slug = slugify(blogArr()[i].titulo); save(); schedulePushSettings(); }
+    });
+    box.addEventListener('click', e => {
+      const rm = e.target.closest('[data-post-rm]');
+      if (rm) { blogArr().splice(parseInt(rm.dataset.postRm, 10), 1); save(); schedulePushSettings(); renderBlogEditor(); return; }
+      const capa = e.target.closest('[data-post-capa]');
+      if (capa) { postCapaIdx = parseInt(capa.dataset.postCapa, 10); $('#postCapaFile').click(); return; }
+    });
+    const add = $('#btnAddPost');
+    if (add) add.addEventListener('click', () => { blogArr().push({ titulo: '', resumo: '', conteudo: '', autor: (Cloud.profile && Cloud.profile.nome) || 'Torque Fitness', data: new Date().toISOString().slice(0, 10), capa: '', publicado: false }); save(); renderBlogEditor(); });
+    const cf = $('#postCapaFile');
+    if (cf) cf.addEventListener('change', async e => {
+      const file = e.target.files && e.target.files[0]; e.target.value = '';
+      if (!file || postCapaIdx < 0) return;
+      toast('Enviando capa…');
+      try {
+        const { blob, dataUrl } = await resizeImage(file, 1200, 0.74);
+        let url = dataUrl; try { url = await Cloud.uploadProductImage(blob, 'jpg'); } catch (err) { console.warn('capa:', err); }
+        if (!blogArr()[postCapaIdx]) blogArr()[postCapaIdx] = {};
+        blogArr()[postCapaIdx].capa = url; save(); schedulePushSettings(); renderBlogEditor();
+        toast('Capa salva.');
+      } catch (err) { console.error(err); toast('Não foi possível ler a imagem.'); }
+    });
   })();
 
   // ---- gestão de EQUIPE (vendedores): promover/rebaixar e ativar/desativar ----
