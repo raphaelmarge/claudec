@@ -124,7 +124,7 @@
       imagem: (p.imagem && !String(p.imagem).startsWith('data:')) ? p.imagem : '',
       imagens: Array.isArray(p.imagens) ? p.imagens.filter(u => u && !String(u).startsWith('data:')) : [],
       video: p.video || '',
-      dims: p.dims || '', disp: p.disp || '', preco: Number(p.preco) || 0, oculto: !!p.oculto, travado: !!p.travado
+      dims: p.dims || '', disp: p.disp || '', selo: p.selo || '', preco: Number(p.preco) || 0, oculto: !!p.oculto, travado: !!p.travado
     }));
   }
   // banners de categoria publicáveis (só URLs hospedadas; data: local não vai pro site)
@@ -166,7 +166,7 @@
         imagem: p.imagem || old.imagem || '',   // imagem vazia do servidor NÃO apaga a foto local existente
         imagens: (Array.isArray(p.imagens) && p.imagens.length) ? p.imagens : (old.imagens || []),
         video: p.video || old.video || '',
-        dims: p.dims || '', disp: p.disp || old.disp || '', preco: Number(p.preco) || 0,
+        dims: p.dims || '', disp: p.disp || old.disp || '', selo: p.selo || old.selo || '', preco: Number(p.preco) || 0,
         margem: null, travado: !!p.travado, oculto: !!p.oculto
       };
     });
@@ -1222,6 +1222,7 @@
     $('#edCusto').value = (p && temCusto(p)) ? fobDe(p) : '';
     $('#edDims').value = p ? (p.dims || '') : '';
     $('#edDisp') && ($('#edDisp').value = p ? (p.disp || '') : '');
+    $('#edSelo') && ($('#edSelo').value = p ? (p.selo || '') : '');
     edGaleria = (p && Array.isArray(p.imagens)) ? p.imagens.slice() : [];
     renderEdGaleria();
     $('#edVideo') && ($('#edVideo').value = p ? (p.video || '') : '');
@@ -1243,6 +1244,7 @@
       imagem: $('#edImagem').value.trim(),
       dims: $('#edDims').value.trim(),
       disp: ($('#edDisp') && $('#edDisp').value.trim()) || '',
+      selo: ($('#edSelo') && $('#edSelo').value) || '',
       imagens: edGaleria.slice(),
       video: ($('#edVideo') && $('#edVideo').value.trim()) || '',
       fob: num($('#edCusto').value) || 0,
@@ -1344,7 +1346,7 @@
     if (!f.nome) { toast('Informe o nome do produto.'); return; }
     const p = editingId ? state.products.find(x => x.id === editingId) : { id: uid() };
     p.codigo = f.codigo; p.serie = f.serie; p.tipo = f.tipo; p.nome = f.nome; p.imagem = f.imagem;
-    p.dims = f.dims; p.disp = f.disp; p.imagens = f.imagens; p.video = f.video; p.fob = f.fob; p.margem = f.margem; p.oculto = f.oculto;
+    p.dims = f.dims; p.disp = f.disp; p.selo = f.selo; p.imagens = f.imagens; p.video = f.video; p.fob = f.fob; p.margem = f.margem; p.oculto = f.oculto;
     if (f.precoInput != null) { p.preco = f.precoInput; p.travado = true; }   // preço travado manual
     else if (custoBRL(f) > 0) { p.travado = false; p.preco = r2(precoCalculado(p)); }  // automático a partir do custo
     else { p.travado = false; if (p.preco == null) p.preco = 0; }             // sem custo nem preço digitado: preserva o preço atual
