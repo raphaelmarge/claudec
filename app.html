@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/styles.css?v=20260627t" />
+  <link rel="stylesheet" href="css/styles.css?v=20260627u" />
   <link rel="manifest" href="app.webmanifest" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -239,7 +239,10 @@
 
     <h3 class="config__sub">Perguntas frequentes (FAQ) <small>aparecem no site e ajudam no Google</small></h3>
     <div class="stages-cfg" id="faqEditor"></div>
-    <button class="btn btn--ghost" id="btnAddFaq" type="button" style="margin-top:8px">＋ Nova pergunta</button>
+    <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn--ghost" id="btnAddFaq" type="button">＋ Nova pergunta</button>
+      <button class="btn btn--ghost" id="btnFaqSug" type="button" title="Preenche com as perguntas mais comuns para você editar">↻ Carregar perguntas sugeridas</button>
+    </div>
 
     <h3 class="config__sub">Depoimentos <small>aparecem no site como prova social</small></h3>
     <div class="stages-cfg" id="depoEditor"></div>
@@ -665,12 +668,12 @@
   <!-- Toast -->
   <div id="toast" class="toast" hidden></div>
 
-  <script src="js/config.js?v=20260627t"></script>
+  <script src="js/config.js?v=20260627u"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/cloud.js?v=20260627t"></script>
-  <script src="js/products.js?v=20260627t"></script>
-  <script src="js/secure.js?v=20260627t"></script>
-  <script src="js/app.js?v=20260627t"></script>
+  <script src="js/cloud.js?v=20260627u"></script>
+  <script src="js/products.js?v=20260627u"></script>
+  <script src="js/secure.js?v=20260627u"></script>
+  <script src="js/app.js?v=20260627u"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
