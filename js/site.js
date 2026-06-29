@@ -563,16 +563,16 @@
   // Perguntas frequentes padrão (baseadas nas dúvidas mais comuns em sites de
   // equipamentos de academia). Usadas quando o admin ainda não publicou as suas.
   const DEFAULT_FAQ = [
-    { q: 'A Torque Fitness atende todo o Brasil?', a: 'Sim. Atendemos academias, studios, condomínios, hotéis e personal trainers em todo o território nacional. O frete é calculado conforme a cidade de entrega e já entra no orçamento.' },
-    { q: 'Qual é o prazo de entrega dos equipamentos?', a: 'Depende da disponibilidade de cada item: produtos em pronta entrega saem em poucos dias úteis e os itens sob fabricação seguem o prazo informado na proposta. A disponibilidade aparece na ficha de cada equipamento.' },
-    { q: 'Os equipamentos têm garantia?', a: 'Sim. Todos têm garantia contra defeitos de fabricação, com prazo e condições detalhados na proposta. Estrutura e solda costumam ter cobertura estendida em relação às peças de desgaste.' },
-    { q: 'Como funciona o parcelamento e quais as formas de pagamento?', a: 'A compra pode ser parcelada — o número de parcelas e o valor já aparecem no orçamento. Trabalhamos com cartão, boleto/PIX e condições especiais para academia completa. Fale com o nosso time para a melhor condição.' },
-    { q: 'Vocês ajudam a montar a academia (mix de equipamentos e layout)?', a: 'Sim. Ajudamos a escolher os equipamentos conforme o seu espaço, público e orçamento. Use o "Monte sua academia" aqui no site ou peça um projeto personalizado pelo WhatsApp.' },
-    { q: 'Qual o investimento para montar uma academia?', a: 'Varia conforme o tamanho do espaço, o público e a quantidade de equipamentos. Dá para começar com um pacote enxuto e expandir aos poucos. Monte um orçamento aqui no site para ter uma estimativa na hora.' },
-    { q: 'Os equipamentos são para uso profissional e intenso?', a: 'Sim. Nossas linhas são projetadas para uso comercial intenso, com estrutura reforçada e acabamento que aguenta a alta rotatividade de uma academia.' },
-    { q: 'Vocês oferecem assistência técnica e reposição de peças?', a: 'Sim. Damos suporte pós-venda e reposição de peças das nossas linhas. Se precisar, fale com o atendimento pelo WhatsApp com o código do equipamento em mãos.' },
-    { q: 'Vendem para pessoa física ou apenas para empresas (CNPJ)?', a: 'Atendemos os dois. Vendemos para academias e empresas (CNPJ) e também para pessoa física — personal trainers e quem quer montar um espaço em casa ou no condomínio.' },
-    { q: 'Como faço um orçamento?', a: 'É simples: escolha os equipamentos no catálogo, adicione ao orçamento e envie o pedido pelo WhatsApp. Nosso time retorna com valores, prazos e condições. Você também pode baixar o catálogo em PDF.' }
+    { q: 'A Torque Fitness atende todo o Brasil?', a: 'Sim, atendemos todo o Brasil — de capitais a cidades do interior. O frete entra no orçamento de acordo com a cidade de entrega.' },
+    { q: 'Qual é o prazo de entrega dos equipamentos?', a: 'Os equipamentos são fabricados sob encomenda, com prazo médio de 100 a 120 dias após a confirmação do pedido. O prazo exato vai detalhado na sua proposta.' },
+    { q: 'Os equipamentos têm garantia?', a: 'Sim. Todos os equipamentos têm 1 ano de garantia contra defeitos de fabricação.' },
+    { q: 'Como funciona o parcelamento e quais as formas de pagamento?', a: 'Trabalhamos com diversas formas de pagamento e parcelamento, definidas conforme a análise e validação de crédito. Fale com o nosso time para encontrar a melhor condição para o seu caso.' },
+    { q: 'Vocês ajudam a montar a academia (mix de equipamentos e layout)?', a: 'Sim. Temos parcerias com escritórios de arquitetura e empreiteiras para ajudar no layout, na obra e na montagem da academia — do projeto à instalação dos equipamentos.' },
+    { q: 'Qual o investimento para montar uma academia?', a: 'O investimento depende principalmente da metragem (m²) da academia, do público e do mix de equipamentos. Monte um orçamento aqui no site ou fale conosco para uma estimativa sob medida.' },
+    { q: 'Os equipamentos são para uso profissional e intenso?', a: 'Sim. Todos os nossos equipamentos são desenvolvidos para uso profissional e intenso, prontos para a alta rotatividade de uma academia comercial.' },
+    { q: 'Vocês oferecem assistência técnica e reposição de peças?', a: 'Sim, oferecemos assistência técnica e reposição de peças das nossas linhas. Em caso de necessidade, fale com o nosso atendimento com o código do equipamento em mãos.' },
+    { q: 'Vendem para pessoa física ou apenas para empresas (CNPJ)?', a: 'Atendemos tanto CNPJ quanto CPF — academias, empresas, personal trainers e pessoa física.' },
+    { q: 'Como faço um orçamento?', a: 'É só entrar em contato pelo WhatsApp ou montar o seu orçamento aqui mesmo no site, escolhendo os equipamentos no catálogo. Nosso time retorna com valores, prazos e condições.' }
   ];
   function setFaqLd(arr) {
     let s = document.getElementById('ldFaq');
