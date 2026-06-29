@@ -143,7 +143,8 @@
     const c = P().contato || {};
     return {
       endereco: c.endereco || '', mapsUrl: c.mapsUrl || '', telefone: c.telefone || '',
-      whatsapp: c.whatsapp || '', email: c.email || '', horario: c.horario || ''
+      whatsapp: c.whatsapp || '', email: c.email || '', horario: c.horario || '',
+      gaId: c.gaId || '', metaPixel: c.metaPixel || ''
     };
   }
   function applyCatalog(remote) {
@@ -623,7 +624,7 @@
   })();
 
   // ---- editor de LOCALIZAÇÃO / CONTATO (sincroniza p/ o site comercial) ----
-  const CONTATO_FIELDS = { '#ctEndereco': 'endereco', '#ctMaps': 'mapsUrl', '#ctTelefone': 'telefone', '#ctWhats': 'whatsapp', '#ctEmail': 'email', '#ctHorario': 'horario' };
+  const CONTATO_FIELDS = { '#ctEndereco': 'endereco', '#ctMaps': 'mapsUrl', '#ctTelefone': 'telefone', '#ctWhats': 'whatsapp', '#ctEmail': 'email', '#ctHorario': 'horario', '#ctGa': 'gaId', '#ctPixel': 'metaPixel' };
   function renderContatoEditor() {
     const c = P().contato || {};
     Object.keys(CONTATO_FIELDS).forEach(sel => { const el = $(sel); if (el && el !== document.activeElement) el.value = c[CONTATO_FIELDS[sel]] || ''; });
