@@ -562,6 +562,18 @@ body[data-auth="out"] .login { display: flex; }
 .qarow__a { flex: 1 1 100%; background: var(--black); border: 1px solid var(--line-2); color: var(--txt); border-radius: 8px; padding: 9px 10px; font-size: .88rem; font-family: var(--font-body); resize: vertical; }
 .qarow__q:focus, .qarow__a:focus { outline: none; border-color: var(--violet); box-shadow: 0 0 0 3px var(--violet-glow); }
 .qarow__x { background: none; border: 1px solid rgba(248,113,113,.4); color: var(--danger); border-radius: 8px; padding: 7px 10px; cursor: pointer; flex: none; }
+.postrow { border: 1px solid var(--line-2); border-radius: 10px; padding: 12px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px; }
+.postrow input, .postrow textarea { background: var(--black); border: 1px solid var(--line-2); color: var(--txt); border-radius: 8px; padding: 9px 10px; font-size: .88rem; font-family: var(--font-body); width: 100%; }
+.postrow textarea { resize: vertical; }
+.postrow input:focus, .postrow textarea:focus { outline: none; border-color: var(--violet); box-shadow: 0 0 0 3px var(--violet-glow); }
+.postrow__t { font-weight: 700; }
+.postrow__meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.postrow__meta input[type=text], .postrow__meta input[type=date] { width: auto; flex: 1; min-width: 110px; }
+.postrow__capa { background: var(--panel-2); border: 1px solid var(--line-2); color: var(--txt); border-radius: 8px; padding: 8px 11px; cursor: pointer; font-size: .82rem; flex: none; }
+.postrow__capa.on { border-color: var(--ok); color: var(--ok); }
+.postrow__pub { display: inline-flex; align-items: center; gap: 6px; font-size: .82rem; color: var(--txt-dim); flex: none; }
+.postrow__pub input { width: auto; }
+.postrow__x { background: none; border: 1px solid rgba(248,113,113,.4); color: var(--danger); border-radius: 8px; padding: 7px 10px; cursor: pointer; flex: none; }
 .imgpick__preview { width: 84px; height: 84px; object-fit: cover; border-radius: 10px; border: 1px solid var(--line-2); background: #fff; flex: 0 0 auto; }
 .imgpick__ph { width: 84px; height: 84px; border-radius: 10px; border: 1px dashed var(--line-2); color: var(--txt-dim); font-size: .68rem; display: flex; align-items: center; justify-content: center; text-align: center; flex: 0 0 auto; }
 .imgpick__body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
