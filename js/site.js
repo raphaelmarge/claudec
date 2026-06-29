@@ -478,6 +478,25 @@
       $$('.pmthumb', media).forEach(t => t.classList.toggle('on', t === (it || vt)));
     });
   })();
+  // produtos relacionados (mesma linha primeiro, depois mesmo tipo) no modal
+  function relatedTo(p) {
+    const pool = PRODUCTS.filter(x => x.codigo !== p.codigo && x.preco > 0);
+    const sameSerie = pool.filter(x => (x.serie || '') === (p.serie || '') && p.serie);
+    const sameTipo = pool.filter(x => x.tipo === p.tipo && !sameSerie.includes(x));
+    const rest = pool.filter(x => !sameSerie.includes(x) && !sameTipo.includes(x));
+    return sameSerie.concat(sameTipo, rest).slice(0, 4);
+  }
+  function renderRelated(p) {
+    const box = $('#pmRel'), grid = $('#pmRelGrid'); if (!box || !grid) return;
+    const rel = relatedTo(p);
+    if (!rel.length) { box.hidden = true; grid.innerHTML = ''; return; }
+    grid.innerHTML = rel.map(x => `<button class="pmrel" data-rel="${esc(x.codigo)}" type="button">
+      <span class="pmrel__img">${x.imagem ? `<img src="${esc(x.imagem)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'"/>` : ''}</span>
+      <span class="pmrel__name">${esc(x.nome)}</span>
+      <span class="pmrel__price">${money(x.preco)}</span>
+    </button>`).join('');
+    box.hidden = false;
+  }
   function openProd(code, push) {
     const p = byCode(code); if (!p) return;
     prodCode = code;
@@ -492,7 +511,9 @@
     const maxN = Math.max(1, Math.floor(PARAMS.parcelasMax || 48));
     $('#pmParc').textContent = `ou ${maxN}× de ${money(p.preco / maxN)}`;
     $('#pmCtrl').innerHTML = prodCtrlHTML(p);
+    renderRelated(p);
     $('#prodModal').hidden = false; document.body.style.overflow = 'hidden';
+    $('.pmodal__card').scrollTop = 0;
     applyProdMeta(p);
     if (push !== false && currentCode() !== code) history.pushState({ prod: code }, '', prodURL(p));
   }
@@ -529,6 +550,12 @@
     if (window.fbq) try { fbq('track', 'Lead', { content_name: p.nome }); } catch (e) {}
     if (window.gtag) try { gtag('event', 'contact', { item_name: p.nome }); } catch (e) {}
     window.open(n ? `https://wa.me/${n}?text=${txt}` : `https://wa.me/?text=${txt}`, '_blank');
+  });
+  // clicar num produto relacionado abre o detalhe dele
+  const relGrid = $('#pmRelGrid');
+  if (relGrid) relGrid.addEventListener('click', e => {
+    const b = e.target.closest('[data-rel]'); if (!b) return;
+    openProd(b.dataset.rel, true);
   });
   const shareBtn = $('#pmShare');
   if (shareBtn) shareBtn.addEventListener('click', async () => {
