@@ -109,6 +109,7 @@
       <div class="pcard__b">
         <span class="pcard__serie">${esc(p.serie || '')}</span>
         <span class="pcard__name">${esc(p.nome)}</span>
+        ${p.disp ? `<span class="pcard__disp">📦 ${esc(p.disp)}</span>` : ''}
         <div class="pcard__sp"></div>
         <div class="pcard__price"><small>a partir de</small><b>${money(p.preco)}</b></div>
         ${ctrl}
@@ -451,6 +452,8 @@
     $('#pmSerie').textContent = p.serie || '';
     $('#pmNome').textContent = p.nome;
     $('#pmDims').textContent = p.dims ? 'Dimensões: ' + p.dims + ' mm' : '';
+    const dispEl = $('#pmDisp');
+    if (dispEl) { if (p.disp) { dispEl.textContent = '📦 ' + p.disp; dispEl.hidden = false; } else { dispEl.hidden = true; } }
     $('#pmDesc').innerHTML = prodDescHTML(p);
     $('#pmPrice').textContent = money(p.preco);
     const maxN = Math.max(1, Math.floor(PARAMS.parcelasMax || 48));
@@ -709,7 +712,7 @@
       if (!items || !items.length) return;
       const live = items
         .filter(p => p && p.preco > 0 && !p.oculto)
-        .map(p => ({ id: p.id, codigo: p.codigo || '', nome: p.nome || '', serie: p.serie || 'Geral', tipo: p.tipo || 'maquina', imagem: p.imagem || '', dims: p.dims || '', preco: Number(p.preco) || 0 }));
+        .map(p => ({ id: p.id, codigo: p.codigo || '', nome: p.nome || '', serie: p.serie || 'Geral', tipo: p.tipo || 'maquina', imagem: p.imagem || '', dims: p.dims || '', disp: p.disp || '', preco: Number(p.preco) || 0 }));
       if (!live.length) return;
       PRODUCTS = live;
       if (data && data.banners && typeof data.banners === 'object') BANNERS = data.banners;   // banners por categoria

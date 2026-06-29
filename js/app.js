@@ -121,7 +121,7 @@
     return state.products.map(p => ({
       id: p.id, codigo: p.codigo || '', nome: p.nome || '', serie: p.serie || 'Geral', tipo: p.tipo || 'maquina',
       imagem: (p.imagem && !String(p.imagem).startsWith('data:')) ? p.imagem : '',
-      dims: p.dims || '', preco: Number(p.preco) || 0, oculto: !!p.oculto, travado: !!p.travado
+      dims: p.dims || '', disp: p.disp || '', preco: Number(p.preco) || 0, oculto: !!p.oculto, travado: !!p.travado
     }));
   }
   // banners de categoria publicáveis (só URLs hospedadas; data: local não vai pro site)
@@ -153,7 +153,7 @@
       return {
         id: p.id || old.id || uid(), codigo: p.codigo || '', nome: p.nome || '', serie: p.serie || 'Geral', tipo: p.tipo || 'maquina',
         imagem: p.imagem || old.imagem || '',   // imagem vazia do servidor NÃO apaga a foto local existente
-        dims: p.dims || '', preco: Number(p.preco) || 0,
+        dims: p.dims || '', disp: p.disp || old.disp || '', preco: Number(p.preco) || 0,
         margem: null, travado: !!p.travado, oculto: !!p.oculto
       };
     });
@@ -1082,6 +1082,7 @@
     setImgPreview(p ? p.imagem : '');
     $('#edCusto').value = (p && temCusto(p)) ? fobDe(p) : '';
     $('#edDims').value = p ? (p.dims || '') : '';
+    $('#edDisp') && ($('#edDisp').value = p ? (p.disp || '') : '');
     $('#edMargem').value = (p && p.margem != null) ? p.margem : '';
     // mostra o preço atual quando ele é travado OU quando não há custo para recalcular
     // (produtos do catálogo público têm preço direto, sem custo) — evita o campo vir vazio
@@ -1099,6 +1100,7 @@
       nome: $('#edNome').value.trim(),
       imagem: $('#edImagem').value.trim(),
       dims: $('#edDims').value.trim(),
+      disp: ($('#edDisp') && $('#edDisp').value.trim()) || '',
       fob: num($('#edCusto').value) || 0,
       margem: $('#edMargem').value === '' ? null : (num($('#edMargem').value) || 0),
       precoInput: $('#edPreco').value === '' ? null : (num($('#edPreco').value) || 0),
@@ -1171,7 +1173,7 @@
     if (!f.nome) { toast('Informe o nome do produto.'); return; }
     const p = editingId ? state.products.find(x => x.id === editingId) : { id: uid() };
     p.codigo = f.codigo; p.serie = f.serie; p.tipo = f.tipo; p.nome = f.nome; p.imagem = f.imagem;
-    p.dims = f.dims; p.fob = f.fob; p.margem = f.margem; p.oculto = f.oculto;
+    p.dims = f.dims; p.disp = f.disp; p.fob = f.fob; p.margem = f.margem; p.oculto = f.oculto;
     if (f.precoInput != null) { p.preco = f.precoInput; p.travado = true; }   // preço travado manual
     else if (custoBRL(f) > 0) { p.travado = false; p.preco = r2(precoCalculado(p)); }  // automático a partir do custo
     else { p.travado = false; if (p.preco == null) p.preco = 0; }             // sem custo nem preço digitado: preserva o preço atual
@@ -3018,6 +3020,24 @@
     toast(`Backup gerado: ${lista.length} orçamento(s)${extra}.`);
   }
   $('#btnBackup') && $('#btnBackup').addEventListener('click', exportBackup);
+
+  // Fechamento de comissão: exporta as vendas fechadas + comissão (filtra o período no Excel pela coluna Mês)
+  function exportComissoes() {
+    const comPct = Number(P().comissao) || 0;
+    const ganhos = (dashData || []).filter(r => stageOf(r) === 'ganho')
+      .sort((a, b) => new Date(a.criado_em || 0) - new Date(b.criado_em || 0));
+    if (!ganhos.length) { toast('Nenhuma venda fechada para exportar.'); return; }
+    const head = ['Mês', 'Data', 'Número', 'Cliente', 'Vendedor', 'Valor fechado', 'Comissão %', 'Comissão R$'];
+    const rows = [head];
+    ganhos.forEach(r => {
+      const val = Number(r.total) || 0;
+      rows.push([String(r.criado_em || '').slice(0, 7), r.criado_em ? dmy(r.criado_em) : '', r.numero || '',
+        r.cliente_nome || '', r.vendedor_nome || '', numBR(val), numBR(comPct), numBR(val * comPct / 100)]);
+    });
+    downloadText(`torque-comissoes-${new Date().toISOString().slice(0, 10)}.csv`, toCSV(rows));
+    toast(`${ganhos.length} venda(s) fechada(s) exportada(s).` + (comPct ? '' : ' Defina a comissão (%) nos Parâmetros.'));
+  }
+  $('#btnComissoes') && $('#btnComissoes').addEventListener('click', exportComissoes);
 
   /* ------------------------------------------------------------
      DISTRIBUIÇÃO DE LEADS — rodízio entre vendedores (admin)
