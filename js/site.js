@@ -32,7 +32,7 @@
   let BANNERS = {};         // imagens de banner por categoria (nome → URL), vindas do catalog.json
   const bannerImg = nome => BANNERS[nome] || '';
   // dados de localização/contato (default + ao vivo via catalog.json → data.site)
-  let SITEINFO = Object.assign({ endereco: '', mapsUrl: '', telefone: '', whatsapp: SITE.whatsapp || '', email: '', horario: '' }, window.TORQUE_SITE_INFO || {});
+  let SITEINFO = Object.assign({ endereco: '', mapsUrl: '', telefone: '', whatsapp: SITE.whatsapp || '', email: '', horario: '', gaId: '', metaPixel: '' }, window.TORQUE_SITE_INFO || {});
   let CAROUSEL = {};        // imagem por slide do carrossel (id → URL), vinda do catalog.json
   let query = '';
   let priceBand = 'all';
@@ -262,6 +262,8 @@
         obs: [cidade ? 'Cidade: ' + cidade : '', msg ? 'Mensagem: ' + msg : ''].filter(Boolean).join(' | ')
       });
       if (error) throw error;
+      if (window.fbq) try { fbq('track', 'Lead', { value: subtotal, currency: 'BRL' }); } catch (e) {}
+      if (window.gtag) try { gtag('event', 'generate_lead', { value: subtotal, currency: 'BRL' }); } catch (e) {}
       cart = {}; save(); syncAll();
       $('#leadTitle').textContent = 'Pedido enviado!';
       $('#btnEnviarLead').style.display = 'none';
@@ -515,6 +517,16 @@
   });
 
   // compartilhar (Web Share API no celular; copia o link no desktop)
+  // pedir este produto no WhatsApp (mensagem já com nome/código/preço)
+  const wppProdBtn = $('#pmWpp');
+  if (wppProdBtn) wppProdBtn.addEventListener('click', () => {
+    if (!prodCode) return; const p = byCode(prodCode); if (!p) return;
+    const n = String(SITEINFO.whatsapp || SITE.whatsapp || '').replace(/\D/g, '');
+    const txt = encodeURIComponent(`Olá! Tenho interesse no equipamento *${p.nome}*${p.codigo ? ` (${p.codigo})` : ''} — ${money(p.preco)}. Pode me passar mais informações?`);
+    if (window.fbq) try { fbq('track', 'Lead', { content_name: p.nome }); } catch (e) {}
+    if (window.gtag) try { gtag('event', 'contact', { item_name: p.nome }); } catch (e) {}
+    window.open(n ? `https://wa.me/${n}?text=${txt}` : `https://wa.me/?text=${txt}`, '_blank');
+  });
   const shareBtn = $('#pmShare');
   if (shareBtn) shareBtn.addEventListener('click', async () => {
     if (!prodCode) return; const p = byCode(prodCode); if (!p) return;
@@ -536,6 +548,26 @@
     return n ? `https://wa.me/${n}?text=${m}` : `https://wa.me/?text=${m}`;
   }
   function applyWpp() { const el = $('#wppFloat'); if (el) el.href = wppHref(); }
+  // Analytics/Pixel: injeta o Google Analytics 4 e/ou o Meta Pixel quando os IDs estão configurados
+  let analyticsDone = false;
+  function injectAnalytics() {
+    if (analyticsDone) return;
+    const ga = String(SITEINFO.gaId || '').trim(), px = String(SITEINFO.metaPixel || '').trim();
+    if (!ga && !px) return;
+    analyticsDone = true;
+    if (ga) {
+      const s = document.createElement('script'); s.async = true;
+      s.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(ga);
+      document.head.appendChild(s);
+      window.dataLayer = window.dataLayer || [];
+      window.gtag = function () { window.dataLayer.push(arguments); };
+      window.gtag('js', new Date()); window.gtag('config', ga);
+    }
+    if (px) {
+      !function (f, b, e, v, n, t, s) { if (f.fbq) return; n = f.fbq = function () { n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments); }; if (!f._fbq) f._fbq = n; n.push = n; n.loaded = !0; n.version = '2.0'; n.queue = []; t = b.createElement(e); t.async = !0; t.src = v; s = b.getElementsByTagName(e)[0]; s.parentNode.insertBefore(t, s); }(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
+      window.fbq('init', px); window.fbq('track', 'PageView');
+    }
+  }
   const SLIDES = [
     { id: 'home', kind: 'home', grad: 'linear-gradient(135deg,#14121c,#1f1733)',
       tag: 'Linha profissional & comercial',
@@ -749,7 +781,7 @@
       renderSeries(); renderChips(); renderGrid(); refreshCounts(); renderLinhasMenu();
       const tp = currentTipo(), dl = currentLinha();                    // re-aplica a vista com o catálogo ao vivo
       if (tp) goToTipo(tp, false, false); else if (dl) goToLinha(dl, false, false);
-      renderLinhaHead(); renderCarousel(); renderContato(); applyWpp();
+      renderLinhaHead(); renderCarousel(); renderContato(); applyWpp(); injectAnalytics();
     } catch (e) { /* offline ou bucket vazio → mantém o catálogo embutido */ }
   }
   loadLiveCatalog();

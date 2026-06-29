@@ -261,6 +261,9 @@ img{max-width:100%;display:block}
 .pmodal__stepper input{flex:1;min-width:0;text-align:center;border:none;background:transparent;color:var(--txt);font-family:var(--font-mono);font-weight:700;font-size:1rem}
 .pmodal__share{margin-top:12px;display:inline-flex;align-items:center;gap:8px;background:transparent;border:1px solid var(--line-2);color:var(--txt-dim);border-radius:10px;padding:9px 14px;font-weight:600;font-size:.82rem;font-family:var(--font-body);cursor:pointer;transition:border-color .15s,color .15s}
 .pmodal__share:hover{border-color:var(--violet);color:var(--txt)}
+.pmodal__wpp{margin-top:12px;width:100%;display:inline-flex;align-items:center;justify-content:center;gap:9px;background:#25D366;border:none;color:#06310f;border-radius:12px;padding:13px 16px;font-weight:800;font-size:.95rem;font-family:var(--font-body);cursor:pointer;transition:filter .15s}
+.pmodal__wpp svg{width:22px;height:22px;fill:#06310f}
+.pmodal__wpp:hover{filter:brightness(1.05)}
 .pmodal__share svg{width:16px;height:16px;fill:currentColor}
 
 /* ---------------- REVEAL ANIM ---------------- */
