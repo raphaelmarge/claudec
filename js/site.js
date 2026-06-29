@@ -38,6 +38,8 @@
   let priceBand = 'all';
   let sortBy = 'rel';
   let shown = PAGE;
+  let compare = new Set();   // códigos selecionados para comparar
+  const CMP_MAX = 3;
 
   function load() { try { return JSON.parse(localStorage.getItem(CART_KEY)) || {}; } catch (e) { return {}; } }
   function save() { try { localStorage.setItem(CART_KEY, JSON.stringify(cart)); } catch (e) {} }
@@ -105,7 +107,7 @@
       ? `<div class="pcard__stepper" data-code="${esc(p.codigo)}"><button data-act="dec">−</button><input data-act="qty" inputmode="numeric" value="${q}"/><button data-act="inc">+</button></div>`
       : `<button class="pcard__add" data-act="add" data-code="${esc(p.codigo)}">+ Adicionar</button>`;
     return `<article class="pcard ${q > 0 ? 'in' : ''}" data-code="${esc(p.codigo)}">
-      <div class="pcard__media">${p.selo ? `<span class="pcard__selo">${esc(p.selo)}</span>` : ''}${media}</div>
+      <div class="pcard__media">${p.selo ? `<span class="pcard__selo">${esc(p.selo)}</span>` : ''}<button class="pcard__cmp ${compare.has(p.codigo) ? 'on' : ''}" data-act="cmp" data-code="${esc(p.codigo)}" type="button" title="Comparar" aria-label="Comparar">⇄</button>${media}</div>
       <div class="pcard__b">
         <span class="pcard__serie">${esc(p.serie || '')}</span>
         <span class="pcard__name">${esc(p.nome)}</span>
@@ -164,6 +166,7 @@
     const codeEl = e.target.closest('[data-code]');
     const code = codeEl && codeEl.dataset.code;
     if (e.target.closest('[data-cact="orc"]')) { e.preventDefault(); askOrc(); return; }
+    if (act === 'cmp' && code) { toggleCompare(code); return; }
     if (act === 'add' && code) { setQty(code, 1); syncAll(); toast('Adicionado ao orçamento'); return; }
     if (act === 'inc' && code) { setQty(code, qtyOf(code) + 1); syncAll(); return; }
     if (act === 'dec' && code) { setQty(code, qtyOf(code) - 1); syncAll(); return; }
@@ -770,6 +773,50 @@
   }
   const btnPdf = $('#btnCatalogoPdf');
   if (btnPdf) btnPdf.addEventListener('click', baixarCatalogoPDF);
+
+  /* ---------- comparador de produtos ---------- */
+  function toggleCompare(code) {
+    if (compare.has(code)) compare.delete(code);
+    else { if (compare.size >= CMP_MAX) { toast(`Compare até ${CMP_MAX} por vez.`); return; } compare.add(code); }
+    renderGrid(); renderCmpBar();
+  }
+  function renderCmpBar() {
+    const bar = $('#cmpBar'); if (!bar) return;
+    const n = compare.size;
+    bar.hidden = n < 1;
+    const c = $('#cmpCount'); if (c) c.textContent = n;
+    const go = $('#cmpGo'); if (go) go.disabled = n < 2;
+  }
+  function closeCmp() { const m = $('#cmpModal'); if (m) m.hidden = true; document.body.style.overflow = ''; }
+  function openCmp() {
+    const items = Array.from(compare).map(byCode).filter(Boolean);
+    if (items.length < 2) { toast('Selecione ao menos 2 equipamentos.'); return; }
+    const maxN = Math.max(1, Math.floor(PARAMS.parcelasMax || 48));
+    const head = `<th></th>` + items.map(p => `<th>
+      <div class="cmpcol">${p.imagem ? `<img src="${esc(p.imagem)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'"/>` : `<div class="cmpcol__ph"></div>`}
+      <b>${esc(p.nome)}</b><button class="cmpcol__rm" data-cmprm="${esc(p.codigo)}" type="button" title="Tirar da comparação">✕</button></div></th>`).join('');
+    const row = (lab, fn) => `<tr><td class="cmprow__lab">${lab}</td>${items.map(p => `<td>${fn(p)}</td>`).join('')}</tr>`;
+    const body = `<div class="cmpscroll"><table class="cmptable"><thead><tr>${head}</tr></thead><tbody>
+      ${row('Linha', p => esc(p.serie || '—'))}
+      ${row('Tipo', p => (p.tipo === 'acessorio' ? 'Acessório' : 'Máquina'))}
+      ${row('Dimensões', p => p.dims ? esc(p.dims) + ' mm' : '—')}
+      ${row('Disponibilidade', p => p.disp ? esc(p.disp) : '—')}
+      ${row('Preço', p => `<b class="cmpprice">${money(p.preco)}</b><small>${maxN}× de ${money(p.preco / maxN)}</small>`)}
+      ${row('', p => `<button class="cmpadd" data-act="add" data-code="${esc(p.codigo)}" type="button">+ Adicionar</button>`)}
+    </tbody></table></div>`;
+    $('#cmpBody').innerHTML = body;
+    $('#cmpModal').hidden = false; document.body.style.overflow = 'hidden';
+  }
+  (function wireCmp() {
+    const go = $('#cmpGo'); if (go) go.addEventListener('click', openCmp);
+    const clr = $('#cmpClear'); if (clr) clr.addEventListener('click', () => { compare.clear(); renderGrid(); renderCmpBar(); });
+    const modal = $('#cmpModal');
+    if (modal) modal.addEventListener('click', e => {
+      if (e.target.closest('[data-cmpclose]')) { closeCmp(); return; }
+      const rm = e.target.closest('[data-cmprm]');
+      if (rm) { compare.delete(rm.dataset.cmprm); renderGrid(); renderCmpBar(); if (compare.size < 2) closeCmp(); else openCmp(); return; }
+    });
+  })();
 
   /* ---------- "Monte sua academia" (montador) ---------- */
   (function montador() {
