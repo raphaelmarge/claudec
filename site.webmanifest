@@ -1,0 +1,15 @@
+{
+  "name": "Torque Fitness",
+  "short_name": "Torque",
+  "description": "Equipamentos profissionais de academia — catálogo e orçamento online.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0B0B0F",
+  "theme_color": "#0B0B0F",
+  "lang": "pt-BR",
+  "icons": [
+    { "src": "icons/icon-192.png", "type": "image/png", "sizes": "192x192" },
+    { "src": "icons/icon-512.png", "type": "image/png", "sizes": "512x512", "purpose": "any maskable" }
+  ]
+}

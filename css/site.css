@@ -38,6 +38,8 @@ img{max-width:100%;display:block}
 .nav__links a{color:var(--txt-dim);font-size:.9rem;font-weight:500}
 .nav__links a:hover{color:var(--txt)}
 .nav__actions{margin-left:auto;display:flex;align-items:center;gap:12px}
+.nav__install{background:transparent;border:1px solid var(--violet);color:var(--violet);font-size:.82rem;font-weight:600;padding:8px 12px;border-radius:10px;cursor:pointer;font-family:var(--font-body)}
+.nav__install:hover{background:var(--violet);color:#fff}
 .nav__vendor{color:var(--txt-mut);font-size:.82rem;border:1px solid var(--line-2);padding:8px 12px;border-radius:10px}
 .nav__vendor:hover{color:var(--txt);border-color:var(--violet)}
 .nav__cart{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,var(--violet),var(--violet-700));color:#fff;border:none;border-radius:999px;padding:9px 16px;font-weight:700;font-size:.86rem;cursor:pointer;box-shadow:var(--violet-glow) 0 6px 18px}

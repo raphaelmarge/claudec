@@ -847,6 +847,23 @@
   }
   loadLiveCatalog();
 
+  /* ---------- PWA: instalar a vitrine como app ---------- */
+  (function pwa() {
+    let deferred = null;
+    const btn = $('#installBtn');
+    window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferred = e; if (btn) btn.hidden = false; });
+    if (btn) btn.addEventListener('click', async () => {
+      if (!deferred) return;
+      deferred.prompt();
+      try { await deferred.userChoice; } catch (e) {}
+      deferred = null; btn.hidden = true;
+    });
+    window.addEventListener('appinstalled', () => { if (btn) btn.hidden = true; });
+    if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
+      navigator.serviceWorker.register('sw.js').catch(function () {});
+    }
+  })();
+
   // deep-link: se a URL já vier com ?p=codigo, abre o produto direto
   (function initDeepLink() {
     const code = currentCode();
