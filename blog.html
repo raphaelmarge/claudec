@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/site.css?v=20260627p" />
+  <link rel="stylesheet" href="css/site.css?v=20260627q" />
   <style>
     .blog{max-width:820px;margin:0 auto;padding:34px 20px 60px}
     .blog__back{display:inline-flex;align-items:center;gap:6px;color:var(--txt-dim);font-size:.86rem;margin-bottom:20px}
@@ -57,7 +57,7 @@
     <p class="blog__empty">Carregando…</p>
   </main>
 
-  <script src="js/config.js?v=20260627p"></script>
+  <script src="js/config.js?v=20260627q"></script>
   <script>
     (function () {
       var $ = function (s, r) { return (r || document).querySelector(s); };
@@ -79,6 +79,24 @@
       }
       var BASE = location.origin + location.pathname.replace(/[^/]*$/, '');
       var WPP = '';
+
+      // Artigos padrão (aparecem até o admin publicar os próprios no painel)
+      var DEFAULT_POSTS = [
+        {
+          slug: 'quanto-custa-montar-uma-academia-2026',
+          titulo: 'Quanto custa montar uma academia em 2026? Guia completo',
+          resumo: 'O que pesa no investimento, faixas de orçamento por porte e como começar sem desperdiçar dinheiro.',
+          capa: '', autor: 'Torque Fitness', data: '2026-06-28',
+          conteudo: 'Montar uma academia é um ótimo negócio — mas o investimento varia bastante conforme o tamanho do espaço, o público que você quer atender e a linha de equipamentos escolhida. Neste guia, mostramos o que realmente pesa no custo e damos faixas de referência para você se planejar.\n\n## O que define o custo\n- Tamanho do espaço (m²) e quantas estações de treino cabem\n- Mix de equipamentos: musculação, cardio e funcional\n- Padrão dos aparelhos (linha de entrada x linha profissional)\n- Estrutura do local: piso emborrachado, espelhos, iluminação e ar\n- Itens de operação: recepção, vestiário, software de gestão\n\n## Faixas de investimento (estimativas)\nOs valores abaixo são apenas uma referência inicial — o orçamento real depende do projeto. Use como ponto de partida.\n- Studio pequeno / funcional (até ~80 m²): foco em acessórios, alguns aparelhos-chave e área livre\n- Academia de bairro (~150 a 300 m²): musculação completa, cardio e funcional para alta rotatividade\n- Academia completa (300 m²+): todas as linhas, áreas separadas e equipamentos de uso intenso\n\n## Como economizar sem perder qualidade\n- Comece pelo essencial e cresça por etapas, conforme a base de alunos\n- Priorize equipamentos robustos nas estações mais usadas (são os que mais sofrem)\n- Padronize a linha para facilitar manutenção e dar identidade visual\n- Aproveite parcelamento para preservar o capital de giro\n\n## Por onde começar\nDefina o público e o espaço, monte a lista de equipamentos por categoria e simule o orçamento. Na nossa vitrine você usa o "Monte sua academia" para gerar uma sugestão em segundos e pedir um orçamento personalizado.\n\nQuer um projeto sob medida? Fale com um consultor Torque Fitness e receba uma proposta com as melhores condições.'
+        },
+        {
+          slug: 'equipamentos-essenciais-academia-de-bairro',
+          titulo: 'Checklist: equipamentos essenciais para uma academia de bairro',
+          resumo: 'A lista enxuta para abrir bem: o que não pode faltar em musculação, cardio e funcional.',
+          capa: '', autor: 'Torque Fitness', data: '2026-06-28',
+          conteudo: 'Vai abrir uma academia de bairro e não sabe por onde começar a lista de equipamentos? Reunimos um checklist enxuto e eficiente, focado no que mais traz resultado para o aluno e retorno para você.\n\n## Musculação (a base do negócio)\n- Leg press e cadeira extensora/flexora (membros inferiores)\n- Supino e voador / peck deck (peito)\n- Puxador alto e remada (costas)\n- Desenvolvimento e elevação lateral (ombros)\n- Rosca e tríceps (braços)\n- Estação de abdominais e core\n\n## Cardio (rotatividade e aquecimento)\n- Esteiras profissionais\n- Bikes vertical e horizontal\n- Elíptico\n\n## Funcional e acessórios\n- Halteres e anilhas\n- Racks e barras\n- Kettlebells, cordas e bolas\n- Colchonetes e steps\n\n## Dica de ouro\nReforce as estações mais disputadas com equipamentos robustos de uso intenso — são as que mais quebram quando o aparelho é fraco. Padronizar a linha também deixa a academia com cara profissional.\n\nMonte sua lista na nossa vitrine e peça um orçamento: ajudamos você a equipar tudo com as melhores condições.'
+        }
+      ];
 
       function renderList(posts) {
         document.title = 'Blog · Torque Fitness';
@@ -113,14 +131,14 @@
       }
       (function load() {
         var cfg = window.TORQUE_SUPABASE;
-        if (!cfg || !cfg.url) { renderList([]); return; }
+        if (!cfg || !cfg.url) { route(DEFAULT_POSTS); return; }
         var url = cfg.url.replace(/\/+$/, '') + '/storage/v1/object/public/produtos/catalog.json?t=' + Date.now();
         fetch(url).then(function (r) { return r.ok ? r.json() : null; }).then(function (data) {
           var site = (data && data.site) || {};
           WPP = site.whatsapp || '';
-          var posts = Array.isArray(site.blog) ? site.blog : [];
+          var posts = (Array.isArray(site.blog) && site.blog.length) ? site.blog : DEFAULT_POSTS;
           route(posts);
-        }).catch(function () { renderList([]); });
+        }).catch(function () { route(DEFAULT_POSTS); });
       })();
     })();
   </script>
