@@ -105,7 +105,7 @@
       ? `<div class="pcard__stepper" data-code="${esc(p.codigo)}"><button data-act="dec">−</button><input data-act="qty" inputmode="numeric" value="${q}"/><button data-act="inc">+</button></div>`
       : `<button class="pcard__add" data-act="add" data-code="${esc(p.codigo)}">+ Adicionar</button>`;
     return `<article class="pcard ${q > 0 ? 'in' : ''}" data-code="${esc(p.codigo)}">
-      <div class="pcard__media">${media}</div>
+      <div class="pcard__media">${p.selo ? `<span class="pcard__selo">${esc(p.selo)}</span>` : ''}${media}</div>
       <div class="pcard__b">
         <span class="pcard__serie">${esc(p.serie || '')}</span>
         <span class="pcard__name">${esc(p.nome)}</span>
@@ -479,7 +479,7 @@
     const p = byCode(code); if (!p) return;
     prodCode = code;
     $('#pmMedia').innerHTML = galleryHTML(p);
-    $('#pmSerie').textContent = p.serie || '';
+    $('#pmSerie').textContent = (p.selo ? p.selo + ' · ' : '') + (p.serie || '');
     $('#pmNome').textContent = p.nome;
     $('#pmDims').textContent = p.dims ? 'Dimensões: ' + p.dims + ' mm' : '';
     const dispEl = $('#pmDisp');
@@ -833,7 +833,7 @@
       if (!items || !items.length) return;
       const live = items
         .filter(p => p && p.preco > 0 && !p.oculto)
-        .map(p => ({ id: p.id, codigo: p.codigo || '', nome: p.nome || '', serie: p.serie || 'Geral', tipo: p.tipo || 'maquina', imagem: p.imagem || '', imagens: Array.isArray(p.imagens) ? p.imagens : [], video: p.video || '', dims: p.dims || '', disp: p.disp || '', preco: Number(p.preco) || 0 }));
+        .map(p => ({ id: p.id, codigo: p.codigo || '', nome: p.nome || '', serie: p.serie || 'Geral', tipo: p.tipo || 'maquina', imagem: p.imagem || '', imagens: Array.isArray(p.imagens) ? p.imagens : [], video: p.video || '', dims: p.dims || '', disp: p.disp || '', selo: p.selo || '', preco: Number(p.preco) || 0 }));
       if (!live.length) return;
       PRODUCTS = live;
       if (data && data.banners && typeof data.banners === 'object') BANNERS = data.banners;   // banners por categoria
