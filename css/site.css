@@ -117,6 +117,17 @@ img{max-width:100%;display:block}
 .depocard figcaption{margin-top:14px;display:flex;flex-direction:column}
 .depocard figcaption b{color:var(--violet)}
 .depocard figcaption span{font-size:.8rem;color:var(--txt-mut)}
+/* ---------------- MONTE SUA ACADEMIA ---------------- */
+.montar{max-width:1200px;margin:0 auto;padding:30px 20px 0}
+.montar__card{background:linear-gradient(135deg,#14121c,#1e1733);border:1px solid var(--line);border-radius:20px;padding:30px 26px;position:relative;overflow:hidden}
+.montar__card::after{content:"";position:absolute;inset:0;background:radial-gradient(680px 260px at 90% -40%,var(--violet-glow),transparent);pointer-events:none}
+.montar__group{position:relative;z-index:1;margin-top:18px}
+.montar__lab{display:block;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--txt-mut);font-weight:700;margin-bottom:8px}
+.montar__opts{display:flex;gap:10px;flex-wrap:wrap}
+.montar__chip{background:var(--panel-2);border:1px solid var(--line-2);color:var(--txt);border-radius:999px;padding:10px 16px;font-size:.9rem;font-weight:600;cursor:pointer;font-family:var(--font-body);transition:border-color .15s,background .15s,color .15s}
+.montar__chip:hover{border-color:var(--violet)}
+.montar__chip.on{border-color:var(--violet);background:var(--violet-glow);color:#fff}
+.montar__go{position:relative;z-index:1;margin-top:24px}
 /* ---------------- FAQ ---------------- */
 .faq{max-width:820px;margin:0 auto;padding:34px 20px 10px}
 .faq__list{margin-top:22px;display:flex;flex-direction:column;gap:10px}

@@ -351,7 +351,7 @@
   // página focada: dentro de uma categoria, esconde o hero e a seção "Nossas linhas"
   function applyViewLayout() {
     const cat = !!currentViewName();
-    ['topo', 'series'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = cat ? 'none' : ''; });
+    ['topo', 'series', 'montar'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = cat ? 'none' : ''; });
     document.body.classList.toggle('cat-view', cat);
   }
   function renderLinhaHead() {
@@ -770,6 +770,36 @@
   }
   const btnPdf = $('#btnCatalogoPdf');
   if (btnPdf) btnPdf.addEventListener('click', baixarCatalogoPDF);
+
+  /* ---------- "Monte sua academia" (montador) ---------- */
+  (function montador() {
+    const sec = $('#montar'); if (!sec) return;
+    const foco = $('#montarFoco'), porte = $('#montarPorte'), go = $('#btnMontar');
+    if (foco) foco.addEventListener('click', e => { const b = e.target.closest('[data-foco]'); if (b) b.classList.toggle('on'); });
+    if (porte) porte.addEventListener('click', e => { const b = e.target.closest('[data-porte]'); if (!b) return; $$('[data-porte]', porte).forEach(x => x.classList.toggle('on', x === b)); });
+    const PORTE = { p: { mus: 4, car: 2, fun: 3 }, m: { mus: 10, car: 4, fun: 6 }, g: { mus: 18, car: 8, fun: 10 } };
+    const isCardio = p => /cardio|esteira|bike|el[ií]ptic|escada|spinning|remo/i.test((p.serie || '') + ' ' + (p.nome || ''));
+    const isAcessorio = p => (p.tipo || 'maquina') === 'acessorio';
+    function pick(pool, n) { if (n <= 0 || !pool.length) return []; const step = Math.max(1, Math.floor(pool.length / n)); const out = []; for (let i = 0; i < pool.length && out.length < n; i += step) out.push(pool[i]); return out; }
+    if (go) go.addEventListener('click', () => {
+      const focos = $$('[data-foco].on', foco).map(b => b.dataset.foco);
+      if (!focos.length) { toast('Escolha pelo menos um foco.'); return; }
+      const ptEl = $('[data-porte].on', porte); const pt = (ptEl && ptEl.dataset.porte) || 'm';
+      const cfg = PORTE[pt] || PORTE.m;
+      const all = PRODUCTS.filter(p => p.preco > 0);
+      let chosen = [];
+      if (focos.includes('mus')) chosen = chosen.concat(pick(all.filter(p => !isAcessorio(p) && !isCardio(p)), cfg.mus));
+      if (focos.includes('car')) chosen = chosen.concat(pick(all.filter(isCardio), cfg.car));
+      if (focos.includes('fun')) chosen = chosen.concat(pick(all.filter(isAcessorio), cfg.fun));
+      if (!chosen.length) { toast('Não encontrei itens para essa combinação.'); return; }
+      chosen.forEach(p => { if (p.codigo) cart[p.codigo] = (cart[p.codigo] || 0) + 1; });
+      save(); syncAll();
+      if (window.gtag) try { gtag('event', 'montar_academia', { items: chosen.length }); } catch (e) {}
+      if (window.fbq) try { fbq('track', 'AddToCart', { num_items: chosen.length }); } catch (e) {}
+      openDrawer();
+      toast(`Montamos ${chosen.length} equipamento(s) — revise e peça o orçamento!`);
+    });
+  })();
 
   /* ---------- toast ---------- */
   let tT;
