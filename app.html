@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/styles.css?v=20260627w" />
+  <link rel="stylesheet" href="css/styles.css?v=20260627x" />
   <link rel="manifest" href="app.webmanifest" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -411,6 +411,21 @@
           <label class="field"><span>Custo FOB (US$)</span><input id="edCusto" type="number" step="0.01" min="0" inputmode="decimal" /></label>
           <label class="field"><span>Dimensões</span><input id="edDims" type="text" placeholder="L×P×A (mm)" /></label>
           <label class="field"><span>Disponibilidade / prazo <small>aparece no site</small></span><input id="edDisp" type="text" placeholder="Ex.: Pronta entrega · Sob encomenda 30 dias" /></label>
+          <label class="field"><span>Grupamento muscular <small>vazio = automático pelo nome</small></span>
+            <select id="edGrupo">
+              <option value="">Automático</option>
+              <option value="Cardio">Cardio</option>
+              <option value="Pernas e glúteos">Pernas e glúteos</option>
+              <option value="Peito">Peito</option>
+              <option value="Costas">Costas</option>
+              <option value="Ombros">Ombros</option>
+              <option value="Braços">Braços</option>
+              <option value="Abdômen e core">Abdômen e core</option>
+              <option value="Pilates">Pilates</option>
+              <option value="Peso livre e funcional">Peso livre e funcional</option>
+              <option value="Outros">Outros</option>
+            </select>
+          </label>
           <label class="field"><span>Selo <small>etiqueta de destaque no site</small></span>
             <select id="edSelo">
               <option value="">Nenhum</option>
@@ -668,12 +683,12 @@
   <!-- Toast -->
   <div id="toast" class="toast" hidden></div>
 
-  <script src="js/config.js?v=20260627w"></script>
+  <script src="js/config.js?v=20260627x"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/cloud.js?v=20260627w"></script>
-  <script src="js/products.js?v=20260627w"></script>
-  <script src="js/secure.js?v=20260627w"></script>
-  <script src="js/app.js?v=20260627w"></script>
+  <script src="js/cloud.js?v=20260627x"></script>
+  <script src="js/products.js?v=20260627x"></script>
+  <script src="js/secure.js?v=20260627x"></script>
+  <script src="js/app.js?v=20260627x"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));

@@ -37,9 +37,45 @@
   let query = '';
   let priceBand = 'all';
   let sortBy = 'rel';
+  let filterGrupo = 'all';   // filtro por grupamento muscular
   let shown = PAGE;
   let compare = new Set();   // códigos selecionados para comparar
   const CMP_MAX = 3;
+
+  /* ---------- grupamento muscular ---------- */
+  // Classifica cada equipamento por grupamento muscular a partir do nome (catálogo
+  // em inglês). Se o admin definir p.grupo, ele tem prioridade. Ordem importa:
+  // a primeira regra que casar vence (ex.: "Leg Curl" cai em Pernas, não em Braços).
+  const GRUPO_ORDER = ['Cardio', 'Pernas e glúteos', 'Peito', 'Costas', 'Ombros', 'Braços', 'Abdômen e core', 'Pilates', 'Peso livre e funcional', 'Outros'];
+  const GRUPO_RULES = [
+    ['Cardio', /treadmill|elliptical|stair|climber|rowing|spinn?ing|spining|\bbike\b|recumbent|orbitrek|cross trainer|air bike|pedal|ergometer|kayak|dragon boat|paddle|surf/],
+    ['Pernas e glúteos', /\bleg\b|squat|hack|calf|thigh|\bhip\b|glute|thrust|adduct|abduct|lunge|sissy|tibia|deadlift|pendulum|bridge|hamstring|\bkick\b|pelvic|belt|\binner\b|\bouter\b/],
+    ['Peito', /chest|\bpec\b|pectoral|\bfly\b|crossover|cross over|horizontal press|inclin\w* press|seated push|straight arm|push ups?/],
+    ['Costas', /\bback\b|pulldown|pull down|\blat\b|\brow\b|dorsy|pullover|pull over|chin|\bpull\b/],
+    ['Ombros', /shoulder|\bdelt\b|deltoid|lateral raise|military|shrug|pearl|\braise\b/],
+    ['Braços', /bicep|tricep|\bcurl\b|preacher|\bdip\b|forearm|wrist|french|grip/],
+    ['Abdômen e core', /abdominal|crunch|oblique|torso|twist|roman|\bcore\b|hyper|sit ups?/],
+    ['Pilates', /reformer|pilates|cadillac|barrel|trapeze|wunda/],
+    ['Peso livre e funcional', /bench|\brack\b|dumbbell|barbell|\bplate\b|kettlebell|smith|functional|trainer|station|cable|\bbar\b|weight|ladder|tower|wall|shelf|stand|cage|training|stretch|multi press/]
+  ];
+  function grupoOf(p) {
+    if (p && p.grupo) return p.grupo;
+    const n = normName(p && p.nome);
+    for (let i = 0; i < GRUPO_RULES.length; i++) if (GRUPO_RULES[i][1].test(n)) return GRUPO_RULES[i][0];
+    return 'Outros';
+  }
+  function gruposDisponiveis() {
+    const set = new Set(PRODUCTS.map(grupoOf));
+    return GRUPO_ORDER.filter(g => set.has(g));
+  }
+  function renderGrupos() {
+    const sel = $('#grupoFilter'); if (!sel) return;
+    const groups = gruposDisponiveis();
+    sel.innerHTML = '<option value="all">Todos os músculos</option>' +
+      groups.map(g => `<option value="${esc(g)}">${esc(g)}</option>`).join('');
+    if (!groups.includes(filterGrupo)) filterGrupo = 'all';
+    sel.value = filterGrupo;
+  }
 
   function load() { try { return JSON.parse(localStorage.getItem(CART_KEY)) || {}; } catch (e) { return {}; } }
   function save() { try { localStorage.setItem(CART_KEY, JSON.stringify(cart)); } catch (e) {} }
@@ -78,6 +114,7 @@
     const q = query.trim().toLowerCase();
     const list = PRODUCTS.filter(p => {
       if (filterSerie !== 'all' && (p.serie || 'Geral') !== filterSerie) return false;
+      if (filterGrupo !== 'all' && grupoOf(p) !== filterGrupo) return false;
       if (filterTipo !== 'all') { const t = p.tipo || 'maquina'; if (filterTipo === 'acessorio' ? t !== 'acessorio' : t === 'acessorio') return false; }
       if (!inBand(p.preco)) return false;
       if (q && !((p.nome + ' ' + p.codigo + ' ' + p.serie).toLowerCase().includes(q))) return false;
@@ -88,7 +125,7 @@
     else if (sortBy === 'name-asc') list.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
     return list;
   }
-  function filtersActive() { return filterSerie !== 'all' || query.trim() !== '' || priceBand !== 'all' || sortBy !== 'rel'; }
+  function filtersActive() { return filterSerie !== 'all' || filterGrupo !== 'all' || query.trim() !== '' || priceBand !== 'all' || sortBy !== 'rel'; }
   function renderMeta(count) {
     const total = PRODUCTS.length;
     const rc = $('#resultCount');
@@ -185,6 +222,8 @@
   $('#search').addEventListener('input', e => { query = e.target.value; shown = PAGE; renderGrid(); });
   $('#priceBand').addEventListener('change', e => { priceBand = e.target.value; shown = PAGE; renderGrid(); });
   $('#sortBy').addEventListener('change', e => { sortBy = e.target.value; shown = PAGE; renderGrid(); });
+  const grupoSel = $('#grupoFilter');
+  if (grupoSel) grupoSel.addEventListener('change', e => { filterGrupo = e.target.value; shown = PAGE; renderGrid(); });
   $('#clearFilters').addEventListener('click', () => goToLinha('all', true, false));
   $('#loadMore').addEventListener('click', () => { shown += PAGE; renderGrid(); });
   $('#navCart').addEventListener('click', openDrawer);
@@ -371,10 +410,11 @@
     const tr = $('#linhasTrig'); if (tr) tr.setAttribute('aria-expanded', 'false');
   }
   function resetFiltros() {
-    query = ''; priceBand = 'all'; sortBy = 'rel'; shown = PAGE;
+    query = ''; priceBand = 'all'; sortBy = 'rel'; filterGrupo = 'all'; shown = PAGE;
     const si = $('#search'); if (si) si.value = '';
     const pb = $('#priceBand'); if (pb) pb.value = 'all';
     const so = $('#sortBy'); if (so) so.value = 'rel';
+    const gf = $('#grupoFilter'); if (gf) gf.value = 'all';
   }
   function afterNav(push, urlParam, scroll) {
     if (push !== false) history[push === 'replace' ? 'replaceState' : 'pushState']({}, '', urlParam ? (BASE_URL + urlParam) : BASE_URL);
@@ -897,7 +937,7 @@
   /* ---------- init ---------- */
   window.__plate = plate;
   $('#ano').textContent = new Date().getFullYear();
-  renderSeries(); renderChips(); renderGrid(); refreshCounts();
+  renderSeries(); renderChips(); renderGrupos(); renderGrid(); refreshCounts();
   renderLinhasMenu(); renderLinhaHead();
   renderCarousel(); startCar(); renderContato(); renderDepo(); renderFaq();
   // deep-link: ?linha=Cardio ou ?tipo=acessorio já entram filtrados
@@ -922,13 +962,13 @@
       if (!items || !items.length) return;
       const live = items
         .filter(p => p && p.preco > 0 && !p.oculto)
-        .map(p => ({ id: p.id, codigo: p.codigo || '', nome: p.nome || '', serie: p.serie || 'Geral', tipo: p.tipo || 'maquina', imagem: p.imagem || '', imagens: Array.isArray(p.imagens) ? p.imagens : [], video: p.video || '', dims: p.dims || '', disp: p.disp || '', selo: p.selo || '', preco: Number(p.preco) || 0 }));
+        .map(p => ({ id: p.id, codigo: p.codigo || '', nome: p.nome || '', serie: p.serie || 'Geral', tipo: p.tipo || 'maquina', grupo: p.grupo || '', imagem: p.imagem || '', imagens: Array.isArray(p.imagens) ? p.imagens : [], video: p.video || '', dims: p.dims || '', disp: p.disp || '', selo: p.selo || '', preco: Number(p.preco) || 0 }));
       if (!live.length) return;
       PRODUCTS = live;
       if (data && data.banners && typeof data.banners === 'object') BANNERS = data.banners;   // banners por categoria
       if (data && data.carousel && typeof data.carousel === 'object') CAROUSEL = data.carousel;   // imagens do carrossel
       if (data && data.site && typeof data.site === 'object') SITEINFO = Object.assign(SITEINFO, data.site);   // contato/localização
-      renderSeries(); renderChips(); renderGrid(); refreshCounts(); renderLinhasMenu();
+      renderSeries(); renderChips(); renderGrupos(); renderGrid(); refreshCounts(); renderLinhasMenu();
       const tp = currentTipo(), dl = currentLinha();                    // re-aplica a vista com o catálogo ao vivo
       if (tp) goToTipo(tp, false, false); else if (dl) goToLinha(dl, false, false);
       renderLinhaHead(); renderCarousel(); renderContato(); renderDepo(); renderFaq(); applyWpp(); injectAnalytics();
