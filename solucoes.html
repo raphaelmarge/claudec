@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0B0B0F" />
+  <title>Soluções por segmento · Torque Fitness</title>
+  <meta name="description" content="Equipamentos Torque Fitness para academia, CrossFit, Pilates, hotéis, condomínios e personal trainer. Monte seu projeto e fale com um consultor." />
+  <link rel="canonical" href="https://raphaelmarge.github.io/claudec/solucoes.html" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Torque Fitness" />
+  <meta property="og:title" content="Soluções por segmento · Torque Fitness" />
+  <meta property="og:description" content="Equipamentos para cada tipo de negócio fitness." />
+  <meta property="og:url" content="https://raphaelmarge.github.io/claudec/solucoes.html" />
+  <meta property="og:image" content="https://raphaelmarge.github.io/claudec/assets/og.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/site.css?v=20260627s" />
+  <style>
+    .seg{max-width:980px;margin:0 auto;padding:30px 20px 60px}
+    .seg__back{display:inline-flex;gap:6px;color:var(--txt-dim);font-size:.86rem;margin-bottom:18px}
+    .seg__back:hover{color:var(--violet)}
+    .seg__hero{background:linear-gradient(135deg,#14121c,#1e1733);border:1px solid var(--line);border-radius:20px;padding:36px 28px;position:relative;overflow:hidden}
+    .seg__hero::after{content:"";position:absolute;inset:0;background:radial-gradient(680px 280px at 88% -30%,var(--violet-glow),transparent);pointer-events:none}
+    .seg__tag{position:relative;z-index:1;display:inline-block;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--violet);font-weight:700;border:1px solid var(--line-2);padding:5px 12px;border-radius:999px;background:rgba(11,11,15,.4)}
+    .seg__hero h1{position:relative;z-index:1;font-size:2.2rem;line-height:1.1;margin:16px 0 0;font-weight:900}
+    .seg__hero p{position:relative;z-index:1;color:var(--txt-dim);font-size:1.06rem;line-height:1.55;margin:14px 0 0;max-width:640px}
+    .seg__cta{position:relative;z-index:1;display:flex;gap:12px;flex-wrap:wrap;margin-top:26px}
+    .seg__pts{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;margin:28px 0}
+    .seg__pt{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+    .seg__pt b{display:block;margin-bottom:4px}
+    .seg__pt span{color:var(--txt-dim);font-size:.92rem;line-height:1.5}
+    .seg__links{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0 0}
+    .seg__h2{font-size:1.4rem;margin:30px 0 6px}
+    .seglist{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-top:24px}
+    .segcard{display:block;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px;transition:border-color .15s,transform .12s}
+    .segcard:hover{border-color:var(--violet);transform:translateY(-2px)}
+    .segcard__ic{font-size:1.8rem}
+    .segcard h2{font-size:1.15rem;margin:10px 0 6px}
+    .segcard p{color:var(--txt-dim);font-size:.9rem;margin:0;line-height:1.5}
+  </style>
+</head>
+<body>
+  <header class="nav" id="nav">
+    <a class="nav__brand" href="./">
+      <svg viewBox="0 0 227 271" class="nav__mark"><g transform="translate(0,271) scale(0.1,-0.1)"><path d="M130 2617 c-50 -26 -50 -19 -50 -685 0 -686 -2 -669 61 -691 34 -12 367 -14 406 -3 12 4 105 84 205 178 533 498 494 463 524 455 38 -10 70 -54 58 -81 -5 -11 -268 -262 -584 -558 -586 -547 -620 -584 -652 -682 -6 -19 -13 -125 -15 -236 -6 -224 -3 -234 62 -234 30 0 96 59 706 630 601 563 677 630 703 628 18 -2 37 -14 50 -31 19 -26 19 -30 5 -55 -8 -15 -289 -283 -624 -597 l-609 -570 887 -3 c609 -1 894 1 908 8 19 11 20 24 17 973 -3 944 -4 963 -24 1023 -88 255 -268 427 -539 511 l-90 27 -690 3 c-546 3 -695 1 -715 -10z"/></g></svg>
+      <span><strong>TORQUE FITNESS</strong><em>EQUIPAMENTOS</em></span>
+    </a>
+    <div class="nav__actions">
+      <a class="nav__vendor" href="./">← Voltar ao site</a>
+    </div>
+  </header>
+
+  <main class="seg" id="seg"><p style="color:var(--txt-dim);padding:40px 0">Carregando…</p></main>
+
+  <script src="js/config.js?v=20260627s"></script>
+  <script>
+    (function () {
+      var $ = function (s) { return document.querySelector(s); };
+      var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); };
+      var WPP = '';
+      var SEG = {
+        'academia': { ic: '🏋️', tag: 'Academia', h1: 'Equipamentos para montar uma academia completa',
+          sub: 'Musculação, cardio e funcional de padrão comercial para academias de bairro e completas, com alta durabilidade e parcelamento facilitado.',
+          desc: 'Equipamentos profissionais para montar academia de bairro ou completa: musculação, cardio e funcional Torque Fitness.',
+          pts: [['Musculação completa', 'Estações de força para todos os grupos musculares.'], ['Cardio de academia', 'Esteiras, bikes e elípticos para alta rotatividade.'], ['Uso intenso', 'Equipamentos robustos, feitos para aguentar o dia a dia.'], ['Parcelamento', 'Condições facilitadas em até 48×.']],
+          links: [['Ver equipamentos', 'index.html#produtos'], ['Máquinas', 'index.html?tipo=maquina']] },
+        'crossfit': { ic: '🤸', tag: 'CrossFit', h1: 'Equipamentos para CrossFit e Cross Training',
+          sub: 'Monte seu box com racks, barras, anilhas, kettlebells, cordas e tudo para treinos de alta intensidade.',
+          desc: 'Equipamentos para CrossFit e cross training: racks, barras, anilhas, kettlebells e acessórios funcionais Torque Fitness.',
+          pts: [['Funcional e livre', 'Acessórios e pesos livres para WODs e treinos intensos.'], ['Resistência', 'Equipamentos para uso pesado e contínuo.'], ['Espaço otimizado', 'Soluções para aproveitar bem a área do box.'], ['Projeto sob medida', 'Ajudamos a dimensionar o seu box.']],
+          links: [['Acessórios & funcional', 'index.html?tipo=acessorio'], ['Ver tudo', 'index.html#produtos']] },
+        'pilates': { ic: '🧘', tag: 'Pilates', h1: 'Equipamentos para studio de Pilates',
+          sub: 'Aparelhos e acessórios para montar seu studio de Pilates com qualidade e conforto para os alunos.',
+          desc: 'Equipamentos para studio de Pilates: aparelhos e acessórios Torque Fitness. Monte seu studio com qualidade.',
+          pts: [['Linha Pilates', 'Aparelhos pensados para o método.'], ['Conforto e segurança', 'Acabamento de qualidade para os alunos.'], ['Studio completo', 'Tudo para abrir ou renovar seu espaço.'], ['Atendimento consultivo', 'Orientação para o seu projeto.']],
+          links: [['Ver linha Pilates', 'index.html?linha=Pilates'], ['Ver tudo', 'index.html#produtos']] },
+        'hoteis-condominios': { ic: '🏢', tag: 'Hotéis & Condomínios', h1: 'Academia para hotéis e condomínios',
+          sub: 'Espaços fitness compactos e completos para hotéis, condomínios e empresas, com manutenção simples e ótimo custo-benefício.',
+          desc: 'Equipamentos para academia de hotel, condomínio e empresa: soluções compactas e duráveis Torque Fitness.',
+          pts: [['Compacto e completo', 'Aproveita bem espaços menores.'], ['Baixa manutenção', 'Equipamentos confiáveis para uso coletivo.'], ['Valoriza o imóvel', 'Um diferencial para moradores e hóspedes.'], ['Projeto pronto', 'Montamos o mix ideal para o seu espaço.']],
+          links: [['Ver equipamentos', 'index.html#produtos'], ['Máquinas', 'index.html?tipo=maquina']] },
+        'personal': { ic: '💪', tag: 'Personal Trainer', h1: 'Equipamentos para personal trainer e studio',
+          sub: 'Monte seu studio de personal com os equipamentos certos para atender com qualidade e se diferenciar.',
+          desc: 'Equipamentos para personal trainer e studio de treinamento: musculação, funcional e acessórios Torque Fitness.',
+          pts: [['Studio enxuto e eficiente', 'O essencial para atender bem.'], ['Versatilidade', 'Musculação e funcional num só espaço.'], ['Imagem profissional', 'Equipamentos que valorizam o seu serviço.'], ['Cresça por etapas', 'Comece com o básico e amplie depois.']],
+          links: [['Ver equipamentos', 'index.html#produtos'], ['Acessórios', 'index.html?tipo=acessorio']] }
+      };
+
+      function wpp(texto) { var n = String(WPP || '').replace(/\D/g, ''); return (n ? 'https://wa.me/' + n : 'https://wa.me/') + '?text=' + encodeURIComponent(texto); }
+
+      function renderSegment(key, s) {
+        document.title = s.h1 + ' · Torque Fitness';
+        var m = document.querySelector('meta[name="description"]'); if (m) m.content = s.desc;
+        var can = document.querySelector('link[rel="canonical"]'); if (can) can.href = 'https://raphaelmarge.github.io/claudec/solucoes.html?s=' + key;
+        var pts = s.pts.map(function (p) { return '<div class="seg__pt"><b>' + esc(p[0]) + '</b><span>' + esc(p[1]) + '</span></div>'; }).join('');
+        var links = s.links.map(function (l) { return '<a class="btn btn--ghost" href="' + esc(l[1]) + '">' + esc(l[0]) + '</a>'; }).join('');
+        $('#seg').innerHTML =
+          '<a class="seg__back" href="solucoes.html">← Todas as soluções</a>' +
+          '<div class="seg__hero"><span class="seg__tag">' + esc(s.tag) + '</span><h1>' + esc(s.h1) + '</h1><p>' + esc(s.sub) + '</p>' +
+          '<div class="seg__cta"><a class="btn btn--primary" href="' + esc(wpp('Olá! Quero equipar um(a) ' + s.tag + '. Pode me ajudar?')) + '" target="_blank" rel="noopener">📱 Falar no WhatsApp</a>' +
+          '<a class="btn btn--ghost" href="index.html#produtos">Ver equipamentos</a></div></div>' +
+          '<h2 class="seg__h2">Por que a Torque Fitness</h2><div class="seg__pts">' + pts + '</div>' +
+          '<h2 class="seg__h2">Comece por aqui</h2><div class="seg__links">' + links + '</div>';
+        var ld = document.createElement('script'); ld.type = 'application/ld+json';
+        ld.textContent = JSON.stringify({ '@context': 'https://schema.org', '@type': 'Service', name: s.h1, description: s.desc, provider: { '@type': 'Organization', name: 'Torque Fitness' }, areaServed: 'BR' });
+        document.head.appendChild(ld);
+      }
+      function renderList() {
+        var cards = Object.keys(SEG).map(function (k) { var s = SEG[k];
+          return '<a class="segcard" href="solucoes.html?s=' + k + '"><div class="segcard__ic">' + s.ic + '</div><h2>' + esc(s.h1) + '</h2><p>' + esc(s.sub) + '</p></a>';
+        }).join('');
+        $('#seg').innerHTML = '<a class="seg__back" href="./">← Voltar ao site</a><h1 style="font-size:2rem;margin:0 0 6px">Soluções por segmento</h1><p style="color:var(--txt-dim);margin:0 0 8px">Encontramos o equipamento certo para o seu tipo de negócio.</p><div class="seglist">' + cards + '</div>';
+      }
+      function route() {
+        var k = new URLSearchParams(location.search).get('s');
+        if (k && SEG[k]) renderSegment(k, SEG[k]); else renderList();
+      }
+      (function load() {
+        var cfg = window.TORQUE_SUPABASE;
+        if (!cfg || !cfg.url) { route(); return; }
+        fetch(cfg.url.replace(/\/+$/, '') + '/storage/v1/object/public/produtos/catalog.json?t=' + Date.now())
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .then(function (d) { WPP = (d && d.site && d.site.whatsapp) || ''; route(); })
+          .catch(function () { route(); });
+      })();
+    })();
+  </script>
+</body>
+</html>

@@ -2,6 +2,12 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://raphaelmarge.github.io/claudec/</loc><lastmod>2026-06-28</lastmod><changefreq>weekly</changefreq><priority>1.0</priority></url>
   <url><loc>https://raphaelmarge.github.io/claudec/blog.html</loc><lastmod>2026-06-28</lastmod><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://raphaelmarge.github.io/claudec/solucoes.html</loc><lastmod>2026-06-28</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://raphaelmarge.github.io/claudec/solucoes.html?s=academia</loc><lastmod>2026-06-28</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://raphaelmarge.github.io/claudec/solucoes.html?s=crossfit</loc><lastmod>2026-06-28</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://raphaelmarge.github.io/claudec/solucoes.html?s=pilates</loc><lastmod>2026-06-28</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://raphaelmarge.github.io/claudec/solucoes.html?s=hoteis-condominios</loc><lastmod>2026-06-28</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://raphaelmarge.github.io/claudec/solucoes.html?s=personal</loc><lastmod>2026-06-28</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://raphaelmarge.github.io/claudec/?tipo=maquina</loc><lastmod>2026-06-28</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://raphaelmarge.github.io/claudec/?tipo=acessorio</loc><lastmod>2026-06-28</lastmod><changefreq>weekly</changefreq><priority>0.7</priority></url>
   <url><loc>https://raphaelmarge.github.io/claudec/?linha=A7%20Series</loc><lastmod>2026-06-28</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>
