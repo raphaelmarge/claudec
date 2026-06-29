@@ -32,7 +32,7 @@
   let BANNERS = {};         // imagens de banner por categoria (nome → URL), vindas do catalog.json
   const bannerImg = nome => BANNERS[nome] || '';
   // dados de localização/contato (default + ao vivo via catalog.json → data.site)
-  let SITEINFO = Object.assign({ endereco: '', mapsUrl: '', telefone: '', whatsapp: SITE.whatsapp || '', email: '', horario: '', gaId: '', metaPixel: '' }, window.TORQUE_SITE_INFO || {});
+  let SITEINFO = Object.assign({ endereco: '', mapsUrl: '', telefone: '', whatsapp: SITE.whatsapp || '', email: '', horario: '', gaId: '', metaPixel: '', faq: [], depoimentos: [] }, window.TORQUE_SITE_INFO || {});
   let CAROUSEL = {};        // imagem por slide do carrossel (id → URL), vinda do catalog.json
   let query = '';
   let priceBand = 'all';
@@ -548,6 +548,37 @@
     return n ? `https://wa.me/${n}?text=${m}` : `https://wa.me/?text=${m}`;
   }
   function applyWpp() { const el = $('#wppFloat'); if (el) el.href = wppHref(); }
+  // depoimentos (prova social)
+  function renderDepo() {
+    const sec = $('#depoimentos'); if (!sec) return;
+    const arr = Array.isArray(SITEINFO.depoimentos) ? SITEINFO.depoimentos : [];
+    if (!arr.length) { sec.hidden = true; return; }
+    sec.hidden = false;
+    $('#depoGrid').innerHTML = arr.map(d => `<figure class="depocard"><blockquote>“${esc(d.texto)}”</blockquote><figcaption><b>${esc(d.nome || 'Cliente')}</b>${d.local ? `<span>${esc(d.local)}</span>` : ''}</figcaption></figure>`).join('');
+  }
+  // FAQ + dados estruturados (FAQPage no Google)
+  function setFaqLd(arr) {
+    let s = document.getElementById('ldFaq');
+    if (!arr || !arr.length) { if (s) s.remove(); return; }
+    if (!s) { s = document.createElement('script'); s.type = 'application/ld+json'; s.id = 'ldFaq'; document.head.appendChild(s); }
+    s.textContent = JSON.stringify({ '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: arr.map(f => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) });
+  }
+  function renderFaq() {
+    const sec = $('#faq'); if (!sec) return;
+    const arr = Array.isArray(SITEINFO.faq) ? SITEINFO.faq : [];
+    if (!arr.length) { sec.hidden = true; setFaqLd(null); return; }
+    sec.hidden = false;
+    $('#faqList').innerHTML = arr.map((f, i) => `<div class="faqitem"><button class="faqitem__q" type="button" data-faq="${i}" aria-expanded="false">${esc(f.q)}<span class="faqitem__chev">▾</span></button><div class="faqitem__a" hidden>${esc(f.a)}</div></div>`).join('');
+    setFaqLd(arr);
+  }
+  (function wireFaq() {
+    const list = $('#faqList'); if (!list) return;
+    list.addEventListener('click', e => {
+      const b = e.target.closest('[data-faq]'); if (!b) return;
+      const a = b.nextElementSibling; const abrir = a.hidden;
+      a.hidden = !abrir; b.setAttribute('aria-expanded', String(abrir)); b.classList.toggle('on', abrir);
+    });
+  })();
   // Analytics/Pixel: injeta o Google Analytics 4 e/ou o Meta Pixel quando os IDs estão configurados
   let analyticsDone = false;
   function injectAnalytics() {
@@ -749,7 +780,7 @@
   $('#ano').textContent = new Date().getFullYear();
   renderSeries(); renderChips(); renderGrid(); refreshCounts();
   renderLinhasMenu(); renderLinhaHead();
-  renderCarousel(); startCar(); renderContato();
+  renderCarousel(); startCar(); renderContato(); renderDepo(); renderFaq();
   // deep-link: ?linha=Cardio ou ?tipo=acessorio já entram filtrados
   (function initView() {
     const tp = currentTipo(), dl = currentLinha();
@@ -781,7 +812,7 @@
       renderSeries(); renderChips(); renderGrid(); refreshCounts(); renderLinhasMenu();
       const tp = currentTipo(), dl = currentLinha();                    // re-aplica a vista com o catálogo ao vivo
       if (tp) goToTipo(tp, false, false); else if (dl) goToLinha(dl, false, false);
-      renderLinhaHead(); renderCarousel(); renderContato(); applyWpp(); injectAnalytics();
+      renderLinhaHead(); renderCarousel(); renderContato(); renderDepo(); renderFaq(); applyWpp(); injectAnalytics();
     } catch (e) { /* offline ou bucket vazio → mantém o catálogo embutido */ }
   }
   loadLiveCatalog();

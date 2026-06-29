@@ -97,7 +97,7 @@
      fiscais (custo/margem) nunca saem daqui. Degrada para
      localStorage se a tabela não existir.
      ------------------------------------------------------------ */
-  const SHARED_PARAM_KEYS = ['parcelasMax', 'juros', 'validade', 'stages', 'metas', 'linhas', 'linhaBanners', 'contato', 'carousel', 'comissao', 'kits', 'descontoMaxVendedor'];
+  const SHARED_PARAM_KEYS = ['parcelasMax', 'juros', 'validade', 'stages', 'metas', 'linhas', 'linhaBanners', 'contato', 'carousel', 'comissao', 'kits', 'descontoMaxVendedor', 'faq', 'depoimentos'];
   const SETTINGS_SQL =
     "create table if not exists public.settings (\n" +
     "  id int primary key default 1,\n" +
@@ -144,7 +144,9 @@
     return {
       endereco: c.endereco || '', mapsUrl: c.mapsUrl || '', telefone: c.telefone || '',
       whatsapp: c.whatsapp || '', email: c.email || '', horario: c.horario || '',
-      gaId: c.gaId || '', metaPixel: c.metaPixel || ''
+      gaId: c.gaId || '', metaPixel: c.metaPixel || '',
+      faq: (Array.isArray(P().faq) ? P().faq : []).filter(x => x && (x.q || '').trim()).map(x => ({ q: x.q || '', a: x.a || '' })),
+      depoimentos: (Array.isArray(P().depoimentos) ? P().depoimentos : []).filter(x => x && (x.texto || '').trim()).map(x => ({ nome: x.nome || '', local: x.local || '', texto: x.texto || '' }))
     };
   }
   function applyCatalog(remote) {
@@ -398,6 +400,8 @@
     renderLinhasEditor();
     renderCarouselEditor();
     renderContatoEditor();
+    renderFaqEditor();
+    renderDepoEditor();
     renderVendEditor();
     renderSyncStatus();
     $('#configPanel').hidden = state.mode !== 'admin';
@@ -687,6 +691,72 @@
       const rm = e.target.closest('[data-car-rm]');
       if (rm) { const c = P().carousel || {}; delete c[rm.dataset.carRm]; P().carousel = c; save(); schedulePushSettings(); renderCarouselEditor(); toast('Imagem removida.'); return; }
     });
+  })();
+
+  // ---- editor de FAQ (perguntas frequentes) ----
+  const faqArr = () => Array.isArray(P().faq) ? P().faq : (P().faq = []);
+  function renderFaqEditor() {
+    const box = $('#faqEditor'); if (!box) return;
+    if (box.contains(document.activeElement)) return;
+    const arr = faqArr();
+    box.innerHTML = arr.length ? arr.map((f, i) => `
+      <div class="qarow" data-i="${i}">
+        <input class="qarow__q" data-faq-q="${i}" type="text" value="${esc(f.q || '')}" placeholder="Pergunta" />
+        <textarea class="qarow__a" data-faq-a="${i}" rows="2" placeholder="Resposta">${esc(f.a || '')}</textarea>
+        <button class="qarow__x" type="button" data-faq-rm="${i}" title="Remover">✕</button>
+      </div>`).join('') : '<p class="atv__empty">Nenhuma pergunta ainda.</p>';
+  }
+  (function wireFaqEditor() {
+    const box = $('#faqEditor'); if (!box) return;
+    box.addEventListener('input', e => {
+      const q = e.target.closest('[data-faq-q]'), a = e.target.closest('[data-faq-a]');
+      if (!q && !a) return;
+      const i = parseInt((q || a).dataset.faqQ || (q || a).dataset.faqA, 10);
+      if (!faqArr()[i]) faqArr()[i] = { q: '', a: '' };
+      if (q) faqArr()[i].q = q.value;
+      if (a) faqArr()[i].a = a.value;
+      save(); schedulePushSettings();
+    });
+    box.addEventListener('click', e => {
+      const rm = e.target.closest('[data-faq-rm]'); if (!rm) return;
+      faqArr().splice(parseInt(rm.dataset.faqRm, 10), 1); save(); schedulePushSettings(); renderFaqEditor();
+    });
+    const add = $('#btnAddFaq');
+    if (add) add.addEventListener('click', () => { faqArr().push({ q: '', a: '' }); save(); renderFaqEditor(); });
+  })();
+
+  // ---- editor de DEPOIMENTOS ----
+  const depoArr = () => Array.isArray(P().depoimentos) ? P().depoimentos : (P().depoimentos = []);
+  function renderDepoEditor() {
+    const box = $('#depoEditor'); if (!box) return;
+    if (box.contains(document.activeElement)) return;
+    const arr = depoArr();
+    box.innerHTML = arr.length ? arr.map((d, i) => `
+      <div class="qarow" data-i="${i}">
+        <textarea class="qarow__a" data-depo-texto="${i}" rows="2" placeholder="Depoimento do cliente">${esc(d.texto || '')}</textarea>
+        <input class="qarow__q" data-depo-nome="${i}" type="text" value="${esc(d.nome || '')}" placeholder="Nome" />
+        <input class="qarow__q" data-depo-local="${i}" type="text" value="${esc(d.local || '')}" placeholder="Academia / cidade" />
+        <button class="qarow__x" type="button" data-depo-rm="${i}" title="Remover">✕</button>
+      </div>`).join('') : '<p class="atv__empty">Nenhum depoimento ainda.</p>';
+  }
+  (function wireDepoEditor() {
+    const box = $('#depoEditor'); if (!box) return;
+    box.addEventListener('input', e => {
+      const t = e.target.closest('[data-depo-texto]'), n = e.target.closest('[data-depo-nome]'), l = e.target.closest('[data-depo-local]');
+      const el = t || n || l; if (!el) return;
+      const i = parseInt(el.dataset.depoTexto || el.dataset.depoNome || el.dataset.depoLocal, 10);
+      if (!depoArr()[i]) depoArr()[i] = { nome: '', local: '', texto: '' };
+      if (t) depoArr()[i].texto = t.value;
+      if (n) depoArr()[i].nome = n.value;
+      if (l) depoArr()[i].local = l.value;
+      save(); schedulePushSettings();
+    });
+    box.addEventListener('click', e => {
+      const rm = e.target.closest('[data-depo-rm]'); if (!rm) return;
+      depoArr().splice(parseInt(rm.dataset.depoRm, 10), 1); save(); schedulePushSettings(); renderDepoEditor();
+    });
+    const add = $('#btnAddDepo');
+    if (add) add.addEventListener('click', () => { depoArr().push({ nome: '', local: '', texto: '' }); save(); renderDepoEditor(); });
   })();
 
   // ---- gestão de EQUIPE (vendedores): promover/rebaixar e ativar/desativar ----
