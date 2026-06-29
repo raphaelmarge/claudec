@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0B0B0F" />
+  <title>Perguntas frequentes · Torque Fitness</title>
+  <meta name="description" content="Tire suas dúvidas sobre prazo de entrega, garantia, formas de pagamento, montagem da academia e como fazer um orçamento com a Torque Fitness." />
+  <link rel="canonical" href="https://raphaelmarge.github.io/claudec/faq.html" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Torque Fitness" />
+  <meta property="og:title" content="Perguntas frequentes · Torque Fitness" />
+  <meta property="og:description" content="Prazo de entrega, garantia, pagamento, montagem e orçamento — tire suas dúvidas." />
+  <meta property="og:url" content="https://raphaelmarge.github.io/claudec/faq.html" />
+  <meta property="og:image" content="https://raphaelmarge.github.io/claudec/assets/og.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/site.css?v=20260627v" />
+  <style>
+    .faqpage{max-width:820px;margin:0 auto;padding:34px 20px 60px}
+    .faqpage__back{display:inline-flex;align-items:center;gap:6px;color:var(--txt-dim);font-size:.86rem;margin-bottom:20px}
+    .faqpage__back:hover{color:var(--violet)}
+    .faqpage h1{font-size:2.2rem;line-height:1.1;margin:0 0 6px}
+    .faqpage__lead{color:var(--txt-dim);margin:0 0 26px}
+    .faqpage__list{display:grid;gap:10px}
+    .faqpage__cta{margin-top:34px;padding-top:24px;border-top:1px solid var(--line);display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+    .faqpage__cta p{margin:0 8px 0 0;color:var(--txt-dim)}
+    .faqpage__empty{color:var(--txt-dim);text-align:center;padding:50px 0}
+  </style>
+</head>
+<body>
+  <header class="nav" id="nav">
+    <a class="nav__brand" href="./">
+      <svg viewBox="0 0 227 271" class="nav__mark"><g transform="translate(0,271) scale(0.1,-0.1)"><path d="M130 2617 c-50 -26 -50 -19 -50 -685 0 -686 -2 -669 61 -691 34 -12 367 -14 406 -3 12 4 105 84 205 178 533 498 494 463 524 455 38 -10 70 -54 58 -81 -5 -11 -268 -262 -584 -558 -586 -547 -620 -584 -652 -682 -6 -19 -13 -125 -15 -236 -6 -224 -3 -234 62 -234 30 0 96 59 706 630 601 563 677 630 703 628 18 -2 37 -14 50 -31 19 -26 19 -30 5 -55 -8 -15 -289 -283 -624 -597 l-609 -570 887 -3 c609 -1 894 1 908 8 19 11 20 24 17 973 -3 944 -4 963 -24 1023 -88 255 -268 427 -539 511 l-90 27 -690 3 c-546 3 -695 1 -715 -10z"/></g></svg>
+      <span><strong>TORQUE FITNESS</strong><em>EQUIPAMENTOS</em></span>
+    </a>
+    <div class="nav__actions">
+      <a class="nav__vendor" href="./">← Voltar ao site</a>
+    </div>
+  </header>
+
+  <main class="faqpage" id="faqpage">
+    <p class="faqpage__empty">Carregando…</p>
+  </main>
+
+  <script src="js/config.js?v=20260627v"></script>
+  <script>
+    (function () {
+      var $ = function (s, r) { return (r || document).querySelector(s); };
+      var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); };
+      var WPP = '';
+
+      // Perguntas frequentes padrão (espelham as da vitrine; usadas até o admin publicar as suas)
+      var DEFAULT_FAQ = [
+        { q: 'A Torque Fitness atende todo o Brasil?', a: 'Sim, atendemos todo o Brasil — de capitais a cidades do interior. O frete entra no orçamento de acordo com a cidade de entrega.' },
+        { q: 'Qual é o prazo de entrega dos equipamentos?', a: 'Os equipamentos são fabricados sob encomenda, com prazo médio de 100 a 120 dias após a confirmação do pedido. O prazo exato vai detalhado na sua proposta.' },
+        { q: 'Os equipamentos têm garantia?', a: 'Sim. Todos os equipamentos têm 1 ano de garantia contra defeitos de fabricação.' },
+        { q: 'Como funciona o parcelamento e quais as formas de pagamento?', a: 'Trabalhamos com diversas formas de pagamento e parcelamento, definidas conforme a análise e validação de crédito. Fale com o nosso time para encontrar a melhor condição para o seu caso.' },
+        { q: 'Vocês ajudam a montar a academia (mix de equipamentos e layout)?', a: 'Sim. Temos parcerias com escritórios de arquitetura e empreiteiras para ajudar no layout, na obra e na montagem da academia — do projeto à instalação dos equipamentos.' },
+        { q: 'Qual o investimento para montar uma academia?', a: 'O investimento depende principalmente da metragem (m²) da academia, do público e do mix de equipamentos. Monte um orçamento aqui no site ou fale conosco para uma estimativa sob medida.' },
+        { q: 'Os equipamentos são para uso profissional e intenso?', a: 'Sim. Todos os nossos equipamentos são desenvolvidos para uso profissional e intenso, prontos para a alta rotatividade de uma academia comercial.' },
+        { q: 'Vocês oferecem assistência técnica e reposição de peças?', a: 'Sim, oferecemos assistência técnica e reposição de peças das nossas linhas. Em caso de necessidade, fale com o nosso atendimento com o código do equipamento em mãos.' },
+        { q: 'Vendem para pessoa física ou apenas para empresas (CNPJ)?', a: 'Atendemos tanto CNPJ quanto CPF — academias, empresas, personal trainers e pessoa física.' },
+        { q: 'Como faço um orçamento?', a: 'É só entrar em contato pelo WhatsApp ou montar o seu orçamento aqui mesmo no site, escolhendo os equipamentos no catálogo. Nosso time retorna com valores, prazos e condições.' }
+      ];
+
+      function setFaqLd(arr) {
+        var s = document.createElement('script'); s.type = 'application/ld+json';
+        s.textContent = JSON.stringify({ '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: arr.map(function (f) { return { '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } }; }) });
+        document.head.appendChild(s);
+      }
+
+      function render(arr) {
+        var items = arr.map(function (f, i) {
+          return '<div class="faqitem"><button class="faqitem__q" type="button" data-faq="' + i + '" aria-expanded="false">' + esc(f.q) + '<span class="faqitem__chev">▾</span></button><div class="faqitem__a" hidden>' + esc(f.a) + '</div></div>';
+        }).join('');
+        var n = WPP.replace(/\D/g, '');
+        var wppHref = (n ? 'https://wa.me/' + n : 'https://wa.me/') + '?text=' + encodeURIComponent('Olá! Tenho uma dúvida sobre os equipamentos da Torque Fitness.');
+        $('#faqpage').innerHTML =
+          '<a class="faqpage__back" href="./">← Voltar ao site</a>' +
+          '<h1>Perguntas frequentes</h1>' +
+          '<p class="faqpage__lead">As dúvidas mais comuns sobre prazo, garantia, pagamento e como montar a sua academia com a Torque Fitness.</p>' +
+          '<div class="faqpage__list">' + items + '</div>' +
+          '<div class="faqpage__cta"><p>Não encontrou o que procurava?</p>' +
+          '<a class="btn btn--primary" href="' + esc(wppHref) + '" target="_blank" rel="noopener">📱 Falar no WhatsApp</a>' +
+          '<a class="btn btn--ghost" href="./#produtos">Ver equipamentos</a></div>';
+        setFaqLd(arr);
+        $('#faqpage').addEventListener('click', function (e) {
+          var b = e.target.closest('[data-faq]'); if (!b) return;
+          var a = b.nextElementSibling; var abrir = a.hidden;
+          a.hidden = !abrir; b.setAttribute('aria-expanded', String(abrir)); b.classList.toggle('on', abrir);
+        });
+      }
+
+      (function load() {
+        var cfg = window.TORQUE_SUPABASE;
+        if (!cfg || !cfg.url) { render(DEFAULT_FAQ); return; }
+        var url = cfg.url.replace(/\/+$/, '') + '/storage/v1/object/public/produtos/catalog.json?t=' + Date.now();
+        fetch(url).then(function (r) { return r.ok ? r.json() : null; }).then(function (data) {
+          var site = (data && data.site) || {};
+          WPP = site.whatsapp || '';
+          var pub = (Array.isArray(site.faq) ? site.faq : []).filter(function (f) { return f && (f.q || '').trim(); });
+          render(pub.length ? pub : DEFAULT_FAQ);
+        }).catch(function () { render(DEFAULT_FAQ); });
+      })();
+    })();
+  </script>
+</body>
+</html>
