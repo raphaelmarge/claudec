@@ -443,12 +443,40 @@
       ? `<div class="pmodal__stepper" data-code="${esc(p.codigo)}"><button data-act="dec">−</button><input data-act="qty" inputmode="numeric" value="${q}"/><button data-act="inc">+</button></div>`
       : `<button class="pmodal__add" data-act="add" data-code="${esc(p.codigo)}">+ Adicionar ao orçamento</button>`;
   }
+  // extrai o ID de um vídeo do YouTube (vários formatos de link)
+  function ytId(url) {
+    if (!url) return '';
+    const s = String(url).trim();
+    const m = s.match(/(?:youtu\.be\/|[?&]v=|\/embed\/|\/shorts\/)([\w-]{11})/);
+    return m ? m[1] : (/^[\w-]{11}$/.test(s) ? s : '');
+  }
+  function galleryHTML(p) {
+    const imgs = [p.imagem, ...(Array.isArray(p.imagens) ? p.imagens : [])].filter(Boolean);
+    const vid = ytId(p.video);
+    const cover = imgs[0] || '';
+    const mainHTML = cover
+      ? `<img src="${esc(cover)}" alt="${esc(p.nome)}" decoding="async" onerror="this.replaceWith(document.createRange().createContextualFragment(window.__plate))"/>`
+      : plate;
+    if (imgs.length <= 1 && !vid) return mainHTML;   // só uma imagem → sem miniaturas
+    const thumbs = imgs.map((u, i) => `<button class="pmthumb ${i === 0 ? 'on' : ''}" type="button" data-img="${esc(u)}"><img src="${esc(u)}" alt="" loading="lazy" /></button>`).join('')
+      + (vid ? `<button class="pmthumb pmthumb--vid" type="button" data-vid="${esc(vid)}"><img src="https://img.youtube.com/vi/${vid}/mqdefault.jpg" alt="vídeo" loading="lazy" /><span class="pmthumb__play">▶</span></button>` : '');
+    return `<div class="pmgal"><div class="pmgal__main" id="pmgalMain">${mainHTML}</div><div class="pmgal__thumbs">${thumbs}</div></div>`;
+  }
+  (function wireGallery() {
+    const media = $('#pmMedia'); if (!media) return;
+    media.addEventListener('click', e => {
+      const main = $('#pmgalMain'); if (!main) return;
+      const it = e.target.closest('[data-img]'), vt = e.target.closest('[data-vid]');
+      if (it) { main.innerHTML = `<img src="${esc(it.dataset.img)}" alt="" decoding="async" />`; }
+      else if (vt) { main.innerHTML = `<div class="pmgal__video"><iframe src="https://www.youtube.com/embed/${esc(vt.dataset.vid)}?autoplay=1&rel=0" title="Vídeo do produto" frameborder="0" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe></div>`; }
+      else return;
+      $$('.pmthumb', media).forEach(t => t.classList.toggle('on', t === (it || vt)));
+    });
+  })();
   function openProd(code, push) {
     const p = byCode(code); if (!p) return;
     prodCode = code;
-    $('#pmMedia').innerHTML = p.imagem
-      ? `<img src="${esc(p.imagem)}" alt="${esc(p.nome)}" decoding="async" onerror="this.replaceWith(document.createRange().createContextualFragment(window.__plate))"/>`
-      : plate;
+    $('#pmMedia').innerHTML = galleryHTML(p);
     $('#pmSerie').textContent = p.serie || '';
     $('#pmNome').textContent = p.nome;
     $('#pmDims').textContent = p.dims ? 'Dimensões: ' + p.dims + ' mm' : '';
@@ -712,7 +740,7 @@
       if (!items || !items.length) return;
       const live = items
         .filter(p => p && p.preco > 0 && !p.oculto)
-        .map(p => ({ id: p.id, codigo: p.codigo || '', nome: p.nome || '', serie: p.serie || 'Geral', tipo: p.tipo || 'maquina', imagem: p.imagem || '', dims: p.dims || '', disp: p.disp || '', preco: Number(p.preco) || 0 }));
+        .map(p => ({ id: p.id, codigo: p.codigo || '', nome: p.nome || '', serie: p.serie || 'Geral', tipo: p.tipo || 'maquina', imagem: p.imagem || '', imagens: Array.isArray(p.imagens) ? p.imagens : [], video: p.video || '', dims: p.dims || '', disp: p.disp || '', preco: Number(p.preco) || 0 }));
       if (!live.length) return;
       PRODUCTS = live;
       if (data && data.banners && typeof data.banners === 'object') BANNERS = data.banners;   // banners por categoria

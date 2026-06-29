@@ -552,6 +552,11 @@ body[data-auth="out"] .login { display: flex; }
 .stagerow__dias input:focus { outline: none; border-color: var(--violet); box-shadow: 0 0 0 3px var(--violet-glow); }
 /* seletor de imagem do produto */
 .imgpick { display: flex; gap: 12px; align-items: flex-start; }
+.galpick { display: flex; flex-wrap: wrap; gap: 8px; }
+.galpick__item { position: relative; width: 66px; height: 66px; border: 1px solid var(--line-2); border-radius: 9px; overflow: hidden; }
+.galpick__item img { width: 100%; height: 100%; object-fit: cover; }
+.galpick__x { position: absolute; top: 2px; right: 2px; width: 19px; height: 19px; border: none; border-radius: 50%; background: rgba(0,0,0,.65); color: #fff; font-size: .7rem; cursor: pointer; line-height: 1; display: flex; align-items: center; justify-content: center; }
+.galpick__empty { color: var(--txt-mut); font-size: .82rem; }
 .imgpick__preview { width: 84px; height: 84px; object-fit: cover; border-radius: 10px; border: 1px solid var(--line-2); background: #fff; flex: 0 0 auto; }
 .imgpick__ph { width: 84px; height: 84px; border-radius: 10px; border: 1px dashed var(--line-2); color: var(--txt-dim); font-size: .68rem; display: flex; align-items: center; justify-content: center; text-align: center; flex: 0 0 auto; }
 .imgpick__body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 8px; }

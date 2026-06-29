@@ -121,6 +121,8 @@
     return state.products.map(p => ({
       id: p.id, codigo: p.codigo || '', nome: p.nome || '', serie: p.serie || 'Geral', tipo: p.tipo || 'maquina',
       imagem: (p.imagem && !String(p.imagem).startsWith('data:')) ? p.imagem : '',
+      imagens: Array.isArray(p.imagens) ? p.imagens.filter(u => u && !String(u).startsWith('data:')) : [],
+      video: p.video || '',
       dims: p.dims || '', disp: p.disp || '', preco: Number(p.preco) || 0, oculto: !!p.oculto, travado: !!p.travado
     }));
   }
@@ -153,6 +155,8 @@
       return {
         id: p.id || old.id || uid(), codigo: p.codigo || '', nome: p.nome || '', serie: p.serie || 'Geral', tipo: p.tipo || 'maquina',
         imagem: p.imagem || old.imagem || '',   // imagem vazia do servidor NÃO apaga a foto local existente
+        imagens: (Array.isArray(p.imagens) && p.imagens.length) ? p.imagens : (old.imagens || []),
+        video: p.video || old.video || '',
         dims: p.dims || '', disp: p.disp || old.disp || '', preco: Number(p.preco) || 0,
         margem: null, travado: !!p.travado, oculto: !!p.oculto
       };
@@ -1083,6 +1087,9 @@
     $('#edCusto').value = (p && temCusto(p)) ? fobDe(p) : '';
     $('#edDims').value = p ? (p.dims || '') : '';
     $('#edDisp') && ($('#edDisp').value = p ? (p.disp || '') : '');
+    edGaleria = (p && Array.isArray(p.imagens)) ? p.imagens.slice() : [];
+    renderEdGaleria();
+    $('#edVideo') && ($('#edVideo').value = p ? (p.video || '') : '');
     $('#edMargem').value = (p && p.margem != null) ? p.margem : '';
     // mostra o preço atual quando ele é travado OU quando não há custo para recalcular
     // (produtos do catálogo público têm preço direto, sem custo) — evita o campo vir vazio
@@ -1101,6 +1108,8 @@
       imagem: $('#edImagem').value.trim(),
       dims: $('#edDims').value.trim(),
       disp: ($('#edDisp') && $('#edDisp').value.trim()) || '',
+      imagens: edGaleria.slice(),
+      video: ($('#edVideo') && $('#edVideo').value.trim()) || '',
       fob: num($('#edCusto').value) || 0,
       margem: $('#edMargem').value === '' ? null : (num($('#edMargem').value) || 0),
       precoInput: $('#edPreco').value === '' ? null : (num($('#edPreco').value) || 0),
@@ -1168,12 +1177,39 @@
     finally { btn.disabled = false; btn.textContent = old; }
   });
 
+  // ---- galeria de fotos extras do produto ----
+  let edGaleria = [];
+  function renderEdGaleria() {
+    const box = $('#edGaleria'); if (!box) return;
+    box.innerHTML = edGaleria.length
+      ? edGaleria.map((u, i) => `<div class="galpick__item"><img src="${esc(u)}" alt="" /><button type="button" class="galpick__x" data-gal-rm="${i}" title="Remover">✕</button></div>`).join('')
+      : '<span class="galpick__empty">Nenhuma foto extra.</span>';
+  }
+  if ($('#edGaleria')) $('#edGaleria').addEventListener('click', e => {
+    const rm = e.target.closest('[data-gal-rm]'); if (!rm) return;
+    edGaleria.splice(parseInt(rm.dataset.galRm, 10), 1); renderEdGaleria();
+  });
+  if ($('#btnAddFoto')) $('#btnAddFoto').addEventListener('click', () => $('#edFotoFile').click());
+  if ($('#edFotoFile')) $('#edFotoFile').addEventListener('change', async e => {
+    const file = e.target.files && e.target.files[0]; e.target.value = '';
+    if (!file) return;
+    const btn = $('#btnAddFoto'), old = btn.textContent; btn.disabled = true; btn.textContent = 'Enviando…';
+    try {
+      const { blob, dataUrl } = await resizeImage(file, 1000, 0.72);
+      let url = dataUrl, naNuvem = false;
+      try { url = await Cloud.uploadProductImage(blob, 'jpg'); naNuvem = true; } catch (err) { console.warn('Storage:', err); }
+      edGaleria.push(url); renderEdGaleria();
+      toast(naNuvem ? 'Foto adicionada.' : 'Foto local — ative o Storage para aparecer no site.');
+    } catch (err) { console.error(err); toast('Não foi possível ler a imagem.'); }
+    finally { btn.disabled = false; btn.textContent = old; }
+  });
+
   $('#btnSaveProduct').addEventListener('click', () => {
     const f = readEditForm();
     if (!f.nome) { toast('Informe o nome do produto.'); return; }
     const p = editingId ? state.products.find(x => x.id === editingId) : { id: uid() };
     p.codigo = f.codigo; p.serie = f.serie; p.tipo = f.tipo; p.nome = f.nome; p.imagem = f.imagem;
-    p.dims = f.dims; p.disp = f.disp; p.fob = f.fob; p.margem = f.margem; p.oculto = f.oculto;
+    p.dims = f.dims; p.disp = f.disp; p.imagens = f.imagens; p.video = f.video; p.fob = f.fob; p.margem = f.margem; p.oculto = f.oculto;
     if (f.precoInput != null) { p.preco = f.precoInput; p.travado = true; }   // preço travado manual
     else if (custoBRL(f) > 0) { p.travado = false; p.preco = r2(precoCalculado(p)); }  // automático a partir do custo
     else { p.travado = false; if (p.preco == null) p.preco = 0; }             // sem custo nem preço digitado: preserva o preço atual
