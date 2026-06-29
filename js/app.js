@@ -701,6 +701,20 @@
   })();
 
   // ---- editor de FAQ (perguntas frequentes) ----
+  // Perguntas frequentes sugeridas (dúvidas mais comuns em sites de equipamentos
+  // de academia). Enquanto o admin não publica as suas, estas aparecem no site.
+  const FAQ_SUG = [
+    { q: 'A Torque Fitness atende todo o Brasil?', a: 'Sim. Atendemos academias, studios, condomínios, hotéis e personal trainers em todo o território nacional. O frete é calculado conforme a cidade de entrega e já entra no orçamento.' },
+    { q: 'Qual é o prazo de entrega dos equipamentos?', a: 'Depende da disponibilidade de cada item: produtos em pronta entrega saem em poucos dias úteis e os itens sob fabricação seguem o prazo informado na proposta. A disponibilidade aparece na ficha de cada equipamento.' },
+    { q: 'Os equipamentos têm garantia?', a: 'Sim. Todos têm garantia contra defeitos de fabricação, com prazo e condições detalhados na proposta. Estrutura e solda costumam ter cobertura estendida em relação às peças de desgaste.' },
+    { q: 'Como funciona o parcelamento e quais as formas de pagamento?', a: 'A compra pode ser parcelada — o número de parcelas e o valor já aparecem no orçamento. Trabalhamos com cartão, boleto/PIX e condições especiais para academia completa. Fale com o nosso time para a melhor condição.' },
+    { q: 'Vocês ajudam a montar a academia (mix de equipamentos e layout)?', a: 'Sim. Ajudamos a escolher os equipamentos conforme o seu espaço, público e orçamento. Use o "Monte sua academia" no site ou peça um projeto personalizado pelo WhatsApp.' },
+    { q: 'Qual o investimento para montar uma academia?', a: 'Varia conforme o tamanho do espaço, o público e a quantidade de equipamentos. Dá para começar com um pacote enxuto e expandir aos poucos. Monte um orçamento no site para ter uma estimativa na hora.' },
+    { q: 'Os equipamentos são para uso profissional e intenso?', a: 'Sim. Nossas linhas são projetadas para uso comercial intenso, com estrutura reforçada e acabamento que aguenta a alta rotatividade de uma academia.' },
+    { q: 'Vocês oferecem assistência técnica e reposição de peças?', a: 'Sim. Damos suporte pós-venda e reposição de peças das nossas linhas. Se precisar, fale com o atendimento pelo WhatsApp com o código do equipamento em mãos.' },
+    { q: 'Vendem para pessoa física ou apenas para empresas (CNPJ)?', a: 'Atendemos os dois. Vendemos para academias e empresas (CNPJ) e também para pessoa física — personal trainers e quem quer montar um espaço em casa ou no condomínio.' },
+    { q: 'Como faço um orçamento?', a: 'É simples: escolha os equipamentos no catálogo, adicione ao orçamento e envie o pedido pelo WhatsApp. Nosso time retorna com valores, prazos e condições. Você também pode baixar o catálogo em PDF.' }
+  ];
   const faqArr = () => Array.isArray(P().faq) ? P().faq : (P().faq = []);
   function renderFaqEditor() {
     const box = $('#faqEditor'); if (!box) return;
@@ -711,7 +725,7 @@
         <input class="qarow__q" data-faq-q="${i}" type="text" value="${esc(f.q || '')}" placeholder="Pergunta" />
         <textarea class="qarow__a" data-faq-a="${i}" rows="2" placeholder="Resposta">${esc(f.a || '')}</textarea>
         <button class="qarow__x" type="button" data-faq-rm="${i}" title="Remover">✕</button>
-      </div>`).join('') : '<p class="atv__empty">Nenhuma pergunta ainda.</p>';
+      </div>`).join('') : '<p class="atv__empty">Nenhuma pergunta publicada — o site está mostrando as 10 perguntas sugeridas. Clique em “Carregar perguntas sugeridas” para editá-las.</p>';
   }
   (function wireFaqEditor() {
     const box = $('#faqEditor'); if (!box) return;
@@ -730,6 +744,13 @@
     });
     const add = $('#btnAddFaq');
     if (add) add.addEventListener('click', () => { faqArr().push({ q: '', a: '' }); save(); renderFaqEditor(); });
+    const sug = $('#btnFaqSug');
+    if (sug) sug.addEventListener('click', () => {
+      const arr = faqArr();
+      if (arr.some(f => (f.q || '').trim()) && !confirm('Isto vai adicionar as perguntas sugeridas à sua lista atual. Continuar?')) return;
+      FAQ_SUG.forEach(f => arr.push({ q: f.q, a: f.a }));
+      save(); schedulePushSettings(); renderFaqEditor();
+    });
   })();
 
   // ---- editor de DEPOIMENTOS ----
