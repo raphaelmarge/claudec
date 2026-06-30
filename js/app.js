@@ -1344,13 +1344,20 @@
     el.hidden = show === false; el.innerHTML = html || '';
   }
   async function importarFotosZip(file) {
-    setFotosStatus('Lendo o arquivo…', true);
+    const sizeMB = Math.round((file.size || 0) / 1048576);
+    const mobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
+    if (mobile && sizeMB > 200) {
+      setFotosStatus(`Este arquivo tem <b>${sizeMB} MB</b>. No celular o navegador trava ao abrir arquivos grandes. Faça a importação <b>no computador</b> (Chrome/Edge), ou divida o ZIP em partes menores (~150 MB cada) — pode importar várias vezes, uma parte por vez.`, true);
+      return;
+    }
+    if (sizeMB > 400 && !confirm(`O arquivo tem ${sizeMB} MB. Abrir um ZIP tão grande exige bastante memória do navegador e pode travar.\n\nO ideal é dividir em partes de ~150 MB. Tentar mesmo assim?`)) { setFotosStatus('', false); return; }
+    setFotosStatus(`Lendo o arquivo (${sizeMB} MB)… isso pode levar um tempo com arquivos grandes. Não feche a aba.`, true);
     let JSZipCtor = window.JSZip;
     if (!JSZipCtor) { try { await loadScript('https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js'); } catch (e) {} JSZipCtor = window.JSZip; }
     if (!JSZipCtor) { setFotosStatus('Não consegui carregar o leitor de ZIP (sem internet?).'); return; }
     let zip;
     try { zip = await JSZipCtor.loadAsync(file); }
-    catch (e) { setFotosStatus('Arquivo .zip inválido ou corrompido.'); return; }
+    catch (e) { setFotosStatus(`Não consegui abrir o ZIP (${sizeMB} MB) — provável falta de memória do navegador. Tente no computador ou divida em partes menores.`); return; }
     const byCode = {};
     state.products.forEach(p => { if (p.codigo) byCode[normCode(p.codigo)] = p; });
     const imgs = [];
