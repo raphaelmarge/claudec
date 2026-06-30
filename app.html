@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/styles.css?v=20260627x" />
+  <link rel="stylesheet" href="css/styles.css?v=20260627y" />
   <link rel="manifest" href="app.webmanifest" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -261,12 +261,15 @@
     <p class="sync-status" id="syncStatus" hidden></p>
     <div class="config__actions">
       <button class="btn btn--primary" id="btnImport" type="button">Importar planilha</button>
+      <button class="btn btn--ghost" id="btnImportFotos" type="button" title="Envie um .zip com as fotos nomeadas pelo código do produto (ex.: A701.jpg)">🖼️ Importar fotos (ZIP)</button>
       <button class="btn btn--ghost" id="btnAddProduct" type="button">+ Novo produto</button>
       <button class="btn btn--ghost" id="btnRecalcPrices" type="button">↻ Recalcular preços pelo custo</button>
       <button class="btn btn--ghost" id="btnResetData" type="button">Restaurar catálogo</button>
       <button class="btn btn--ghost" id="btnLock" type="button">🔒 Bloquear</button>
       <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" hidden />
+      <input type="file" id="fotosZipInput" accept=".zip" hidden />
     </div>
+    <p class="sync-status" id="fotosImportStatus" hidden></p>
   </section>
 
   <!-- ===================== TOOLBAR (filters/search) ===================== -->
@@ -683,12 +686,12 @@
   <!-- Toast -->
   <div id="toast" class="toast" hidden></div>
 
-  <script src="js/config.js?v=20260627x"></script>
+  <script src="js/config.js?v=20260627y"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/cloud.js?v=20260627x"></script>
-  <script src="js/products.js?v=20260627x"></script>
-  <script src="js/secure.js?v=20260627x"></script>
-  <script src="js/app.js?v=20260627x"></script>
+  <script src="js/cloud.js?v=20260627y"></script>
+  <script src="js/products.js?v=20260627y"></script>
+  <script src="js/secure.js?v=20260627y"></script>
+  <script src="js/app.js?v=20260627y"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));

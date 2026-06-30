@@ -1337,6 +1337,84 @@
     finally { btn.disabled = false; btn.textContent = old; }
   });
 
+  // ---- importação de fotos em massa via ZIP (arquivos nomeados pelo código do produto) ----
+  const normCode = s => String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]+/g, '');
+  function setFotosStatus(html, show) {
+    const el = $('#fotosImportStatus'); if (!el) return;
+    el.hidden = show === false; el.innerHTML = html || '';
+  }
+  async function importarFotosZip(file) {
+    if (!(Cloud.isAdmin && Cloud.isAdmin())) { toast('Só admin pode importar fotos para o site.'); return; }
+    setFotosStatus('Lendo o arquivo…', true);
+    let JSZipCtor = window.JSZip;
+    if (!JSZipCtor) { try { await loadScript('https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js'); } catch (e) {} JSZipCtor = window.JSZip; }
+    if (!JSZipCtor) { setFotosStatus('Não consegui carregar o leitor de ZIP (sem internet?).'); return; }
+    let zip;
+    try { zip = await JSZipCtor.loadAsync(file); }
+    catch (e) { setFotosStatus('Arquivo .zip inválido ou corrompido.'); return; }
+    const byCode = {};
+    state.products.forEach(p => { if (p.codigo) byCode[normCode(p.codigo)] = p; });
+    const imgs = [];
+    zip.forEach((path, entry) => {
+      if (entry.dir) return;
+      const base = path.split('/').pop();
+      if (/(^|\/)__macosx/i.test(path) || base.startsWith('.')) return;
+      if (!/\.(jpe?g|png|webp)$/i.test(base)) return;
+      imgs.push({ entry, base });
+    });
+    if (!imgs.length) { setFotosStatus('Nenhuma imagem (.jpg/.png/.webp) encontrada no ZIP.'); return; }
+    const matched = [], unmatched = [];
+    imgs.forEach(it => {
+      const stem = it.base.replace(/\.[^.]+$/, '');
+      const tok = (stem.match(/[a-z0-9]+/i) || [''])[0];   // 1º bloco (código no padrão "CODIGO_nome")
+      const p = byCode[normCode(stem)] || (tok.length >= 3 ? byCode[normCode(tok)] : null);
+      if (p) matched.push({ entry: it.entry, base: it.base, p }); else unmatched.push(it.base);
+    });
+    if (!matched.length) {
+      setFotosStatus(`Nenhuma foto casou com os códigos dos produtos (${imgs.length} imagens lidas). Confira se os arquivos estão nomeados pelo código, ex.: <b>A701.jpg</b>.`);
+      return;
+    }
+    if (!confirm(`Encontrei ${matched.length} fotos que casam com produtos (de ${imgs.length} no ZIP).\n\nVou otimizar cada uma e enviar para o site. Pode levar alguns minutos — não feche esta aba. Continuar?`)) { setFotosStatus('', false); return; }
+    let done = 0, ok = 0, fail = 0; const total = matched.length;
+    const tick = () => setFotosStatus(`Enviando fotos… <b>${done}/${total}</b> (${ok} enviadas, ${fail} falhas)`, true);
+    tick();
+    let idx = 0;
+    async function worker() {
+      while (idx < matched.length) {
+        const m = matched[idx++];
+        try {
+          const blob = await m.entry.async('blob');
+          const { blob: rb } = await resizeImage(blob, 1500, 0.82);
+          const url = await Cloud.uploadProductImage(rb, 'jpg');
+          m.p.imagem = url; ok++;
+        } catch (e) { fail++; console.warn('falha na foto', m.base, e); }
+        done++; tick();
+      }
+    }
+    await Promise.all([worker(), worker(), worker(), worker()]);
+    save(); render(); schedulePushSettings();   // publica o catálogo atualizado para a vitrine
+    const semFoto = state.products.filter(p => p.codigo && !p.imagem).map(p => p.codigo);
+    let resumo = `<b>Concluído:</b> ${ok} foto(s) enviada(s)`;
+    if (fail) resumo += ` · ${fail} falha(s)`;
+    if (unmatched.length) resumo += ` · ${unmatched.length} foto(s) do ZIP sem produto correspondente`;
+    if (semFoto.length) resumo += ` · ${semFoto.length} produto(s) ainda sem foto`;
+    resumo += '. O catálogo está sendo publicado no site (veja o detalhamento no console do navegador).';
+    setFotosStatus(resumo, true);
+    toast('Importação de fotos concluída.');
+    if (unmatched.length) console.log('Fotos do ZIP sem produto correspondente:', unmatched);
+    if (semFoto.length) console.log('Produtos ainda sem foto (códigos):', semFoto);
+  }
+  if ($('#btnImportFotos')) $('#btnImportFotos').addEventListener('click', () => $('#fotosZipInput').click());
+  if ($('#fotosZipInput')) $('#fotosZipInput').addEventListener('change', async e => {
+    const file = e.target.files && e.target.files[0]; e.target.value = '';
+    if (!file) return;
+    const btn = $('#btnImportFotos'), old = btn ? btn.textContent : '';
+    if (btn) { btn.disabled = true; btn.textContent = 'Importando…'; }
+    try { await importarFotosZip(file); }
+    catch (err) { console.error(err); setFotosStatus('Erro inesperado: ' + ((err && err.message) || err)); }
+    finally { if (btn) { btn.disabled = false; btn.textContent = old; } }
+  });
+
   // ---- galeria de fotos extras do produto ----
   let edGaleria = [];
   function renderEdGaleria() {
