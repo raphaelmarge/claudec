@@ -68,6 +68,27 @@
     const set = new Set(PRODUCTS.map(grupoOf));
     return GRUPO_ORDER.filter(g => set.has(g));
   }
+  /* ---------- vistos recentemente ---------- */
+  const RECENT_KEY = 'torque_recent';
+  function loadRecent() { try { return JSON.parse(localStorage.getItem(RECENT_KEY)) || []; } catch (e) { return []; } }
+  function pushRecent(code) {
+    if (!code) return;
+    let r = loadRecent().filter(c => c !== code);
+    r.unshift(code); r = r.slice(0, 12);
+    try { localStorage.setItem(RECENT_KEY, JSON.stringify(r)); } catch (e) {}
+    renderRecent();
+  }
+  function renderRecent() {
+    const sec = $('#recent'), row = $('#recentRow'); if (!sec || !row) return;
+    const items = loadRecent().map(byCode).filter(Boolean);
+    if (items.length < 2) { sec.hidden = true; row.innerHTML = ''; return; }   // só aparece com 2+ vistos
+    row.innerHTML = items.map(p => `<button class="rcard" data-rec="${esc(p.codigo)}" type="button">
+      <span class="rcard__img">${p.imagem ? `<img src="${esc(p.imagem)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'"/>` : ''}</span>
+      <span class="rcard__name">${esc(p.nome)}</span>
+      <span class="rcard__price">${money(p.preco)}</span>
+    </button>`).join('');
+    sec.hidden = false;
+  }
   function renderGrupos() {
     const sel = $('#grupoFilter'); if (!sel) return;
     const groups = gruposDisponiveis();
@@ -540,6 +561,7 @@
   function openProd(code, push) {
     const p = byCode(code); if (!p) return;
     prodCode = code;
+    pushRecent(code);
     $('#pmMedia').innerHTML = galleryHTML(p);
     $('#pmSerie').textContent = (p.selo ? p.selo + ' · ' : '') + (p.serie || '');
     $('#pmNome').textContent = p.nome;
@@ -596,6 +618,12 @@
   if (relGrid) relGrid.addEventListener('click', e => {
     const b = e.target.closest('[data-rel]'); if (!b) return;
     openProd(b.dataset.rel, true);
+  });
+  // clicar num "visto recentemente" abre o detalhe
+  const recRow = $('#recentRow');
+  if (recRow) recRow.addEventListener('click', e => {
+    const b = e.target.closest('[data-rec]'); if (!b) return;
+    openProd(b.dataset.rec, true);
   });
   const shareBtn = $('#pmShare');
   if (shareBtn) shareBtn.addEventListener('click', async () => {
@@ -937,7 +965,7 @@
   /* ---------- init ---------- */
   window.__plate = plate;
   $('#ano').textContent = new Date().getFullYear();
-  renderSeries(); renderChips(); renderGrupos(); renderGrid(); refreshCounts();
+  renderSeries(); renderChips(); renderGrupos(); renderGrid(); refreshCounts(); renderRecent();
   renderLinhasMenu(); renderLinhaHead();
   renderCarousel(); startCar(); renderContato(); renderDepo(); renderFaq();
   // deep-link: ?linha=Cardio ou ?tipo=acessorio já entram filtrados
@@ -968,7 +996,7 @@
       if (data && data.banners && typeof data.banners === 'object') BANNERS = data.banners;   // banners por categoria
       if (data && data.carousel && typeof data.carousel === 'object') CAROUSEL = data.carousel;   // imagens do carrossel
       if (data && data.site && typeof data.site === 'object') SITEINFO = Object.assign(SITEINFO, data.site);   // contato/localização
-      renderSeries(); renderChips(); renderGrupos(); renderGrid(); refreshCounts(); renderLinhasMenu();
+      renderSeries(); renderChips(); renderGrupos(); renderGrid(); refreshCounts(); renderRecent(); renderLinhasMenu();
       const tp = currentTipo(), dl = currentLinha();                    // re-aplica a vista com o catálogo ao vivo
       if (tp) goToTipo(tp, false, false); else if (dl) goToLinha(dl, false, false);
       renderLinhaHead(); renderCarousel(); renderContato(); renderDepo(); renderFaq(); applyWpp(); injectAnalytics();
