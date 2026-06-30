@@ -32,7 +32,13 @@
   let BANNERS = {};         // imagens de banner por categoria (nome → URL), vindas do catalog.json
   const bannerImg = nome => BANNERS[nome] || '';
   // dados de localização/contato (default + ao vivo via catalog.json → data.site)
-  let SITEINFO = Object.assign({ endereco: '', mapsUrl: '', telefone: '', whatsapp: SITE.whatsapp || '', email: '', horario: '', gaId: '', metaPixel: '', faq: [], depoimentos: [] }, window.TORQUE_SITE_INFO || {});
+  let SITEINFO = Object.assign({ endereco: '', mapsUrl: '', telefone: '', whatsapp: SITE.whatsapp || '', email: '', horario: '', gaId: '', metaPixel: '', faq: [], depoimentos: [], cupons: [] }, window.TORQUE_SITE_INFO || {});
+  let appliedCoupon = null;   // cupom de desconto aplicado ao orçamento
+  const normCupom = s => String(s == null ? '' : s).toUpperCase().replace(/[^A-Z0-9]/g, '');
+  function activeCupons() { return (Array.isArray(SITEINFO.cupons) ? SITEINFO.cupons : []).filter(c => c && c.codigo && c.ativo !== false && (Number(c.desconto) || 0) > 0); }
+  function findCupom(code) { const n = normCupom(code); return activeCupons().find(c => normCupom(c.codigo) === n) || null; }
+  function popupCupom() { return activeCupons().find(c => c.popup) || null; }
+  function cupomDesc(sub) { return appliedCoupon ? Math.round(sub * (Number(appliedCoupon.desconto) || 0) / 100 * 100) / 100 : 0; }
   let CAROUSEL = {};        // imagem por slide do carrossel (id → URL), vinda do catalog.json
   let query = '';
   let priceBand = 'all';
@@ -206,11 +212,30 @@
         <div class="ditem__step"><button data-act="dec">−</button><input data-act="qty" inputmode="numeric" value="${l.q}"/><button data-act="inc">+</button></div>
       </div>`;
     }).join('') : `<p class="drawer__empty">Seu orçamento está vazio.<br>Adicione equipamentos para começar.</p>`;
-    const total = cartTotal();
+    const subtotal = cartTotal();
+    if (appliedCoupon && !findCupom(appliedCoupon.codigo)) appliedCoupon = null;   // cupom deixou de existir
+    const desc = cupomDesc(subtotal);
+    const total = Math.max(0, subtotal - desc);
+    renderCupomBox(subtotal, desc);
     $('#drawerTotal').textContent = money(total);
     const maxN = Math.max(1, Math.floor(PARAMS.parcelasMax || 48));
     $('#drawerParcela').textContent = total > 0 ? `ou até ${maxN}× de ${money(total / maxN)}` : '';
     $('#btnSolicitar').disabled = total <= 0;
+  }
+  function renderCupomBox(subtotal, desc) {
+    const box = $('#cupomBox'); if (!box) return;
+    if (appliedCoupon) {
+      box.innerHTML = `<div class="cupom-on"><span>✓ Cupom <b>${esc(appliedCoupon.codigo)}</b> — ${appliedCoupon.desconto}% off <small>(−${money(desc)})</small></span><button type="button" id="cupomRemove" class="cupom-x">remover</button></div>`;
+    } else {
+      box.innerHTML = `<div class="cupom-row"><input id="cupomInput" type="text" placeholder="Cupom de desconto" autocomplete="off" /><button type="button" id="cupomApply" class="cupom-apply">Aplicar</button></div><p class="cupom-msg" id="cupomMsg" hidden></p>`;
+    }
+  }
+  function applyCupom(code) {
+    const c = findCupom(code);
+    const msg = $('#cupomMsg');
+    if (!c) { if (msg) { msg.textContent = 'Cupom inválido ou expirado.'; msg.hidden = false; } return; }
+    appliedCoupon = c; renderDrawer();
+    toast(`Cupom ${c.codigo} aplicado: ${c.desconto}% de desconto!`);
   }
   function syncAll() { refreshCounts(); renderGrid(); renderDrawer(); }
 
@@ -248,6 +273,14 @@
   $('#clearFilters').addEventListener('click', () => goToLinha('all', true, false));
   $('#loadMore').addEventListener('click', () => { shown += PAGE; renderGrid(); });
   $('#navCart').addEventListener('click', openDrawer);
+  const cupomBox = $('#cupomBox');
+  if (cupomBox) {
+    cupomBox.addEventListener('click', e => {
+      if (e.target.closest('#cupomApply')) { applyCupom(($('#cupomInput') || {}).value || ''); }
+      else if (e.target.closest('#cupomRemove')) { appliedCoupon = null; renderDrawer(); }
+    });
+    cupomBox.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'cupomInput') { e.preventDefault(); applyCupom(e.target.value); } });
+  }
 
   function openDrawer() { renderDrawer(); $('#drawer').hidden = false; document.body.style.overflow = 'hidden'; }
   function closeDrawer() { $('#drawer').hidden = true; document.body.style.overflow = ''; }
@@ -271,7 +304,9 @@
     bindLeadInputs();
   }
   function leadFormHTML() {
-    return `<p class="lmodal__hint">Você selecionou <b>${cartCount()}</b> item(ns) · total estimado <b>${money(cartTotal())}</b>.<br>Preencha seus dados e um consultor entra em contato.</p>
+    const sub = cartTotal(); const desc = cupomDesc(sub); const tot = Math.max(0, sub - desc);
+    const cupomLine = appliedCoupon ? ` · cupom <b>${esc(appliedCoupon.codigo)}</b> (−${money(desc)})` : '';
+    return `<p class="lmodal__hint">Você selecionou <b>${cartCount()}</b> item(ns) · total estimado <b>${money(tot)}</b>${cupomLine}.<br>Preencha seus dados e um consultor entra em contato.</p>
       <label class="field"><span>Nome *</span><input id="leadNome" type="text" autocomplete="name" /></label>
       <div class="lgrid">
         <label class="field"><span>WhatsApp / Telefone *</span><input id="leadTel" type="tel" inputmode="tel" autocomplete="tel" /></label>
@@ -307,7 +342,10 @@
 
     const lines = cartLines();
     const subtotal = cartTotal();
+    const desc = cupomDesc(subtotal);
+    const total = Math.max(0, subtotal - desc);
     const maxN = Math.max(1, Math.floor(PARAMS.parcelasMax || 48));
+    const cupomObs = appliedCoupon ? `Cupom: ${appliedCoupon.codigo} (${appliedCoupon.desconto}%${appliedCoupon.quem ? ' · ' + appliedCoupon.quem : ''})` : '';
     const btn = $('#btnEnviarLead'); btn.disabled = true; btn.textContent = 'Enviando…';
     try {
       const { error } = await client.from('orcamentos').insert({
@@ -318,16 +356,16 @@
         vendedor_nome: '',
         itens: lines.map(l => ({ codigo: l.p.codigo, nome: l.p.nome, qtd: l.q, unitario: l.p.preco, total: l.total })),
         subtotal: subtotal,
-        total: subtotal,
+        total: total,
         parcelas: maxN,
-        valor_parcela: subtotal / maxN,
+        valor_parcela: total / maxN,
         status: 'novo',
-        obs: [cidade ? 'Cidade: ' + cidade : '', msg ? 'Mensagem: ' + msg : ''].filter(Boolean).join(' | ')
+        obs: [cidade ? 'Cidade: ' + cidade : '', msg ? 'Mensagem: ' + msg : '', cupomObs].filter(Boolean).join(' | ')
       });
       if (error) throw error;
       if (window.fbq) try { fbq('track', 'Lead', { value: subtotal, currency: 'BRL' }); } catch (e) {}
       if (window.gtag) try { gtag('event', 'generate_lead', { value: subtotal, currency: 'BRL' }); } catch (e) {}
-      cart = {}; save(); syncAll();
+      cart = {}; appliedCoupon = null; save(); syncAll();
       $('#leadTitle').textContent = 'Pedido enviado!';
       $('#btnEnviarLead').style.display = 'none';
       $('#leadBody').innerHTML = `<div class="lead-ok"><div class="ico">✓</div>
@@ -958,6 +996,42 @@
     });
   })();
 
+  /* ---------- pop-up de boas-vindas (cupom) ---------- */
+  const PROMO_KEY = 'torque_promo_seen';
+  let promoDone = false;
+  function maybeShowPromo() {
+    if (promoDone) return;
+    const c = popupCupom(); if (!c) return;
+    let seen = 0; try { seen = +localStorage.getItem(PROMO_KEY) || 0; } catch (e) {}
+    if (Date.now() - seen < 2 * 864e5) return;   // não repete por 2 dias
+    if (!$('#drawer').hidden || !$('#leadModal').hidden || !$('#prodModal').hidden || currentCode()) return;   // não atrapalha outra ação
+    const m = $('#promoModal'); if (!m) return;
+    promoDone = true;
+    const d = $('#promoDesc'); if (d) d.textContent = `${c.desconto}% de desconto no seu primeiro orçamento`;
+    const cd = $('#promoCode'); if (cd) cd.textContent = c.codigo;
+    m.hidden = false;
+  }
+  function closePromo() { const m = $('#promoModal'); if (m) m.hidden = true; try { localStorage.setItem(PROMO_KEY, String(Date.now())); } catch (e) {} }
+  (function wirePromo() {
+    const m = $('#promoModal'); if (!m) return;
+    m.addEventListener('click', e => {
+      if (e.target.closest('[data-promo-close]')) { closePromo(); return; }
+      if (e.target.closest('#promoCopy')) {
+        const c = popupCupom(); if (!c) return;
+        try { navigator.clipboard.writeText(c.codigo); } catch (e) {}
+        toast('Código copiado!');
+        return;
+      }
+      if (e.target.closest('#promoUse')) {
+        const c = popupCupom(); if (c) { appliedCoupon = c; renderDrawer(); }
+        closePromo();
+        toast(`Cupom ${c ? c.codigo : ''} aplicado — escolha seus equipamentos!`);
+        const el = document.getElementById('produtos'); if (el) el.scrollIntoView({ behavior: 'smooth' });
+        return;
+      }
+    });
+  })();
+
   /* ---------- toast ---------- */
   let tT;
   function toast(m) { const t = $('#toast'); t.textContent = m; t.hidden = false; clearTimeout(tT); tT = setTimeout(() => t.hidden = true, 2200); }
@@ -1000,6 +1074,8 @@
       const tp = currentTipo(), dl = currentLinha();                    // re-aplica a vista com o catálogo ao vivo
       if (tp) goToTipo(tp, false, false); else if (dl) goToLinha(dl, false, false);
       renderLinhaHead(); renderCarousel(); renderContato(); renderDepo(); renderFaq(); applyWpp(); injectAnalytics();
+      setTimeout(maybeShowPromo, 700);   // pop-up de cupom de boas-vindas
+
     } catch (e) { /* offline ou bucket vazio → mantém o catálogo embutido */ }
   }
   loadLiveCatalog();
