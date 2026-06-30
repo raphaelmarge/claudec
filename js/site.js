@@ -1032,6 +1032,15 @@
     });
   })();
 
+  /* ---------- botão voltar ao topo ---------- */
+  (function backToTop() {
+    const btn = $('#toTop'); if (!btn) return;
+    const upd = () => { btn.hidden = window.scrollY < 600; };
+    window.addEventListener('scroll', upd, { passive: true });
+    btn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+    upd();
+  })();
+
   /* ---------- toast ---------- */
   let tT;
   function toast(m) { const t = $('#toast'); t.textContent = m; t.hidden = false; clearTimeout(tT); tT = setTimeout(() => t.hidden = true, 2200); }
