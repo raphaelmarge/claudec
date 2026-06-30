@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/site.css?v=20260628a" />
+  <link rel="stylesheet" href="css/site.css?v=20260628b" />
   <style>
     .blog{max-width:820px;margin:0 auto;padding:34px 20px 60px}
     .blog__back{display:inline-flex;align-items:center;gap:6px;color:var(--txt-dim);font-size:.86rem;margin-bottom:20px}
@@ -57,7 +57,7 @@
     <p class="blog__empty">Carregando…</p>
   </main>
 
-  <script src="js/config.js?v=20260628a"></script>
+  <script src="js/config.js?v=20260628b"></script>
   <script>
     (function () {
       var $ = function (s, r) { return (r || document).querySelector(s); };
@@ -129,15 +129,32 @@
         if (slug) { var p = posts.filter(function (x) { return x.slug === slug; })[0]; if (p) return renderPost(p, posts); }
         renderList(posts);
       }
+      // junta posts de várias fontes, removendo repetidos por slug (último vence) e ordenando por data desc
+      function mergePosts() {
+        var bySlug = {};
+        for (var i = 0; i < arguments.length; i++) {
+          var arr = arguments[i]; if (!Array.isArray(arr)) continue;
+          arr.forEach(function (p) { if (p && p.slug && (p.titulo || p.conteudo)) bySlug[p.slug] = p; });
+        }
+        var out = Object.keys(bySlug).map(function (k) { return bySlug[k]; });
+        out.sort(function (a, b) { return String(b.data || '').localeCompare(String(a.data || '')); });
+        return out;
+      }
       (function load() {
+        // posts automáticos publicados no repositório (atualizados pela rotina diária)
+        var repoP = fetch('blog-posts.json?t=' + Date.now()).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; });
+        // posts publicados pelo admin (via catalog.json)
         var cfg = window.TORQUE_SUPABASE;
-        if (!cfg || !cfg.url) { route(DEFAULT_POSTS); return; }
-        var url = cfg.url.replace(/\/+$/, '') + '/storage/v1/object/public/produtos/catalog.json?t=' + Date.now();
-        fetch(url).then(function (r) { return r.ok ? r.json() : null; }).then(function (data) {
-          var site = (data && data.site) || {};
+        var admP = (cfg && cfg.url)
+          ? fetch(cfg.url.replace(/\/+$/, '') + '/storage/v1/object/public/produtos/catalog.json?t=' + Date.now()).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; })
+          : Promise.resolve(null);
+        Promise.all([repoP, admP]).then(function (res) {
+          var repoPosts = Array.isArray(res[0]) ? res[0] : (res[0] && res[0].posts) || null;
+          var site = (res[1] && res[1].site) || {};
           WPP = site.whatsapp || '';
-          var posts = (Array.isArray(site.blog) && site.blog.length) ? site.blog : DEFAULT_POSTS;
-          route(posts);
+          var adminPosts = Array.isArray(site.blog) ? site.blog : null;
+          var merged = mergePosts(DEFAULT_POSTS, repoPosts, adminPosts);   // admin e repo têm prioridade sobre os embutidos
+          route(merged.length ? merged : DEFAULT_POSTS);
         }).catch(function () { route(DEFAULT_POSTS); });
       })();
     })();
