@@ -1344,7 +1344,6 @@
     el.hidden = show === false; el.innerHTML = html || '';
   }
   async function importarFotosZip(file) {
-    if (!(Cloud.isAdmin && Cloud.isAdmin())) { toast('Só admin pode importar fotos para o site.'); return; }
     setFotosStatus('Lendo o arquivo…', true);
     let JSZipCtor = window.JSZip;
     if (!JSZipCtor) { try { await loadScript('https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js'); } catch (e) {} JSZipCtor = window.JSZip; }
@@ -1375,7 +1374,7 @@
       return;
     }
     if (!confirm(`Encontrei ${matched.length} fotos que casam com produtos (de ${imgs.length} no ZIP).\n\nVou otimizar cada uma e enviar para o site. Pode levar alguns minutos — não feche esta aba. Continuar?`)) { setFotosStatus('', false); return; }
-    let done = 0, ok = 0, fail = 0; const total = matched.length;
+    let done = 0, ok = 0, fail = 0, firstErr = ''; const total = matched.length;
     const tick = () => setFotosStatus(`Enviando fotos… <b>${done}/${total}</b> (${ok} enviadas, ${fail} falhas)`, true);
     tick();
     let idx = 0;
@@ -1386,21 +1385,33 @@
           const blob = await m.entry.async('blob');
           const { blob: rb } = await resizeImage(blob, 1500, 0.82);
           const url = await Cloud.uploadProductImage(rb, 'jpg');
+          if (!url || String(url).startsWith('data:')) throw new Error('upload não retornou URL pública');
           m.p.imagem = url; ok++;
-        } catch (e) { fail++; console.warn('falha na foto', m.base, e); }
+        } catch (e) {
+          fail++; if (!firstErr) firstErr = (e && (e.message || e.error || e.name)) || 'erro';
+          console.warn('falha na foto', m.base, e);
+        }
         done++; tick();
       }
     }
     await Promise.all([worker(), worker(), worker(), worker()]);
-    save(); render(); schedulePushSettings();   // publica o catálogo atualizado para a vitrine
+    const ehAdmin = !!(Cloud.isAdmin && Cloud.isAdmin());
+    if (ok > 0) { save(); render(); if (ehAdmin) schedulePushSettings(); }   // publica só se for admin
     const semFoto = state.products.filter(p => p.codigo && !p.imagem).map(p => p.codigo);
-    let resumo = `<b>Concluído:</b> ${ok} foto(s) enviada(s)`;
-    if (fail) resumo += ` · ${fail} falha(s)`;
-    if (unmatched.length) resumo += ` · ${unmatched.length} foto(s) do ZIP sem produto correspondente`;
-    if (semFoto.length) resumo += ` · ${semFoto.length} produto(s) ainda sem foto`;
-    resumo += '. O catálogo está sendo publicado no site (veja o detalhamento no console do navegador).';
+    let resumo;
+    if (ok === 0) {
+      // tudo falhou — o motivo quase sempre é o Storage do Supabase (login/admin/bucket)
+      resumo = `<b>Nenhuma foto foi enviada.</b> Motivo: ${esc(firstErr || 'desconhecido')}. ` +
+        'Verifique se você está <b>logado como admin</b> e se o <b>Storage do Supabase</b> está ativo (mesmo upload usado ao trocar a foto de 1 produto).';
+    } else {
+      resumo = `<b>Concluído:</b> ${ok} foto(s) enviada(s)`;
+      if (fail) resumo += ` · ${fail} falha(s)${firstErr ? ' (' + esc(firstErr) + ')' : ''}`;
+      if (unmatched.length) resumo += ` · ${unmatched.length} foto(s) do ZIP sem produto correspondente`;
+      if (semFoto.length) resumo += ` · ${semFoto.length} produto(s) ainda sem foto`;
+      resumo += ehAdmin ? '. O catálogo está sendo publicado no site.' : '. <b>Atenção:</b> você não está como admin, então as fotos foram salvas mas <b>não</b> publicadas no site público.';
+    }
     setFotosStatus(resumo, true);
-    toast('Importação de fotos concluída.');
+    toast(ok > 0 ? 'Importação de fotos concluída.' : 'Importação falhou — veja a mensagem.');
     if (unmatched.length) console.log('Fotos do ZIP sem produto correspondente:', unmatched);
     if (semFoto.length) console.log('Produtos ainda sem foto (códigos):', semFoto);
   }
