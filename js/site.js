@@ -314,6 +314,11 @@
       </div>
       <label class="field"><span>E-mail</span><input id="leadEmail" type="email" inputmode="email" autocomplete="email" /></label>
       <label class="field"><span>Mensagem (opcional)</span><textarea id="leadMsg" rows="2" placeholder="Ex.: montar uma academia, prazo, etc."></textarea></label>
+      <div class="trustbar trustbar--lead">
+        <span>🛡️ 1 ano de garantia</span>
+        <span>🇧🇷 Atendemos todo o Brasil</span>
+        <span>🔒 Seus dados protegidos</span>
+      </div>
       <p class="lmodal__err" id="leadErr" hidden></p>`;
   }
   function bindLeadInputs() {}
