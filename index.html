@@ -51,7 +51,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/site.css?v=20260628c" />
+  <link rel="stylesheet" href="css/site.css?v=20260628d" />
   <link rel="manifest" href="site.webmanifest" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
   <meta name="mobile-web-app-capable" content="yes" />
@@ -290,6 +290,7 @@
       </header>
       <div class="drawer__items" id="drawerItems"></div>
       <div class="drawer__foot">
+        <div class="cupom-box" id="cupomBox"></div>
         <div class="drawer__total"><span>Total estimado</span><b id="drawerTotal">R$ 0,00</b></div>
         <small id="drawerParcela" class="drawer__parcela"></small>
         <button class="btn btn--primary drawer__send" id="btnSolicitar" type="button">Solicitar orçamento</button>
@@ -374,12 +375,29 @@
     </div>
   </div>
 
+  <!-- ===================== POP-UP DE BOAS-VINDAS (CUPOM) ===================== -->
+  <div class="promo" id="promoModal" hidden>
+    <div class="promo__backdrop" data-promo-close></div>
+    <div class="promo__card">
+      <button class="promo__x" data-promo-close type="button" aria-label="Fechar">✕</button>
+      <span class="promo__tag">🎁 Oferta de boas-vindas</span>
+      <h2 class="promo__title" id="promoDesc">Desconto no seu primeiro orçamento</h2>
+      <p class="promo__lead">Use o cupom abaixo ao montar o seu orçamento:</p>
+      <div class="promo__code" id="promoCode">CUPOM</div>
+      <div class="promo__btns">
+        <button class="btn btn--primary" id="promoUse" type="button">Usar agora</button>
+        <button class="btn btn--ghost" id="promoCopy" type="button">Copiar código</button>
+      </div>
+      <p class="promo__fine">Informe o cupom no orçamento. Não cumulativo com outras promoções.</p>
+    </div>
+  </div>
+
   <div id="toast" class="toast" hidden></div>
 
-  <script src="js/config.js?v=20260628c"></script>
+  <script src="js/config.js?v=20260628d"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/products.js?v=20260628c"></script>
-  <script src="js/descricoes.js?v=20260628c"></script>
-  <script src="js/site.js?v=20260628c"></script>
+  <script src="js/products.js?v=20260628d"></script>
+  <script src="js/descricoes.js?v=20260628d"></script>
+  <script src="js/site.js?v=20260628d"></script>
 </body>
 </html>

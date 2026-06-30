@@ -337,6 +337,32 @@ img{max-width:100%;display:block}
 .pmrel__name{font-size:.82rem;line-height:1.25;color:var(--txt);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .pmrel__price{font-size:.86rem;font-weight:800;color:var(--violet);margin-top:auto}
 @media(min-width:560px){.pmodal__rel-grid{grid-template-columns:repeat(4,1fr)}}
+/* cupom de desconto no orçamento */
+.cupom-box{margin-bottom:10px}
+.cupom-row{display:flex;gap:8px}
+.cupom-row input{flex:1;min-width:0;background:var(--panel-2);border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:11px 12px;font-size:.9rem;font-family:var(--font-body);text-transform:uppercase}
+.cupom-row input:focus{outline:none;border-color:var(--violet)}
+.cupom-apply{background:var(--panel-2);border:1px solid var(--line-2);color:var(--txt);border-radius:10px;padding:0 16px;font-weight:700;font-size:.85rem;font-family:var(--font-body);cursor:pointer;transition:border-color .15s,color .15s}
+.cupom-apply:hover{border-color:var(--violet);color:var(--violet)}
+.cupom-msg{margin:6px 0 0;font-size:.8rem;color:#f87171}
+.cupom-on{display:flex;align-items:center;justify-content:space-between;gap:8px;background:rgba(139,92,246,.12);border:1px solid var(--violet);border-radius:10px;padding:9px 12px;font-size:.86rem;color:var(--txt)}
+.cupom-on small{color:var(--txt-dim)}
+.cupom-x{background:none;border:none;color:var(--txt-dim);font-size:.8rem;cursor:pointer;text-decoration:underline}
+.cupom-x:hover{color:#f87171}
+/* pop-up de boas-vindas (cupom) */
+.promo{position:fixed;inset:0;z-index:120;display:flex;align-items:center;justify-content:center;padding:20px}
+.promo[hidden]{display:none}
+.promo__backdrop{position:absolute;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(3px)}
+.promo__card{position:relative;z-index:1;width:100%;max-width:400px;background:linear-gradient(160deg,var(--panel),var(--panel-2));border:1px solid var(--violet);border-radius:20px;padding:30px 26px 22px;text-align:center;box-shadow:0 24px 60px rgba(0,0,0,.5)}
+.promo__x{position:absolute;top:12px;right:12px;width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.08);border:none;color:var(--txt-dim);font-size:1rem;cursor:pointer}
+.promo__x:hover{color:var(--txt)}
+.promo__tag{display:inline-block;font-size:.78rem;font-weight:700;color:var(--violet);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px}
+.promo__title{font-size:1.5rem;line-height:1.15;margin:0 0 8px}
+.promo__lead{color:var(--txt-dim);font-size:.92rem;margin:0 0 16px}
+.promo__code{font-family:var(--font-mono,monospace);font-size:1.7rem;font-weight:800;letter-spacing:.12em;color:#fff;background:rgba(139,92,246,.16);border:1px dashed var(--violet);border-radius:12px;padding:14px 10px;margin:0 0 18px}
+.promo__btns{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.promo__btns .btn{flex:1 1 auto}
+.promo__fine{color:var(--txt-mut);font-size:.74rem;margin:16px 0 0}
 /* vistos recentemente (faixa horizontal) */
 .recent{max-width:1240px;margin:0 auto;padding:6px 20px 0}
 .recent .sec-title{margin-bottom:12px}

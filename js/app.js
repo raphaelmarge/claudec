@@ -97,7 +97,7 @@
      fiscais (custo/margem) nunca saem daqui. Degrada para
      localStorage se a tabela não existir.
      ------------------------------------------------------------ */
-  const SHARED_PARAM_KEYS = ['parcelasMax', 'juros', 'validade', 'stages', 'metas', 'linhas', 'linhaBanners', 'contato', 'carousel', 'comissao', 'kits', 'descontoMaxVendedor', 'faq', 'depoimentos', 'blog'];
+  const SHARED_PARAM_KEYS = ['parcelasMax', 'juros', 'validade', 'stages', 'metas', 'linhas', 'linhaBanners', 'contato', 'carousel', 'comissao', 'kits', 'descontoMaxVendedor', 'faq', 'depoimentos', 'blog', 'cupons'];
   const slugify = s => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
   const SETTINGS_SQL =
     "create table if not exists public.settings (\n" +
@@ -152,6 +152,10 @@
         slug: slugify(x.slug || x.titulo), titulo: x.titulo || '', resumo: x.resumo || '',
         capa: (x.capa && !String(x.capa).startsWith('data:')) ? x.capa : '', conteudo: x.conteudo || '',
         autor: x.autor || 'Torque Fitness', data: x.data || ''
+      })),
+      cupons: (Array.isArray(P().cupons) ? P().cupons : []).filter(x => x && (x.codigo || '').trim()).map(x => ({
+        codigo: String(x.codigo || '').trim().toUpperCase(), desconto: Number(x.desconto) || 0,
+        quem: x.quem || '', ativo: x.ativo !== false, popup: !!x.popup
       }))
     };
   }
@@ -409,6 +413,7 @@
     renderFaqEditor();
     renderDepoEditor();
     renderBlogEditor();
+    renderCuponsEditor();
     renderVendEditor();
     renderSyncStatus();
     $('#configPanel').hidden = state.mode !== 'admin';
@@ -751,6 +756,56 @@
       FAQ_SUG.forEach(f => arr.push({ q: f.q, a: f.a }));
       save(); schedulePushSettings(); renderFaqEditor();
     });
+  })();
+
+  // ---- editor de CUPONS de desconto (boas-vindas e influenciadores) ----
+  const cuponsArr = () => Array.isArray(P().cupons) ? P().cupons : (P().cupons = []);
+  function renderCuponsEditor() {
+    const box = $('#cuponsEditor'); if (!box) return;
+    if (box.contains(document.activeElement)) return;
+    const arr = cuponsArr();
+    box.innerHTML = arr.length ? arr.map((c, i) => `
+      <div class="cuprow" data-i="${i}">
+        <input class="cuprow__cod" data-cup-cod="${i}" type="text" value="${esc(c.codigo || '')}" placeholder="CÓDIGO" />
+        <input class="cuprow__pct" data-cup-pct="${i}" type="number" min="0" max="100" step="1" value="${c.desconto != null ? c.desconto : ''}" placeholder="%" />
+        <input class="cuprow__quem" data-cup-quem="${i}" type="text" value="${esc(c.quem || '')}" placeholder="Influenciador / campanha" />
+        <label class="cuprow__chk" title="Ativo"><input type="checkbox" data-cup-ativo="${i}" ${c.ativo !== false ? 'checked' : ''} /> ativo</label>
+        <label class="cuprow__chk" title="Mostrar no pop-up de boas-vindas"><input type="checkbox" data-cup-popup="${i}" ${c.popup ? 'checked' : ''} /> pop-up</label>
+        <button class="qarow__x" type="button" data-cup-rm="${i}" title="Remover">✕</button>
+      </div>`).join('') : '<p class="atv__empty">Nenhum cupom ainda. Crie um código de desconto (ex.: BEMVINDO10) e marque “pop-up” para aparecer ao entrar no site.</p>';
+  }
+  (function wireCuponsEditor() {
+    const box = $('#cuponsEditor'); if (!box) return;
+    box.addEventListener('input', e => {
+      const t = e.target;
+      const cod = t.closest('[data-cup-cod]'), pct = t.closest('[data-cup-pct]'), quem = t.closest('[data-cup-quem]');
+      if (!cod && !pct && !quem) return;
+      const i = parseInt((cod || pct || quem).dataset.cupCod || (cod || pct || quem).dataset.cupPct || (cod || pct || quem).dataset.cupQuem, 10);
+      const arr = cuponsArr(); if (!arr[i]) arr[i] = { codigo: '', desconto: 0, quem: '', ativo: true, popup: false };
+      if (cod) arr[i].codigo = cod.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+      if (pct) arr[i].desconto = Math.max(0, Math.min(100, num(pct.value) || 0));
+      if (quem) arr[i].quem = quem.value;
+      if (cod) cod.value = arr[i].codigo;   // reflete a normalização
+      save(); schedulePushSettings();
+    });
+    box.addEventListener('change', e => {
+      const at = e.target.closest('[data-cup-ativo]'), pp = e.target.closest('[data-cup-popup]');
+      if (!at && !pp) return;
+      const arr = cuponsArr();
+      if (at) { const i = parseInt(at.dataset.cupAtivo, 10); if (arr[i]) arr[i].ativo = at.checked; }
+      if (pp) {
+        const i = parseInt(pp.dataset.cupPopup, 10);
+        if (arr[i]) { arr[i].popup = pp.checked; if (pp.checked) arr.forEach((c, j) => { if (j !== i) c.popup = false; }); }   // só 1 cupom no pop-up
+        renderCuponsEditor();
+      }
+      save(); schedulePushSettings();
+    });
+    box.addEventListener('click', e => {
+      const rm = e.target.closest('[data-cup-rm]'); if (!rm) return;
+      cuponsArr().splice(parseInt(rm.dataset.cupRm, 10), 1); save(); schedulePushSettings(); renderCuponsEditor();
+    });
+    const add = $('#btnAddCupom');
+    if (add) add.addEventListener('click', () => { cuponsArr().push({ codigo: '', desconto: 10, quem: '', ativo: true, popup: false }); save(); renderCuponsEditor(); });
   })();
 
   // ---- editor de DEPOIMENTOS ----
