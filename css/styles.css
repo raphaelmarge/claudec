@@ -641,6 +641,16 @@ span.linharow__x { border: none; background: none; cursor: default; }
 .sync-status.off { color: #F5A524; }
 .mbar__prob { font-family: var(--font-mono); color: var(--txt-dim); opacity: .7; }
 .mcard__hint { font-size: .72rem; color: var(--txt-dim); margin: 8px 0 0; }
+/* tabela de desempenho da equipe (gestor) */
+.teamtbl { display: flex; flex-direction: column; gap: 2px; }
+.teamtbl__h, .teamtbl__r { display: grid; grid-template-columns: 1.4fr 1.1fr .6fr 1fr .5fr; gap: 8px; align-items: center; padding: 8px 6px; font-size: .82rem; }
+.teamtbl__h { color: var(--txt-mut); font-size: .68rem; text-transform: uppercase; letter-spacing: .04em; border-bottom: 1px solid var(--line-2); }
+.teamtbl__h span:not(:first-child), .teamtbl__r span:not(.teamtbl__n) { text-align: right; }
+.teamtbl__r { border-bottom: 1px solid var(--line); }
+.teamtbl__r:last-child { border-bottom: none; }
+.teamtbl__n { font-weight: 600; color: var(--txt); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.teamtbl__warn { color: var(--danger); }
+.teamtbl__ok { color: var(--txt-mut); }
 
 /* metas mensais por vendedor (Fase 4) — empilha no mobile, 1 linha no desktop */
 .metarow { display: grid; grid-template-columns: 1fr auto; column-gap: 10px; row-gap: 6px; align-items: center; margin-bottom: 13px; }
