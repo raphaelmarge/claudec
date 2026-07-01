@@ -2926,7 +2926,33 @@
       : '<p class="atv__empty">Nenhum item orçado ainda.</p>';
     const prodCard = `<div class="mcard"><h3 class="mcard__t">Equipamentos mais orçados</h3>${prodBars}<p class="mcard__hint">Quantidade somada em todos os orçamentos (× vezes) e valor total gerado. Use para priorizar estoque, foco de venda e negociação.</p></div>`;
 
-    $('#dashMetrics').innerHTML = kpis + convCard + fcCard + metasCard +
+    // ---- desempenho da equipe (visão do gestor; só admin) ----
+    let teamCard = '';
+    if (ehAdmin) {
+      const team = {};
+      const T = n => team[n] || (team[n] = { abertoC: 0, abertoV: 0, ganhoC: 0, ganhoV: 0, perdidoC: 0, parados: 0 });
+      base.forEach(r => {
+        const n = r.vendedor_nome || '—'; const k = stageOf(r); const t = T(n);
+        if (k === 'ganho') { t.ganhoC++; t.ganhoV += Number(r.total) || 0; }
+        else if (k === 'perdido') { t.perdidoC++; }
+        else { t.abertoC++; t.abertoV += Number(r.total) || 0; if (rottingInfo(r)) t.parados++; }
+      });
+      const rows = Object.entries(team).filter(([n]) => n && n !== '—')
+        .sort((a, b) => b[1].ganhoV - a[1].ganhoV);
+      if (rows.length) {
+        const body = rows.map(([n, t]) => {
+          const fech = t.ganhoC + t.perdidoC;
+          const conv = fech ? Math.round(t.ganhoC / fech * 100) : 0;
+          const par = t.parados ? `<b class="teamtbl__warn">${t.parados}</b>` : '<span class="teamtbl__ok">—</span>';
+          return `<div class="teamtbl__r"><span class="teamtbl__n">${esc(n)}</span><span>${t.abertoC} · ${moneyK(t.abertoV)}</span><span>${conv}%</span><span>${moneyK(t.ganhoV)}</span><span>${par}</span></div>`;
+        }).join('');
+        teamCard = `<div class="mcard"><h3 class="mcard__t">Desempenho da equipe</h3>
+          <div class="teamtbl"><div class="teamtbl__h"><span>Vendedor</span><span>Aberto</span><span>Conv.</span><span>Fechado</span><span title="Negócios parados">⚠️</span></div>${body}</div>
+          <p class="mcard__hint">Pipeline aberto (nº · valor), taxa de conversão, valor fechado e ⚠️ negócios parados (sem próxima atividade há +${ROT_DIAS} dias) por vendedor.</p></div>`;
+      }
+    }
+
+    $('#dashMetrics').innerHTML = kpis + convCard + fcCard + metasCard + teamCard +
       `<div class="mcard"><h3 class="mcard__t">Distribuição do funil</h3>${funil}</div>` +
       prodCard +
       lossCard +
