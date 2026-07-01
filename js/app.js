@@ -2907,8 +2907,28 @@
       `<div class="mbar"><span class="mbar__lab">${esc(n)}</span><div class="mbar__track"><div class="mbar__fill bad" style="width:${Math.round(c / maxL * 100)}%"></div></div><span class="mbar__val">${c}</span></div>`).join('');
     const lossCard = cnt.perdido ? `<div class="mcard"><h3 class="mcard__t">Motivos de perda (${cnt.perdido})</h3>${lossBars}</div>` : '';
 
+    // ---- equipamentos mais orçados (demanda por produto em todos os negócios) ----
+    const prodAgg = {};
+    base.forEach(r => {
+      const won = stageOf(r) === 'ganho';
+      (Array.isArray(r.itens) ? r.itens : []).forEach(it => {
+        const nome = (it.nome || it.codigo || '').trim(); if (!nome) return;
+        const q = Number(it.qtd) || 0;
+        const v = Number(it.total) || (Number(it.unitario || it.preco) || 0) * q;
+        const p = prodAgg[nome] || (prodAgg[nome] = { qtd: 0, val: 0, deals: 0, wonQtd: 0 });
+        p.qtd += q; p.val += v; p.deals += 1; if (won) p.wonQtd += q;
+      });
+    });
+    const prodArr = Object.entries(prodAgg).sort((a, b) => b[1].qtd - a[1].qtd).slice(0, 8);
+    const maxP = Math.max(1, ...prodArr.map(p => p[1].qtd));
+    const prodBars = prodArr.length
+      ? prodArr.map(([n, d]) => `<div class="mbar"><span class="mbar__lab" title="${esc(n)}">${esc(n)}</span><div class="mbar__track"><div class="mbar__fill" style="width:${Math.round(d.qtd / maxP * 100)}%"></div></div><span class="mbar__val">${d.qtd}× <small>· ${moneyK(d.val)}</small></span></div>`).join('')
+      : '<p class="atv__empty">Nenhum item orçado ainda.</p>';
+    const prodCard = `<div class="mcard"><h3 class="mcard__t">Equipamentos mais orçados</h3>${prodBars}<p class="mcard__hint">Quantidade somada em todos os orçamentos (× vezes) e valor total gerado. Use para priorizar estoque, foco de venda e negociação.</p></div>`;
+
     $('#dashMetrics').innerHTML = kpis + convCard + fcCard + metasCard +
       `<div class="mcard"><h3 class="mcard__t">Distribuição do funil</h3>${funil}</div>` +
+      prodCard +
       lossCard +
       `<div class="mcard"><h3 class="mcard__t">Fechado × Perdido · últimos 6 meses</h3>${chart6}<div class="mlegend"><span><i style="background:var(--ok)"></i>Fechado</span><span><i style="background:var(--danger)"></i>Perdido</span></div></div>` +
       `<div class="mcard"><h3 class="mcard__t">Valor fechado por vendedor</h3>${vendBars}</div>`;
