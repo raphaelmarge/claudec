@@ -248,6 +248,8 @@
     const act = e.target.dataset.act;
     const codeEl = e.target.closest('[data-code]');
     const code = codeEl && codeEl.dataset.code;
+    const catLink = e.target.closest('[data-catalog]');
+    if (catLink) { e.preventDefault(); openCatalog(); closeMenu(); const el = document.getElementById('produtos'); if (el) el.scrollIntoView({ behavior: 'smooth' }); return; }
     if (e.target.closest('[data-cact="orc"]')) { e.preventDefault(); askOrc(); return; }
     if (act === 'cmp' && code) { toggleCompare(code); return; }
     if (act === 'add' && code) { setQty(code, 1); syncAll(); toast('Adicionado ao orçamento'); return; }
@@ -480,7 +482,10 @@
     const so = $('#sortBy'); if (so) so.value = 'rel';
     const gf = $('#grupoFilter'); if (gf) gf.value = 'all';
   }
+  // revela a grade de linhas + catálogo (escondidos na landing até abrir pelo menu)
+  function openCatalog() { document.body.classList.remove('catalog-hidden'); }
   function afterNav(push, urlParam, scroll) {
+    openCatalog();
     if (push !== false) history[push === 'replace' ? 'replaceState' : 'pushState']({}, '', urlParam ? (BASE_URL + urlParam) : BASE_URL);
     renderSeries(); renderChips(); renderGrid(); renderLinhaHead();
     closeLinhasDrop(); closeMenu();
@@ -603,6 +608,7 @@
   }
   function openProd(code, push) {
     const p = byCode(code); if (!p) return;
+    openCatalog();
     prodCode = code;
     pushRecent(code);
     $('#pmMedia').innerHTML = galleryHTML(p);
