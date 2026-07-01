@@ -286,8 +286,8 @@ img{max-width:100%;display:block}
 .trustbar{display:flex;flex-wrap:wrap;gap:8px 14px;justify-content:center;margin-top:12px}
 .trustbar span{font-size:.74rem;color:var(--txt-dim);white-space:nowrap}
 .trustbar--lead{margin:14px 0 0;padding-top:12px;border-top:1px solid var(--line)}
-/* landing enxuta: esconde linhas + catálogo até abrir pelo menu "Catálogo" */
-body.catalog-hidden #series,
+.hero__cta--center{justify-content:center;margin-top:20px}
+/* landing: mantém a grade de linhas, esconde só o catálogo de produtos até abrir */
 body.catalog-hidden #produtos,
 body.catalog-hidden #recent{display:none}
 /* botão voltar ao topo */
