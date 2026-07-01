@@ -2358,6 +2358,19 @@
     const b = e.target.closest('.fchip'); if (!b) return;
     dashStage = b.dataset.stage; renderDashboard();
   });
+  function switchDashView(v) {
+    dashView = v;
+    $$('#dashTabs .dtab').forEach(t => t.classList.toggle('active', t.dataset.view === v));
+    $('#viewList').hidden = v !== 'list'; $('#viewKanban').hidden = v !== 'kanban';
+    $('#viewAgenda').hidden = v !== 'agenda'; $('#viewMetrics').hidden = v !== 'metrics';
+    renderDashboard();
+  }
+  $('#dashAlerts') && $('#dashAlerts').addEventListener('click', e => {
+    const b = e.target.closest('[data-alert]'); if (!b) return;
+    const a = b.dataset.alert;
+    if (a === 'metrics') switchDashView('metrics');
+    else { dashStage = a; renderDashboard(); }
+  });
   // mudar a fase de um orçamento direto no card
   $('#dashList').addEventListener('change', e => {
     if (e.target.dataset.act !== 'stage') return;
@@ -2490,7 +2503,28 @@
     if (dashView === 'metrics') return renderMetrics(base);
     renderListView(base);
   }
+  // ---- alertas gerenciais (só admin): leads sem atendimento, negócios parados, metas ----
+  function renderAlerts(base) {
+    const box = $('#dashAlerts'); if (!box) return;
+    if (!(Cloud.isAdmin && Cloud.isAdmin())) { box.hidden = true; box.innerHTML = ''; return; }
+    const semAtend = base.filter(r => stageOf(r) === 'novo' && atividadesDe(r).length === 0).length;
+    const parados = base.filter(r => rottingInfo(r)).length;
+    const _now = new Date();
+    const mesAtual = _now.getFullYear() + '-' + String(_now.getMonth() + 1).padStart(2, '0');
+    const ganhoMes = {};
+    base.forEach(r => { if (stageOf(r) !== 'ganho') return; if (String(r.criado_em || '').slice(0, 7) !== mesAtual) return; const n = r.vendedor_nome || '—'; ganhoMes[n] = (ganhoMes[n] || 0) + (Number(r.total) || 0); });
+    const metas = P().metas || {};
+    const abaixo = Object.keys(metas).filter(n => n && (Number(metas[n]) || 0) > 0 && (ganhoMes[n] || 0) < Number(metas[n])).length;
+    const chips = [];
+    if (semAtend) chips.push(`<button class="dalert dalert--warn" data-alert="novo">🕐 <b>${semAtend}</b> lead(s) sem atendimento</button>`);
+    if (parados) chips.push(`<span class="dalert dalert--bad">🧊 <b>${parados}</b> negócio(s) parado(s)</span>`);
+    if (abaixo) chips.push(`<button class="dalert" data-alert="metrics">🎯 <b>${abaixo}</b> vendedor(es) abaixo da meta</button>`);
+    if (!chips.length) { box.hidden = true; box.innerHTML = ''; return; }
+    box.hidden = false;
+    box.innerHTML = `<span class="dalert__lab">Atenção do gestor</span>` + chips.join('');
+  }
   function renderListView(base) {
+    renderAlerts(base);
     // ---- funil: contagem + valor por fase ----
     const cnt = { all: base.length }, val = { all: 0 };
     STAGES.forEach(s => { cnt[s.key] = 0; val[s.key] = 0; });
@@ -2926,6 +2960,26 @@
       : '<p class="atv__empty">Nenhum item orçado ainda.</p>';
     const prodCard = `<div class="mcard"><h3 class="mcard__t">Equipamentos mais orçados</h3>${prodBars}<p class="mcard__hint">Quantidade somada em todos os orçamentos (× vezes) e valor total gerado. Use para priorizar estoque, foco de venda e negociação.</p></div>`;
 
+    // ---- atribuição de origem: cupons / influenciadores (extraído das observações) ----
+    const cupAgg = {};
+    base.forEach(r => {
+      const m = /Cupom:\s*([A-Za-z0-9]+)\s*(?:\(([^)]*)\))?/.exec(r.obs || '');
+      if (!m) return;
+      const code = m[1].toUpperCase();
+      const quem = (m[2] || '').split('·')[1] ? m[2].split('·')[1].trim() : '';
+      const label = code + (quem ? ' · ' + quem : '');
+      const a = cupAgg[code] || (cupAgg[code] = { label, deals: 0, ganhoC: 0, ganhoV: 0 });
+      a.deals++; if (stageOf(r) === 'ganho') { a.ganhoC++; a.ganhoV += Number(r.total) || 0; }
+    });
+    const cupArr = Object.values(cupAgg).sort((a, b) => (b.ganhoV - a.ganhoV) || (b.deals - a.deals));
+    let cupCard = '';
+    if (cupArr.length) {
+      const maxC = Math.max(1, ...cupArr.map(c => c.deals));
+      const cupBars = cupArr.map(c =>
+        `<div class="mbar"><span class="mbar__lab" title="${esc(c.label)}">${esc(c.label)}</span><div class="mbar__track"><div class="mbar__fill" style="width:${Math.round(c.deals / maxC * 100)}%"></div></div><span class="mbar__val">${c.deals} orç. <small>· ${c.ganhoC} fech. · ${moneyK(c.ganhoV)}</small></span></div>`).join('');
+      cupCard = `<div class="mcard"><h3 class="mcard__t">Origem por cupom / influenciador</h3>${cupBars}<p class="mcard__hint">Orçamentos que usaram cada cupom, quantos fecharam e o valor gerado. Mede o retorno de cada influenciador/campanha.</p></div>`;
+    }
+
     // ---- desempenho da equipe (visão do gestor; só admin) ----
     let teamCard = '';
     if (ehAdmin) {
@@ -2955,6 +3009,7 @@
     $('#dashMetrics').innerHTML = kpis + convCard + fcCard + metasCard + teamCard +
       `<div class="mcard"><h3 class="mcard__t">Distribuição do funil</h3>${funil}</div>` +
       prodCard +
+      cupCard +
       lossCard +
       `<div class="mcard"><h3 class="mcard__t">Fechado × Perdido · últimos 6 meses</h3>${chart6}<div class="mlegend"><span><i style="background:var(--ok)"></i>Fechado</span><span><i style="background:var(--danger)"></i>Perdido</span></div></div>` +
       `<div class="mcard"><h3 class="mcard__t">Valor fechado por vendedor</h3>${vendBars}</div>`;
