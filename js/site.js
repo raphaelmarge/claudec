@@ -289,7 +289,7 @@
 
   /* ---------- lead ---------- */
   $('#btnSolicitar').addEventListener('click', openLead);
-  function askOrc() { if (cartCount()) openLead(); else { document.getElementById('produtos').scrollIntoView({ behavior: 'smooth' }); toast('Escolha alguns equipamentos primeiro'); } }
+  function askOrc() { if (cartCount()) openLead(); else { openCatalog(); document.getElementById('produtos').scrollIntoView({ behavior: 'smooth' }); toast('Escolha alguns equipamentos primeiro'); } }
   const ctaOrcBtn = $('#ctaOrc'); if (ctaOrcBtn) ctaOrcBtn.addEventListener('click', askOrc);
   const heroOrcBtn = $('#heroOrc'); if (heroOrcBtn) heroOrcBtn.addEventListener('click', askOrc);
 
@@ -1037,6 +1037,7 @@
         const c = popupCupom(); if (c) { appliedCoupon = c; renderDrawer(); }
         closePromo();
         toast(`Cupom ${c ? c.codigo : ''} aplicado — escolha seus equipamentos!`);
+        openCatalog();
         const el = document.getElementById('produtos'); if (el) el.scrollIntoView({ behavior: 'smooth' });
         return;
       }
@@ -1067,7 +1068,10 @@
     const tp = currentTipo(), dl = currentLinha();
     if (tp) goToTipo(tp, 'replace', false);
     else if (dl) goToLinha(dl, 'replace', false);
-    if (tp || dl) setTimeout(() => { const el = document.getElementById('produtos'); if (el) el.scrollIntoView({ behavior: 'smooth' }); }, 250);
+    // chegada com #produtos (links de outras páginas): revela o catálogo antes de rolar
+    const hashProd = location.hash === '#produtos';
+    if (hashProd) openCatalog();
+    if (tp || dl || hashProd) setTimeout(() => { const el = document.getElementById('produtos'); if (el) el.scrollIntoView({ behavior: 'smooth' }); }, 250);
   })();
 
   // catálogo ao vivo: lê o catalog.json publicado pelo app (bucket público) e
