@@ -1127,7 +1127,7 @@
     await Promise.all(Array.from(built.el.querySelectorAll('img')).map(im => im.complete
       ? Promise.resolve()
       : new Promise(r => { im.onload = im.onerror = r; setTimeout(r, 6000); })));
-    const canvas = await html2canvas(built.el, { scale: 2, backgroundColor: '#ffffff', useCORS: true });
+    const canvas = await html2canvas(built.el, { scale: 2, backgroundColor: '#ffffff', useCORS: true, imageTimeout: 6000 });
     const Ctor = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
     if (!Ctor) throw new Error('jsPDF indisponível');
     const doc = new Ctor({ orientation: 'portrait', unit: 'mm', format: 'a4' });
@@ -1208,8 +1208,12 @@
       const file = new File([blob], 'orcamento-torque-fitness.pdf', { type: 'application/pdf' });
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         // celular: abre a folha de compartilhar com o PDF anexado (WhatsApp, e-mail…)
+        orcPdfPronto = { key: orcPdfKey(), file, tot };            // guarda: o próximo toque compartilha na hora
         try { await navigator.share({ files: [file], title: 'Orçamento Torque Fitness', text: 'Meu orçamento Torque Fitness' }); }
-        catch (e) { if (e && e.name !== 'AbortError') throw e; }
+        catch (e) {
+          if (e && e.name === 'NotAllowedError') { toast('PDF pronto! Toque de novo para enviar.'); return; }
+          if (e && e.name !== 'AbortError') throw e;
+        }
       } else {
         // sem suporte a compartilhar arquivo: baixa o PDF e abre o WhatsApp com o resumo
         doc.save('orcamento-torque-fitness.pdf');
