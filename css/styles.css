@@ -901,3 +901,21 @@ body.tv .dash__alerts { font-size: 1rem; }
   .mkpi b { font-size: 1.1rem; }
   .dash__stat b { font-size: 1.05rem; }
 }
+
+/* ===================== CONTRATO DE COMPRA E VENDA ===================== */
+.ctform { max-width: 620px; margin: 0 auto 16px; }
+.ctform__t { font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; color: var(--txt-mut); margin: 14px 0 8px; }
+.ctform__hint { font-size: .74rem; color: var(--txt-dim); margin: 12px 0 0; line-height: 1.5; }
+.contract-doc { width: 100%; max-width: 620px; margin: 0 auto; background: #fff; color: #15151c; border-radius: 12px;
+  padding: 30px 32px; font-size: .74rem; line-height: 1.6; text-align: justify; }
+.contract-doc h3 { text-align: center; font-size: .9rem; margin: 0 0 16px; }
+.contract-doc h4 { font-size: .76rem; margin: 14px 0 6px; }
+.contract-doc p { margin: 0 0 7px; }
+.contract-doc .ct__item { margin: 0 0 4px 12px; }
+.contract-doc .ctok { color: #000; }
+.contract-doc .ctmiss { color: #c81e1e; background: #fde8e8; padding: 0 4px; border-radius: 4px; font-weight: 700; }
+.contract-doc .ct__data { margin-top: 18px; }
+.contract-doc .ct__ass { display: grid; grid-template-columns: 1fr 1fr; gap: 26px 20px; margin-top: 30px; }
+.contract-doc .ct__ass div { display: flex; flex-direction: column; align-items: center; gap: 3px; text-align: center; }
+.contract-doc .ct__ass span { letter-spacing: -1px; color: #444; }
+.contract-doc .ct__ass small { color: #777; font-size: .64rem; }

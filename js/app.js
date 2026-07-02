@@ -97,7 +97,7 @@
      fiscais (custo/margem) nunca saem daqui. Degrada para
      localStorage se a tabela não existir.
      ------------------------------------------------------------ */
-  const SHARED_PARAM_KEYS = ['parcelasMax', 'juros', 'validade', 'stages', 'metas', 'linhas', 'linhaBanners', 'contato', 'carousel', 'comissao', 'kits', 'descontoMaxVendedor', 'faq', 'depoimentos', 'blog', 'cupons'];
+  const SHARED_PARAM_KEYS = ['parcelasMax', 'juros', 'validade', 'stages', 'metas', 'linhas', 'linhaBanners', 'contato', 'carousel', 'comissao', 'kits', 'descontoMaxVendedor', 'faq', 'depoimentos', 'blog', 'cupons', 'contrato'];
   const slugify = s => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
   const SETTINGS_SQL =
     "create table if not exists public.settings (\n" +
@@ -408,6 +408,8 @@
     setVal('#cfgParcelas', p.parcelasMax); setVal('#cfgJuros', p.juros);
     setVal('#cfgValidade', p.validade); setVal('#cfgComissao', p.comissao);
     setVal('#cfgDescMaxVend', p.descontoMaxVendedor);
+    const emp = p.contrato || {};
+    Object.keys(EMP_FIELDS).forEach(id => { const el = $('#' + id); if (el) el.value = emp[EMP_FIELDS[id]] || ''; });
     renderStagesEditor();
     renderLinhasEditor();
     renderCarouselEditor();
@@ -1089,6 +1091,16 @@
   });
   $('#cfgParcelas').addEventListener('input', () => { P().parcelasMax = Math.max(1, parseInt($('#cfgParcelas').value, 10) || 1); save(); renderSummary(); schedulePushSettings(); });
   $('#cfgValidade').addEventListener('input', () => { P().validade = Math.max(1, parseInt($('#cfgValidade').value, 10) || 1); save(); schedulePushSettings(); });
+  // cadastro fixo da empresa vendedora (usado no contrato de compra e venda)
+  const EMP_FIELDS = { empRazao: 'razao', empCnpj: 'cnpj', empEndereco: 'endereco', empRep: 'rep', empCargo: 'cargo', empCpf: 'cpf', empCidade: 'cidade' };
+  Object.keys(EMP_FIELDS).forEach(id => {
+    const el = $('#' + id); if (!el) return;
+    el.addEventListener('input', () => {
+      P().contrato = P().contrato || {};
+      P().contrato[EMP_FIELDS[id]] = el.value.trim();
+      save(); schedulePushSettings();
+    });
+  });
   $('#cfgComissao') && $('#cfgComissao').addEventListener('input', () => { P().comissao = Math.max(0, num($('#cfgComissao').value) || 0); save(); schedulePushSettings(); if (dashView === 'metrics' && !$('#dashScreen').hidden) renderDashboard(); });
   $('#cfgDescMaxVend') && $('#cfgDescMaxVend').addEventListener('input', () => { P().descontoMaxVendedor = Math.max(0, num($('#cfgDescMaxVend').value) || 0); save(); schedulePushSettings(); });
 
@@ -1236,6 +1248,7 @@
     $('#clEmail').value = c ? (c.email || '') : '';
     $('#clDoc').value = c ? (c.doc || '') : '';
     $('#clCidade').value = c ? (c.cidade || '') : '';
+    $('#clEndereco').value = c ? (c.endereco || '') : '';
     $('#clObs').value = c ? (c.obs || '') : '';
     $('#btnDeleteCliente').style.display = c ? '' : 'none';
     ['#clTelefone', '#clEmail', '#clDoc'].forEach(s => markField(s, true));
@@ -1254,10 +1267,18 @@
       id: editClienteId || undefined,
       nome, empresa: $('#clEmpresa').value.trim(), telefone: $('#clTelefone').value.trim(),
       email: $('#clEmail').value.trim(), doc: $('#clDoc').value.trim(),
-      cidade: $('#clCidade').value.trim(), obs: $('#clObs').value.trim()
+      cidade: $('#clCidade').value.trim(), endereco: $('#clEndereco').value.trim(), obs: $('#clObs').value.trim()
     };
     try {
-      const saved = await Cloud.saveCliente(dados);
+      let saved;
+      try { saved = await Cloud.saveCliente(dados); }
+      catch (err) {
+        if (isMissingCol(err) && dados.endereco) {      // banco sem a coluna → guarda no obs
+          dados.obs = ['Endereço: ' + dados.endereco, dados.obs].filter(Boolean).join(' | ');
+          delete dados.endereco;
+          saved = await Cloud.saveCliente(dados);
+        } else throw err;
+      }
       await reloadClientes();
       if (!editClienteId && saved) state.quote.clienteId = saved.id;
       save(); closeModal('#clienteModal'); renderSummary(); toast('Cliente salvo.');
@@ -1908,6 +1929,173 @@
     const itens = lines.map(l => `${l.p.codigo}:${l.q}`).join(',');
     window.open('projeto.html?itens=' + encodeURIComponent(itens), '_blank', 'noopener');
   });
+
+  /* ====================== CONTRATO DE COMPRA E VENDA ====================== */
+  // valor por extenso em reais (para a Cláusula 3)
+  function extensoBRL(v) {
+    v = Math.round((Number(v) || 0) * 100) / 100;
+    const int = Math.floor(v), cent = Math.round((v - int) * 100);
+    const U = ['', 'um', 'dois', 'três', 'quatro', 'cinco', 'seis', 'sete', 'oito', 'nove', 'dez', 'onze', 'doze', 'treze', 'quatorze', 'quinze', 'dezesseis', 'dezessete', 'dezoito', 'dezenove'];
+    const D = ['', '', 'vinte', 'trinta', 'quarenta', 'cinquenta', 'sessenta', 'setenta', 'oitenta', 'noventa'];
+    const C = ['', 'cento', 'duzentos', 'trezentos', 'quatrocentos', 'quinhentos', 'seiscentos', 'setecentos', 'oitocentos', 'novecentos'];
+    const dezena = n => n < 20 ? U[n] : D[Math.floor(n / 10)] + (n % 10 ? ' e ' + U[n % 10] : '');
+    const trio = n => {
+      if (!n) return '';
+      if (n === 100) return 'cem';
+      const c = Math.floor(n / 100), r = n % 100;
+      return (c ? C[c] : '') + (c && r ? ' e ' : '') + (r ? dezena(r) : '');
+    };
+    let resto = int; const partes = [];
+    [[1e9, 'bilhão', 'bilhões'], [1e6, 'milhão', 'milhões'], [1e3, 'mil', 'mil']].forEach(([b, sg, pl]) => {
+      const q = Math.floor(resto / b);
+      if (q) { partes.push(b === 1e3 && q === 1 ? 'mil' : trio(q) + ' ' + (q === 1 ? sg : pl)); resto %= b; }
+    });
+    if (resto) partes.push(trio(resto));
+    let s = (partes.join(' e ') || 'zero') + (int === 1 ? ' real' : ' reais');
+    if (cent) s += ' e ' + dezena(cent) + (cent === 1 ? ' centavo' : ' centavos');
+    return s;
+  }
+  const MESES_PT = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+  let ctCtx = null;   // dados da venda em contrato
+  const ctVal = id => ($('#' + id) ? $('#' + id).value : '').trim();
+  const ctGap = (v, ph) => v ? `<b class="ctok">${esc(v)}</b>` : `<b class="ctmiss">(${esc(ph)})</b>`;
+  function abrirContrato(d) {
+    ctCtx = d;
+    const emp = P().contrato || {};
+    $('#cwNome').value = d.clienteNome || '';
+    $('#cwDoc').value = d.clienteDoc || '';
+    $('#cwEnd').value = d.clienteEndereco || '';
+    $('#cwRep').value = ''; $('#cwCargo').value = ''; $('#cwCpf').value = '';
+    $('#cwEndEntrega').value = d.clienteEndereco || '';
+    const pct = d.total > 0 && d.sinal > 0 ? Math.round(d.sinal / d.total * 100) : 40;
+    $('#cwPctSinal').value = Math.min(100, Math.max(0, pct));
+    $('#cwFormaSinal').value = 'PIX / transferência bancária';
+    const saldo = Math.max(0, (d.total || 0) - (d.sinal || 0));
+    $('#cwFormaSaldo').value = d.parcelas > 1
+      ? `${d.parcelas} parcelas de ${money(d.valorParcela || (saldo / d.parcelas))} via boleto bancário`
+      : 'à vista, via PIX / transferência bancária';
+    $('#cwCidadeAss').value = emp.cidade || '';
+    openModal('#contractModal');
+    renderContrato();
+  }
+  function renderContrato() {
+    if (!ctCtx) return;
+    const d = ctCtx, emp = P().contrato || {};
+    const pct = Math.min(100, Math.max(0, parseInt(ctVal('cwPctSinal'), 10) || 0));
+    const pctSaldo = 100 - pct;
+    const hoje = new Date();
+    const itensHTML = (d.itens && d.itens.length)
+      ? d.itens.map(i => `<p class="ct__item">• ${i.qtd || 1}× <b>${esc(i.nome)}</b>${i.codigo ? ` (cód. ${esc(i.codigo)})` : ''} — ${money(i.unitario || 0)} cada — total ${money(i.total || 0)}</p>`).join('')
+      : `<p class="ct__item"><b class="ctmiss">(DESCRIÇÃO COMPLETA DOS EQUIPAMENTOS)</b></p>`;
+    $('#contractDoc').innerHTML = `
+      <h3>CONTRATO PARTICULAR DE COMPROMISSO DE COMPRA E VENDA</h3>
+      <p><b>CONTRATANTE:</b> ${ctGap(ctVal('cwNome'), 'NOME / RAZÃO SOCIAL DO COMPRADOR')}, inscrito(a) no CPF/CNPJ sob o nº ${ctGap(ctVal('cwDoc'), 'CPF/CNPJ')}, com sede/residência em ${ctGap(ctVal('cwEnd'), 'ENDEREÇO COMPLETO')}, a seguir denominado(a) simplesmente “COMPRADORA”${ctVal('cwRep') ? `, neste ato representada por ${ctGap(ctVal('cwRep'), 'REPRESENTANTE')}, ${ctGap(ctVal('cwCargo'), 'CARGO')}, inscrito no CPF sob o nº ${ctGap(ctVal('cwCpf'), 'CPF DO REPRESENTANTE')}` : ''}.</p>
+      <p><b>CONTRATADA:</b> ${ctGap(emp.razao, 'RAZÃO SOCIAL DA EMPRESA')}, inscrita no CNPJ sob o nº ${ctGap(emp.cnpj, 'CNPJ DA EMPRESA')}, com sede em ${ctGap(emp.endereco, 'ENDEREÇO COMPLETO DA SEDE')}, a seguir denominada simplesmente “VENDEDORA”, neste ato representada por ${ctGap(emp.rep, 'REPRESENTANTE LEGAL')}, ${ctGap(emp.cargo, 'CARGO')}, inscrito no CPF sob o nº ${ctGap(emp.cpf, 'CPF DO REPRESENTANTE')}.</p>
+      <p>As partes acima qualificadas, por este contrato particular de compromisso de compra e venda de mercadorias importadas, nos termos dos artigos 481 a 504 do Código Civil, mediante cláusulas reciprocamente outorgadas e aceitas, se obrigam nos termos e condições seguintes:</p>
+      <h4>CLÁUSULA 1 – DO OBJETO</h4>
+      <p>1.1 – O objeto do presente contrato diz respeito à aquisição e importação de EQUIPAMENTOS pela ora VENDEDORA, mediante prévio e formal pedido realizado pela COMPRADORA.</p>
+      <p>1.2 – Compõem o presente contrato os seguintes equipamentos:</p>
+      ${itensHTML}
+      <p>1.3 – Anteriormente à assinatura deste contrato, a COMPRADORA consigna através do presente instrumento que teve acesso a todos os eventuais documentos que porventura tenha solicitado à VENDEDORA, a fim de comprovar o fiel atendimento às especificações técnicas dos EQUIPAMENTOS acima relacionados, nada mais tendo a reclamar quanto a isso.</p>
+      <h4>CLÁUSULA 2 – DA ENTREGA DOS EQUIPAMENTOS</h4>
+      <p>2.1 – A VENDEDORA compromete-se a realizar a entrega dos EQUIPAMENTOS acima relacionados no endereço situado à ${ctGap(ctVal('cwEndEntrega'), 'ENDEREÇO COMPLETO DE ENTREGA')}.</p>
+      <p>2.2 – A VENDEDORA compromete-se a realizar a entrega dos EQUIPAMENTOS no prazo de até ${ctGap(ctVal('cwPrazo') && ctVal('cwPrazo') + ' (' + extensoBRL(parseInt(ctVal('cwPrazo'), 10) || 0).replace(/ rea(l|is).*$/, '') + ') dias', 'XX DIAS')} da assinatura do presente contrato.</p>
+      <h4>CLÁUSULA 3 – DO PREÇO E PAGAMENTO</h4>
+      <p>3.1 – A COMPRADORA compromete-se a pagar à VENDEDORA a quantia aqui estipulada de <b class="ctok">${money(d.total || 0)}</b> (<b class="ctok">${esc(extensoBRL(d.total || 0))}</b>), sendo <b class="ctok">${pct}%</b> no ato da assinatura deste contrato, ou na forma que segue, e <b class="ctok">${pctSaldo}%</b> após a efetiva entrega dos EQUIPAMENTOS, ou na forma que segue.</p>
+      <p>3.2 – O pagamento dos ${pct}% prévios (<b class="ctok">${money((d.total || 0) * pct / 100)}</b>) será realizado através de ${ctGap(ctVal('cwFormaSinal'), 'DISCRIMINAR FORMA DO PAGAMENTO')}.</p>
+      <p>3.2.1 – Em caso de parcelamento dos ${pct}% ora previstos, a VENDEDORA apenas realizará a transação após a integralização do r. valor.</p>
+      <p>3.3 – O pagamento dos ${pctSaldo}% após a efetiva entrega dos EQUIPAMENTOS (<b class="ctok">${money((d.total || 0) * pctSaldo / 100)}</b>) será realizado através de ${ctGap(ctVal('cwFormaSaldo'), 'DISCRIMINAR FORMA DO PAGAMENTO')}.</p>
+      <p>3.3.1 – O valor ora estipulado de ${pctSaldo}% poderá sofrer reajustes em decorrência de eventuais custos ou despesas inesperadas, devendo a VENDEDORA, neste caso, comprová-los através de todos os documentos, informações e meios que se mostrem hábeis para esta finalidade.</p>
+      <p>3.4 – Em caso de desistência por parte da COMPRADORA, esta se compromete a arcar perante a VENDEDORA com todos os custos e despesas a ela proporcionados, sem prejuízo de responder pelas perdas e danos daí decorrentes.</p>
+      <h4>CLÁUSULA 4 – DAS OBRIGAÇÕES DA COMPRADORA</h4>
+      <p>4.1 – Uma vez importados os EQUIPAMENTOS e efetuados os desembaraços aduaneiros, obriga-se a COMPRADORA a recebê-los da VENDEDORA, que por sua vez a ela se obriga entregá-los, sob as condições pactuadas neste instrumento previstas na CLÁUSULA 2.</p>
+      <p>4.2 – A COMPRADORA também assumirá os eventuais ônus decorrentes de alterações das normas que regem a espécie e que, de alguma forma, possam afetar ou onerar a VENDEDORA.</p>
+      <p>4.3 – Se compromete a COMPRADORA a receber os EQUIPAMENTOS nos termos pactuados na Cláusula 2 deste contrato.</p>
+      <p>4.4 – A apresentar todos os documentos solicitados pela VENDEDORA, bem como garantia que comprove que seu capital social ou patrimônio líquido são compatíveis com o valor de aquisição dos EQUIPAMENTOS importados do exterior.</p>
+      <h4>CLÁUSULA 5 – DAS OBRIGAÇÕES DA VENDEDORA</h4>
+      <p>5.1 – Efetuar a operação dos EQUIPAMENTOS importados por encomenda nas condições estabelecidas entre a VENDEDORA e a COMPRADORA, em observância à Cláusula 1.</p>
+      <p>5.2 – Emitir Nota Fiscal da venda dos EQUIPAMENTOS pelo preço pactuado, bem como dar quitação aos pagamentos efetuados nos termos da Cláusula 3.</p>
+      <p>5.3 – Providenciar perante as pessoas jurídicas responsáveis, tempestivamente, o envio de todos os documentos pertinentes à importação dos EQUIPAMENTOS importados que lhes forem instruídos e encomendados pela COMPRADORA face às exigências normativas brasileiras.</p>
+      <p>5.4 – Responder por eventuais irregularidades dos EQUIPAMENTOS a serem importados, bem como responsabilizar-se integralmente pela qualidade e quantidade dos EQUIPAMENTOS em conformidade com o estipulado na Cláusula 1 deste contrato.</p>
+      <p>5.5 – Manter em boa guarda e ordem, e apresentar à fiscalização aduaneira, quando exigidos, os documentos e registros relativos às transações que promover, pelo prazo decadencial.</p>
+      <h4>CLÁUSULA 6 – DA CLÁUSULA PENAL</h4>
+      <p>6.1 – Em caso de atraso no pagamento previsto na Cláusula 3, fica ajustado que incidirá multa na ordem de ${ctGap(ctVal('cwMulta') && ctVal('cwMulta') + '%', 'XX%')} do r. valor, sem prejuízo de juros mensais, calculados pró-rata dia, à razão de 12% a.a., além de correção monetária pelo IGP-M, caso o atraso seja superior a um mês.</p>
+      <p>6.2 – Em caso de atraso no prazo da entrega, previsto na Cláusula 2, haverá abatimento do saldo devedor na ordem de ${ctGap(ctVal('cwAbat') && ctVal('cwAbat') + '%', 'X%')} quando do primeiro dia de atraso e a reincidir a cada ${ctGap(ctVal('cwReinc') && ctVal('cwReinc') + ' dias', 'X DIAS')}.</p>
+      <p>6.2.1 – Ficará a VENDEDORA isenta da referida multa desde que o fato gerador do atraso tenha ocorrido em decorrência de caso fortuito ou força maior.</p>
+      <h4>CLÁUSULA 7 – DA GARANTIA</h4>
+      <p>A VENDEDORA fornecerá garantia aos EQUIPAMENTOS elencados na Cláusula 1 pelo prazo de 1 ano, em todo eletrônico e pintura, e pelo prazo de 3 anos em estrutura, a iniciar da efetiva entrega dos EQUIPAMENTOS.</p>
+      <h4>CLÁUSULA 8 – DAS DISPOSIÇÕES GERAIS</h4>
+      <p>8.1 – Poderá o presente contrato ser aditado a qualquer momento, desde que as partes signatárias concordem mutuamente com as pretendidas alterações.</p>
+      <p>8.2 – O presente contrato tem a qualidade de título executivo extrajudicial, nos termos do artigo 585, II do Código de Processo Civil.</p>
+      <p>8.3 – A tolerância, por qualquer das partes, com relação ao descumprimento de qualquer obrigação ora ajustada, não será considerada novação, moratória ou renúncia a qualquer direito, constituindo mera liberalidade que não impedirá a parte tolerante de exigir da outra o fiel e cabal cumprimento deste Contrato, a qualquer tempo.</p>
+      <p>8.4 – Elegem as partes o foro da comarca ${ctGap(emp.cidade && 'de ' + emp.cidade, 'CIDADE DO FORO')}, para dirimir eventuais dúvidas originárias da interpretação do presente contrato, renunciando a qualquer outra por mais privilegiada que seja.</p>
+      <p>8.5 – Este Contrato não poderá ser cedido por qualquer uma das partes a quaisquer terceiros, ainda que pessoas ligadas, até o seu integral cumprimento, sem o prévio consentimento por escrito da outra parte.</p>
+      <p>E por estarem nestes termos, justos e contratados, assinam as partes o presente contrato, em duas vias de igual teor e forma, para que, também assinado pelo fiador e duas testemunhas, produza seus jurídicos e legais efeitos.</p>
+      <p class="ct__data">${ctGap(ctVal('cwCidadeAss'), 'CIDADE')}, ${hoje.getDate()} de ${MESES_PT[hoje.getMonth()]} de ${hoje.getFullYear()}.</p>
+      <div class="ct__ass">
+        <div><span>______________________________________</span><b>COMPRADORA</b><small>${esc(ctVal('cwNome') || '')}</small></div>
+        <div><span>______________________________________</span><b>VENDEDORA</b><small>${esc(emp.razao || '')}</small></div>
+        <div><span>______________________________________</span><b>FIADOR</b><small>&nbsp;</small></div>
+        <div><span>______________________________________</span><b>TESTEMUNHA 1</b><small>&nbsp;</small></div>
+        <div><span>______________________________________</span><b>TESTEMUNHA 2</b><small>&nbsp;</small></div>
+      </div>`;
+  }
+  ['cwNome', 'cwDoc', 'cwEnd', 'cwRep', 'cwCargo', 'cwCpf', 'cwEndEntrega', 'cwPrazo', 'cwPctSinal', 'cwFormaSinal', 'cwFormaSaldo', 'cwMulta', 'cwAbat', 'cwReinc', 'cwCidadeAss'].forEach(id => {
+    const el = $('#' + id); if (el) el.addEventListener('input', renderContrato);
+  });
+  $('#btnPdfContract').addEventListener('click', async () => {
+    toast('Gerando contrato…');
+    try {
+      await loadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js');
+      await loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js');
+      const jsPDFCtor = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+      const canvas = await html2canvas($('#contractDoc'), { scale: 2, backgroundColor: '#ffffff', imageTimeout: 6000 });
+      const pdf = new jsPDFCtor({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const pw = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight();
+      const imgH = canvas.height * pw / canvas.width;
+      const data = canvas.toDataURL('image/jpeg', 0.92);
+      let restante = imgH, pos = 0;
+      pdf.addImage(data, 'JPEG', 0, pos, pw, imgH); restante -= ph;
+      while (restante > 0) { pos -= ph; pdf.addPage(); pdf.addImage(data, 'JPEG', 0, pos, pw, imgH); restante -= ph; }
+      const nomeArq = 'contrato-' + slugify(ctVal('cwNome') || 'torque') + '.pdf';
+      pdf.save(nomeArq);
+      toast('Contrato gerado.');
+    } catch (e) { console.error(e); toast('Não foi possível gerar o contrato agora.'); }
+  });
+  // do orçamento em edição (botão no modal do orçamento)
+  const btnContratoQuote = $('#btnContratoQuote');
+  if (btnContratoQuote) btnContratoQuote.addEventListener('click', () => {
+    const lines = cartLines();
+    if (!lines.length) { toast('Adicione itens ao orçamento primeiro.'); return; }
+    const cli = clienteById(Q().clienteId);
+    const n = Number($('#installSelect').value) || Math.floor(P().parcelasMax || 12);
+    const saldo = saldoFinanciar();
+    abrirContrato({
+      clienteNome: cli ? (cli.empresa || cli.nome) : '',
+      clienteDoc: cli ? (cli.doc || '') : '',
+      clienteEndereco: cli ? [cli.endereco, cli.cidade].filter(Boolean).join(', ') : '',
+      itens: lines.map(l => ({ codigo: l.p.codigo, nome: l.p.nome, qtd: l.q, unitario: l.unit, total: l.total })),
+      total: totalComDesconto(),
+      sinal: sinalReais(),
+      parcelas: n,
+      valorParcela: saldo > 0 ? parcelaValor(saldo, n) : 0
+    });
+  });
+  window.__contrato = abrirContrato;    // gancho para testes automatizados
+  // de um negócio do funil (dados salvos na nuvem)
+  function contratoDeRow(r) {
+    const cli = (typeof clienteById === 'function' && r.cliente_id) ? clienteById(r.cliente_id) : null;
+    abrirContrato({
+      clienteNome: r.cliente_nome || (cli ? cli.nome : ''),
+      clienteDoc: cli ? (cli.doc || '') : '',
+      clienteEndereco: cli ? [cli.endereco, cli.cidade].filter(Boolean).join(', ') : '',
+      itens: Array.isArray(r.itens) ? r.itens : [],
+      total: Number(r.total) || 0,
+      sinal: Number(r.sinal) || 0,
+      parcelas: Number(r.parcelas) || 1,
+      valorParcela: Number(r.valor_parcela) || 0
+    });
+  }
 
   $('#btnImageQuote').addEventListener('click', async () => {
     try {
@@ -3209,6 +3397,7 @@
         <button class="dc-note" data-act="note-orc" type="button">🗒 Nota</button>
         <button class="dc-edit" data-act="edit-orc" type="button">✎ Editar</button>
         <button class="dc-dup" data-act="dup-orc" type="button">⧉ Duplicar</button>
+        <button class="dc-ct" data-act="contrato-orc" type="button">📜 Contrato</button>
         <button class="dc-prop" data-act="prop-orc" type="button">🔗 Proposta</button>
         <button class="dc-del" data-act="del-orc" type="button">🗑 Excluir</button>
       </div>
@@ -3242,6 +3431,7 @@
     const o = dashData.find(x => x.id === id); if (!o) return;
     if (e.target.dataset.act === 'edit-orc') editOrcamento(o);
     if (e.target.dataset.act === 'dup-orc') duplicarOrcamento(o);
+    if (e.target.dataset.act === 'contrato-orc') contratoDeRow(o);
     if (e.target.dataset.act === 'prop-orc') compartilharProposta(o);
     if (e.target.dataset.act === 'note-orc') openOrc(o);
     if (e.target.dataset.act === 'wpp-lead') {
