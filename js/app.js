@@ -268,7 +268,7 @@
   function cifUSD(p) { const fob = fobDe(p); return fob + (P().freteIntlUSD || 0) + fob * (P().seguroPct || 0) / 100; }
   function fatorImposto() {
     const a = ((P().iof || 0) + (P().ii || 0) + (P().ipi || 0) + (P().pisCofins || 0)) / 100;
-    const icms = (P().icms || 0) / 100;
+    const icms = Math.min((P().icms || 0) / 100, 0.95);   // ICMS ≥100% geraria preço infinito
     return (1 + a) / (1 - icms);
   }
   function custoBRL(p) { return cifUSD(p) * fatorImposto() * (P().cambio || 1) + (P().freteNacionalBRL || 0); }
@@ -290,7 +290,9 @@
     state.products.forEach(p => {
       if (!temCusto(p)) { noCost++; return; }       // sem custo (FOB) → câmbio/margem não tem base
       if (p.travado) { locked++; return; }          // preço manual travado → não mexe
-      p.preco = r2(precoCalculado(p)); updated++;
+      const novo = r2(precoCalculado(p));
+      if (!isFinite(novo) || novo <= 0) { noCost++; return; }   // parâmetro inválido não zera o catálogo
+      p.preco = novo; updated++;
     });
     save();
     return { updated, locked, noCost, total: state.products.length, costsLoaded: state.products.some(temCusto) };
@@ -3395,7 +3397,9 @@
     });
     state.quote.clienteId = o.cliente_id || null;
     state.quote.descMode = 'brl';
-    state.quote.descValue = Number(o.desconto) || 0;
+    // leads antigos do site não gravavam `desconto` (cupom embutido só no total):
+    // reconstrói pela diferença subtotal−total para não perder o desconto prometido
+    state.quote.descValue = Number(o.desconto) || Math.max(0, (Number(o.subtotal) || 0) - (Number(o.total) || 0)) || 0;
     state.quote.sinal = Number(o.sinal) || 0;
     editingOrcamentoId = o.id;
     editingNumero = o.numero || '';
@@ -3418,7 +3422,9 @@
     });
     state.quote.clienteId = o.cliente_id || null;
     state.quote.descMode = 'brl';
-    state.quote.descValue = Number(o.desconto) || 0;
+    // leads antigos do site não gravavam `desconto` (cupom embutido só no total):
+    // reconstrói pela diferença subtotal−total para não perder o desconto prometido
+    state.quote.descValue = Number(o.desconto) || Math.max(0, (Number(o.subtotal) || 0) - (Number(o.total) || 0)) || 0;
     state.quote.sinal = Number(o.sinal) || 0;
     editingOrcamentoId = null; editingNumero = ''; editingObs = '';   // NOVO orçamento
     $('#dashScreen').hidden = true; document.body.style.overflow = '';
