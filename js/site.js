@@ -363,6 +363,7 @@
         vendedor_nome: '',
         itens: lines.map(l => ({ codigo: l.p.codigo, nome: l.p.nome, qtd: l.q, unitario: l.p.preco, total: l.total })),
         subtotal: subtotal,
+        desconto: desc,
         total: total,
         parcelas: maxN,
         valor_parcela: total / maxN,
@@ -501,7 +502,15 @@
     afterNav(push, filterTipo !== 'all' ? '?tipo=' + filterTipo : '', scroll);
   }
   function prodImageAbs(p) { try { return p.imagem ? new URL(p.imagem, BASE_URL).href : DEFAULT_META.ogImage; } catch (e) { return DEFAULT_META.ogImage; } }
-  function prodDesc(p) { return `${p.nome} — equipamento ${p.serie ? 'da linha ' + p.serie + ' ' : ''}Torque Fitness, padrão comercial. A partir de ${money(p.preco)}. Solicite o orçamento e fale com um consultor.`; }
+  // meta description do produto: usa a descrição rica (função + músculos) quando existe
+  function prodDesc(p) {
+    const d = DESC[normName(p.nome)];
+    if (d && d.f) {
+      const musc = (d.m && d.m !== '—') ? ` Trabalha: ${String(d.m).replace(/\.+$/, '')}.` : '';
+      return `${p.nome} — ${d.f}${/[.!?]$/.test(d.f) ? '' : '.'}${musc} A partir de ${money(p.preco)} na Torque Fitness.`.slice(0, 300);
+    }
+    return `${p.nome} — equipamento ${p.serie ? 'da linha ' + p.serie + ' ' : ''}Torque Fitness, padrão comercial. A partir de ${money(p.preco)}. Solicite o orçamento e fale com um consultor.`;
+  }
 
   // dados estruturados de Produto (Google) — injeta ao abrir o produto, remove ao fechar
   function setProductLd(p) {
@@ -511,6 +520,7 @@
     s.textContent = JSON.stringify({
       '@context': 'https://schema.org', '@type': 'Product',
       name: p.nome, image: prodImageAbs(p), sku: p.codigo || undefined,
+      description: prodDesc(p),
       category: p.serie || undefined,
       brand: { '@type': 'Brand', name: 'Torque Fitness' },
       offers: { '@type': 'Offer', priceCurrency: 'BRL', price: Number(p.preco) || 0, availability: 'https://schema.org/InStock', url: prodURL(p) }
