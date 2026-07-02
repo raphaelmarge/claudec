@@ -318,6 +318,7 @@
     const maxN = Math.max(1, Math.floor(PARAMS.parcelasMax || 48));
     $('#drawerParcela').textContent = total > 0 ? `ou até ${maxN}× de ${money(total / maxN)}` : '';
     $('#btnSolicitar').disabled = total <= 0;
+    if (!$('#drawer').hidden) prepararOrcPdf();     // mantém o PDF de compartilhar sempre fresco
   }
   function renderCupomBox(subtotal, desc) {
     const box = $('#cupomBox'); if (!box) return;
@@ -389,7 +390,7 @@
     cupomBox.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'cupomInput') { e.preventDefault(); applyCupom(e.target.value); } });
   }
 
-  function openDrawer() { renderDrawer(); $('#drawer').hidden = false; document.body.style.overflow = 'hidden'; }
+  function openDrawer() { renderDrawer(); $('#drawer').hidden = false; document.body.style.overflow = 'hidden'; prepararOrcPdf(); }
   function closeDrawer() { $('#drawer').hidden = true; document.body.style.overflow = ''; }
 
   /* ---------- lead ---------- */
@@ -1058,8 +1059,10 @@
 
   /* ---------- PDF do orçamento (visitante) ---------- */
   // miniatura do produto em dataURL (para embutir no PDF); null se falhar
+  const fotoPdfCache = new Map();
   function fotoParaPDF(url) {
     if (!url) return Promise.resolve(null);
+    if (fotoPdfCache.has(url)) return Promise.resolve(fotoPdfCache.get(url));
     return new Promise(res => {
       const im = new Image();
       im.crossOrigin = 'anonymous';
@@ -1074,7 +1077,8 @@
           const ctx = c.getContext('2d');
           ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, c.width, c.height);
           ctx.drawImage(im, 0, 0, c.width, c.height);
-          res({ data: c.toDataURL('image/jpeg', 0.82), w: c.width, h: c.height });
+          const out = { data: c.toDataURL('image/jpeg', 0.82), w: c.width, h: c.height };
+          fotoPdfCache.set(url, out); res(out);
         } catch (e) { res(null); }
       };
       im.onerror = () => { clearTimeout(t); res(null); };
@@ -1182,9 +1186,37 @@
       if (window.gtag) try { gtag('event', 'orcamento_pdf', { value: tot, currency: 'BRL' }); } catch (e) {}
     });
   }
+  // Pré-gera o PDF quando o carrinho abre ou muda: no iPhone o navigator.share
+  // só funciona logo após o toque — gerar na hora do clique estoura a janela.
+  let orcPdfPronto = null;   // { key, file, tot }
+  let orcPdfTimer = null;
+  function orcPdfKey() { return JSON.stringify(cart) + '|' + (appliedCoupon ? appliedCoupon.codigo : ''); }
+  function prepararOrcPdf() {
+    if (!(navigator.share && navigator.canShare)) return;      // só onde há compartilhamento nativo
+    clearTimeout(orcPdfTimer);
+    orcPdfTimer = setTimeout(async () => {
+      const lines = cartLines();
+      if (!lines.length) { orcPdfPronto = null; return; }
+      const key = orcPdfKey();
+      if (orcPdfPronto && orcPdfPronto.key === key) return;
+      try {
+        const { doc, tot } = await gerarOrcamentoPDF(lines);
+        const file = new File([doc.output('blob')], 'orcamento-torque-fitness.pdf', { type: 'application/pdf' });
+        orcPdfPronto = { key: key, file, tot };
+      } catch (e) { orcPdfPronto = null; }
+    }, 350);
+  }
   async function enviarOrcamentoWhatsApp() {
     const lines = cartLines();
     if (!lines.length) { toast('Seu orçamento está vazio.'); return; }
+    // caminho rápido: PDF já preparado → compartilha ainda dentro do gesto do toque
+    if (orcPdfPronto && orcPdfPronto.key === orcPdfKey() && navigator.canShare && navigator.canShare({ files: [orcPdfPronto.file] })) {
+      try {
+        await navigator.share({ files: [orcPdfPronto.file], title: 'Orçamento Torque Fitness', text: 'Meu orçamento Torque Fitness' });
+        if (window.gtag) try { gtag('event', 'orcamento_whatsapp', { value: orcPdfPronto.tot, currency: 'BRL' }); } catch (e) {}
+        return;
+      } catch (e) { if (e && e.name === 'AbortError') return; }
+    }
     await comBotao($('#btnOrcWpp'), async () => {
       const { doc, tot } = await gerarOrcamentoPDF(lines);
       const blob = doc.output('blob');
