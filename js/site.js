@@ -74,6 +74,90 @@
     const set = new Set(PRODUCTS.map(grupoOf));
     return GRUPO_ORDER.filter(g => set.has(g));
   }
+  /* ---------- busca em português ---------- */
+  // normaliza sem acentos ("extensão" = "extensao")
+  const fold = s => String(s == null ? '' : s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  // dicionário PT→EN: o catálogo é em inglês, o cliente busca em português
+  const SYN = {
+    supino: ['chest press', 'bench press', 'incline press', 'horizontal press', 'bench'], crucifixo: ['fly', 'pec'], voador: ['fly', 'pec', 'delt'],
+    peito: ['chest', 'pec', 'fly'], costas: ['back', 'row', 'pull'], puxador: ['pulldown', 'pull down', 'lat pull', 'high pull'],
+    pulley: ['pulldown', 'pull down', 'cable'], remada: ['row', 'pull back'], remo: ['rowing'],
+    desenvolvimento: ['shoulder press'], ombro: ['shoulder', 'delt', 'raise'], ombros: ['shoulder', 'delt', 'raise'],
+    elevacao: ['raise', 'lift'], encolhimento: ['shrug'], trapezio: ['shrug', 'upper back'],
+    rosca: ['biceps', 'preacher', 'wrist curl', 'arm curl'], biceps: ['biceps', 'preacher', 'arm curl'], triceps: ['triceps', 'dip'],
+    antebraco: ['forearm', 'wrist', 'grip'], mergulho: ['dip'], paralela: ['dip'], paralelas: ['dip'],
+    agachamento: ['squat', 'hack'], gaiola: ['cage', 'rack'], barra: ['bar', 'barbell', 'rack'],
+    halter: ['dumbbell'], halteres: ['dumbbell'], anilha: ['plate'], anilhas: ['plate'], banco: ['bench'],
+    extensora: ['leg extension', 'extension'], flexora: ['leg curl', 'curl'], panturrilha: ['calf'],
+    gluteo: ['glute', 'hip thrust', 'kick'], gluteos: ['glute', 'hip thrust', 'kick'],
+    abdutora: ['abduction', 'outer'], adutora: ['adductor', 'adduction', 'inner'], quadril: ['hip'],
+    terra: ['deadlift'], levantamento: ['deadlift', 'lift'], perna: ['leg', 'squat'], pernas: ['leg', 'squat'],
+    abdominal: ['abdominal', 'crunch', 'sit up'], abdomen: ['abdominal', 'crunch', 'core', 'twist'],
+    lombar: ['back extension', 'hyper', 'roman'], prancha: ['plank', 'core'],
+    esteira: ['treadmill'], bicicleta: ['bike', 'spinning'], bike: ['bike', 'spinning'], ergometrica: ['bike'],
+    eliptico: ['elliptical'], escada: ['stair', 'climber', 'ladder'], transport: ['elliptical'],
+    corda: ['rope', 'battle'], colchonete: ['mat'], caneleira: ['ankle'], barrafixa: ['pull up', 'chin'],
+    polia: ['cable', 'crossover', 'pulley'], crossover: ['crossover', 'cable'], multiestacao: ['multi', 'station'],
+    suporte: ['rack', 'stand', 'shelf'], estante: ['rack', 'shelf', 'tree'], kettlebell: ['kettlebell'],
+    funcional: ['functional', 'trainer'], graviton: ['pull up assistance', 'chin', 'dip']
+  };
+  let searchIdx = new Map();   // codigo → texto pesquisável (nome + série + grupo + descrição PT)
+  function buildSearchIndex() {
+    searchIdx = new Map();
+    PRODUCTS.forEach(p => {
+      const d = DESC[normName(p.nome)] || {};
+      searchIdx.set(p.codigo, fold([p.nome, p.codigo, p.serie, grupoOf(p), d.f, d.m, d.i].filter(Boolean).join(' • ')));
+    });
+  }
+  function matchesQuery(p, toks) {
+    const idx = searchIdx.get(p.codigo) || fold(p.nome + ' ' + p.codigo + ' ' + (p.serie || ''));
+    return toks.every(t => {
+      if (idx.includes(t)) return true;
+      const sing = t.replace(/s$/, '');                       // plural simples
+      if (sing !== t && idx.includes(sing)) return true;
+      const syn = SYN[t] || SYN[sing];
+      return !!(syn && syn.some(s => idx.includes(s)));
+    });
+  }
+  // relevância: casar no NOME do produto vale mais que casar na descrição
+  function queryScore(p, toks) {
+    const nome = fold(p.nome);
+    let s = 0;
+    toks.forEach(t => {
+      if (nome.includes(t)) { s += 3; return; }
+      const syn = SYN[t] || SYN[t.replace(/s$/, '')];
+      if (syn && syn.some(x => nome.includes(x))) s += 2;
+    });
+    return s;
+  }
+
+  /* ---------- favoritos (lista compartilhável) ---------- */
+  const FAV_KEY = 'torque_favs';
+  let favs = new Set((() => { try { return JSON.parse(localStorage.getItem(FAV_KEY)) || []; } catch (e) { return []; } })());
+  let favView = null;   // Set de códigos quando está vendo a lista (própria ou compartilhada)
+  function saveFavs() { try { localStorage.setItem(FAV_KEY, JSON.stringify([...favs])); } catch (e) {} }
+  function toggleFav(code) {
+    if (favs.has(code)) favs.delete(code); else favs.add(code);
+    saveFavs(); renderGrid(); renderFavBar();
+  }
+  function renderFavBar() {
+    const t = $('#favToggle'), s = $('#favShare'); if (!t) return;
+    const n = favs.size;
+    t.hidden = n === 0 && !favView;
+    const c = $('#favCount'); if (c) c.textContent = favView ? favView.size : n;
+    t.classList.toggle('on', !!favView);
+    t.firstChild.textContent = favView ? '✕ Sair dos favoritos ' : '♥ Favoritos ';
+    if (s) s.hidden = !(favView && favView.size);
+  }
+  async function shareFavs() {
+    if (!favView || !favView.size) return;
+    const url = BASE_URL + '?favs=' + encodeURIComponent([...favView].join(','));
+    try {
+      if (navigator.share) { await navigator.share({ title: 'Meus equipamentos favoritos · Torque Fitness', url }); return; }
+      await navigator.clipboard.writeText(url); toast('Link da lista copiado!');
+    } catch (e) { /* usuário cancelou */ }
+  }
+
   /* ---------- vistos recentemente ---------- */
   const RECENT_KEY = 'torque_recent';
   function loadRecent() { try { return JSON.parse(localStorage.getItem(RECENT_KEY)) || []; } catch (e) { return []; } }
@@ -138,18 +222,20 @@
     return preco >= min && preco < max;
   }
   function filtered() {
-    const q = query.trim().toLowerCase();
+    const qToks = fold(query).split(/\s+/).filter(Boolean);
     const list = PRODUCTS.filter(p => {
+      if (favView && !favView.has(p.codigo)) return false;
       if (filterSerie !== 'all' && (p.serie || 'Geral') !== filterSerie) return false;
       if (filterGrupo !== 'all' && grupoOf(p) !== filterGrupo) return false;
       if (filterTipo !== 'all') { const t = p.tipo || 'maquina'; if (filterTipo === 'acessorio' ? t !== 'acessorio' : t === 'acessorio') return false; }
       if (!inBand(p.preco)) return false;
-      if (q && !((p.nome + ' ' + p.codigo + ' ' + p.serie).toLowerCase().includes(q))) return false;
+      if (qToks.length && !matchesQuery(p, qToks)) return false;
       return true;
     });
     if (sortBy === 'price-asc') list.sort((a, b) => a.preco - b.preco);
     else if (sortBy === 'price-desc') list.sort((a, b) => b.preco - a.preco);
     else if (sortBy === 'name-asc') list.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+    else if (qToks.length) list.sort((a, b) => queryScore(b, qToks) - queryScore(a, qToks));   // relevância na busca
     return list;
   }
   function filtersActive() { return filterSerie !== 'all' || filterGrupo !== 'all' || query.trim() !== '' || priceBand !== 'all' || sortBy !== 'rel'; }
@@ -171,7 +257,7 @@
       ? `<div class="pcard__stepper" data-code="${esc(p.codigo)}"><button data-act="dec">−</button><input data-act="qty" inputmode="numeric" value="${q}"/><button data-act="inc">+</button></div>`
       : `<button class="pcard__add" data-act="add" data-code="${esc(p.codigo)}">+ Adicionar</button>`;
     return `<article class="pcard ${q > 0 ? 'in' : ''}" data-code="${esc(p.codigo)}">
-      <div class="pcard__media">${p.selo ? `<span class="pcard__selo">${esc(p.selo)}</span>` : ''}<button class="pcard__cmp ${compare.has(p.codigo) ? 'on' : ''}" data-act="cmp" data-code="${esc(p.codigo)}" type="button" title="Comparar" aria-label="Comparar">⇄</button>${media}</div>
+      <div class="pcard__media">${p.selo ? `<span class="pcard__selo">${esc(p.selo)}</span>` : ''}<button class="pcard__fav ${favs.has(p.codigo) ? 'on' : ''}" data-act="fav" data-code="${esc(p.codigo)}" type="button" title="Favoritar" aria-label="Favoritar">♥</button><button class="pcard__cmp ${compare.has(p.codigo) ? 'on' : ''}" data-act="cmp" data-code="${esc(p.codigo)}" type="button" title="Comparar" aria-label="Comparar">⇄</button>${media}</div>
       <div class="pcard__b">
         <span class="pcard__serie">${esc(p.serie || '')}</span>
         <span class="pcard__name">${esc(p.nome)}</span>
@@ -252,6 +338,7 @@
     if (catLink) { e.preventDefault(); openCatalog(); closeMenu(); const el = document.getElementById('produtos'); if (el) el.scrollIntoView({ behavior: 'smooth' }); return; }
     if (e.target.closest('[data-cact="orc"]')) { e.preventDefault(); askOrc(); return; }
     if (act === 'cmp' && code) { toggleCompare(code); return; }
+    if (act === 'fav' && code) { toggleFav(code); return; }
     if (act === 'add' && code) { setQty(code, 1); syncAll(); toast('Adicionado ao orçamento'); return; }
     if (act === 'inc' && code) { setQty(code, qtyOf(code) + 1); syncAll(); return; }
     if (act === 'dec' && code) { setQty(code, qtyOf(code) - 1); syncAll(); return; }
@@ -273,6 +360,13 @@
   const grupoSel = $('#grupoFilter');
   if (grupoSel) grupoSel.addEventListener('change', e => { filterGrupo = e.target.value; shown = PAGE; renderGrid(); });
   $('#clearFilters').addEventListener('click', () => goToLinha('all', true, false));
+  const favToggleBtn = $('#favToggle');
+  if (favToggleBtn) favToggleBtn.addEventListener('click', () => {
+    favView = favView ? null : new Set(favs);
+    shown = PAGE; renderGrid(); renderFavBar();
+  });
+  const favShareBtn = $('#favShare');
+  if (favShareBtn) favShareBtn.addEventListener('click', shareFavs);
   $('#loadMore').addEventListener('click', () => { shown += PAGE; renderGrid(); });
   $('#navCart').addEventListener('click', openDrawer);
   const cupomBox = $('#cupomBox');
@@ -477,11 +571,12 @@
     const tr = $('#linhasTrig'); if (tr) tr.setAttribute('aria-expanded', 'false');
   }
   function resetFiltros() {
-    query = ''; priceBand = 'all'; sortBy = 'rel'; filterGrupo = 'all'; shown = PAGE;
+    query = ''; priceBand = 'all'; sortBy = 'rel'; filterGrupo = 'all'; favView = null; shown = PAGE;
     const si = $('#search'); if (si) si.value = '';
     const pb = $('#priceBand'); if (pb) pb.value = 'all';
     const so = $('#sortBy'); if (so) so.value = 'rel';
     const gf = $('#grupoFilter'); if (gf) gf.value = 'all';
+    renderFavBar();
   }
   // revela a grade de linhas + catálogo (escondidos na landing até abrir pelo menu)
   function openCatalog() { document.body.classList.remove('catalog-hidden'); }
@@ -943,6 +1038,72 @@
   const btnPdf = $('#btnCatalogoPdf');
   if (btnPdf) btnPdf.addEventListener('click', baixarCatalogoPDF);
 
+  /* ---------- PDF do orçamento (visitante) ---------- */
+  async function baixarOrcamentoPDF() {
+    const lines = cartLines();
+    if (!lines.length) { toast('Seu orçamento está vazio.'); return; }
+    const btn = $('#btnOrcPdf'); let old = '';
+    if (btn) { btn.disabled = true; old = btn.textContent; btn.textContent = 'Gerando…'; }
+    try {
+      await loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js');
+      const Ctor = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+      if (!Ctor) throw new Error('jsPDF indisponível');
+      const doc = new Ctor({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight();
+      const M = 14, violet = [139, 92, 246], gray = [110, 110, 128];
+      const hoje = new Date().toLocaleDateString('pt-BR');
+      // cabeçalho
+      doc.setFillColor(11, 11, 15); doc.rect(0, 0, W, 26, 'F');
+      doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(15);
+      doc.text('TORQUE FITNESS', M, 12);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(180, 180, 200);
+      doc.text('Orçamento estimado', M, 18.5);
+      doc.setTextColor(violet[0], violet[1], violet[2]); doc.text(hoje, W - M, 12, { align: 'right' });
+      let y = 36;
+      // itens
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(gray[0], gray[1], gray[2]);
+      doc.text('QTD', M, y); doc.text('EQUIPAMENTO', M + 14, y); doc.text('UNITÁRIO', W - M - 32, y, { align: 'right' }); doc.text('TOTAL', W - M, y, { align: 'right' });
+      y += 3; doc.setDrawColor(220, 220, 230); doc.line(M, y, W - M, y); y += 6;
+      lines.forEach(l => {
+        if (y > H - 60) { doc.addPage(); y = 20; }
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(40, 40, 50);
+        doc.text(String(l.q) + '×', M, y);
+        const nome = l.p.nome.length > 52 ? l.p.nome.slice(0, 51) + '…' : l.p.nome;
+        doc.text(nome, M + 14, y);
+        doc.text(money(l.p.preco), W - M - 32, y, { align: 'right' });
+        doc.setFont('helvetica', 'bold');
+        doc.text(money(l.total), W - M, y, { align: 'right' });
+        y += 6.5;
+      });
+      // totais
+      y += 2; doc.setDrawColor(180, 180, 200); doc.line(M, y, W - M, y); y += 8;
+      const sub = cartTotal(); const desc = cupomDesc(sub); const tot = Math.max(0, sub - desc);
+      const maxN = Math.max(1, Math.floor(PARAMS.parcelasMax || 48));
+      const tRow = (lab, val, bold, color) => {
+        doc.setFont('helvetica', bold ? 'bold' : 'normal'); doc.setFontSize(bold ? 12 : 10);
+        const c = color || (bold ? violet : gray);
+        doc.setTextColor(c[0], c[1], c[2]);
+        doc.text(lab, W - M - 60, y); doc.text(val, W - M, y, { align: 'right' }); y += bold ? 8 : 6.5;
+      };
+      if (desc > 0) { tRow('Subtotal', money(sub)); tRow(`Cupom ${appliedCoupon ? appliedCoupon.codigo : ''} (−${appliedCoupon ? appliedCoupon.desconto : 0}%)`, '−' + money(desc), false, [220, 80, 80]); }
+      tRow('Total estimado', money(tot), true);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(gray[0], gray[1], gray[2]);
+      doc.text(`ou até ${maxN}× de ${money(tot / maxN)}`, W - M, y, { align: 'right' }); y += 12;
+      // rodapé de contato
+      doc.setFontSize(8.5);
+      doc.text('Valores estimados, sujeitos a confirmação. Frete e instalação a combinar.', M, y); y += 5;
+      const wpp = String(SITEINFO.whatsapp || SITE.whatsapp || '').replace(/\D/g, '');
+      const contato = [wpp ? 'WhatsApp: +' + wpp : '', SITEINFO.email || ''].filter(Boolean).join('   ·   ');
+      if (contato) { doc.setTextColor(violet[0], violet[1], violet[2]); doc.text(contato, M, y); }
+      doc.save('orcamento-torque-fitness.pdf');
+      toast('PDF do orçamento gerado!');
+      if (window.gtag) try { gtag('event', 'orcamento_pdf', { value: tot, currency: 'BRL' }); } catch (e) {}
+    } catch (e) { console.error(e); toast('Não foi possível gerar o PDF agora.'); }
+    finally { if (btn) { btn.disabled = false; btn.textContent = old; } }
+  }
+  const btnOrcPdf = $('#btnOrcPdf');
+  if (btnOrcPdf) btnOrcPdf.addEventListener('click', baixarOrcamentoPDF);
+
   /* ---------- comparador de produtos ---------- */
   function toggleCompare(code) {
     if (compare.has(code)) compare.delete(code);
@@ -1070,7 +1231,7 @@
   /* ---------- init ---------- */
   window.__plate = plate;
   $('#ano').textContent = new Date().getFullYear();
-  renderSeries(); renderChips(); renderGrupos(); renderGrid(); refreshCounts(); renderRecent();
+  buildSearchIndex(); renderSeries(); renderChips(); renderGrupos(); renderGrid(); refreshCounts(); renderRecent(); renderFavBar();
   renderLinhasMenu(); renderLinhaHead();
   renderCarousel(); startCar(); renderContato(); renderDepo(); renderFaq();
   // deep-link: ?linha=Cardio ou ?tipo=acessorio já entram filtrados
@@ -1078,10 +1239,13 @@
     const tp = currentTipo(), dl = currentLinha();
     if (tp) goToTipo(tp, 'replace', false);
     else if (dl) goToLinha(dl, 'replace', false);
+    // lista de favoritos compartilhada (?favs=COD1,COD2)
+    const fv = new URLSearchParams(location.search).get('favs');
+    if (fv) { favView = new Set(fv.split(',').map(s => s.trim()).filter(Boolean)); openCatalog(); renderGrid(); renderFavBar(); }
     // chegada com #produtos (links de outras páginas): revela o catálogo antes de rolar
     const hashProd = location.hash === '#produtos';
     if (hashProd) openCatalog();
-    if (tp || dl || hashProd) setTimeout(() => { const el = document.getElementById('produtos'); if (el) el.scrollIntoView({ behavior: 'smooth' }); }, 250);
+    if (tp || dl || hashProd || fv) setTimeout(() => { const el = document.getElementById('produtos'); if (el) el.scrollIntoView({ behavior: 'smooth' }); }, 250);
   })();
 
   // catálogo ao vivo: lê o catalog.json publicado pelo app (bucket público) e
@@ -1104,7 +1268,7 @@
       if (data && data.banners && typeof data.banners === 'object') BANNERS = data.banners;   // banners por categoria
       if (data && data.carousel && typeof data.carousel === 'object') CAROUSEL = data.carousel;   // imagens do carrossel
       if (data && data.site && typeof data.site === 'object') SITEINFO = Object.assign(SITEINFO, data.site);   // contato/localização
-      renderSeries(); renderChips(); renderGrupos(); renderGrid(); refreshCounts(); renderRecent(); renderLinhasMenu();
+      buildSearchIndex(); renderSeries(); renderChips(); renderGrupos(); renderGrid(); refreshCounts(); renderRecent(); renderLinhasMenu();
       const tp = currentTipo(), dl = currentLinha();                    // re-aplica a vista com o catálogo ao vivo
       if (tp) goToTipo(tp, false, false); else if (dl) goToLinha(dl, false, false);
       renderLinhaHead(); renderCarousel(); renderContato(); renderDepo(); renderFaq(); applyWpp(); injectAnalytics();

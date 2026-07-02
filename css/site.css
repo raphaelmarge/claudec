@@ -152,6 +152,11 @@ img{max-width:100%;display:block}
 .pcard__cmp{position:absolute;top:8px;right:8px;z-index:2;width:30px;height:30px;border-radius:50%;border:1px solid var(--line-2);background:rgba(11,11,15,.6);color:var(--txt-dim);font-size:1rem;cursor:pointer;backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:0}
 .pcard__cmp:hover{border-color:var(--violet);color:var(--violet)}
 .pcard__cmp.on{background:var(--violet);border-color:var(--violet);color:#fff}
+/* favorito (coração no card) */
+.pcard__fav{position:absolute;bottom:8px;left:8px;z-index:2;width:30px;height:30px;border-radius:50%;border:1px solid var(--line-2);background:rgba(11,11,15,.6);color:var(--txt-dim);font-size:.95rem;cursor:pointer;backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:0;transition:transform .12s}
+.pcard__fav:hover{border-color:#f87171;color:#f87171;transform:scale(1.1)}
+.pcard__fav.on{background:#f87171;border-color:#f87171;color:#fff}
+#favToggle.on{border-color:#f87171;color:#f87171}
 /* barra de comparação */
 .cmpbar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + var(--safe-b));z-index:60;display:flex;align-items:center;gap:14px;background:rgba(21,21,28,.96);backdrop-filter:blur(14px);border:1px solid var(--line-2);border-radius:14px;padding:10px 14px;box-shadow:0 10px 40px rgba(0,0,0,.5)}
 .cmpbar__txt{font-size:.84rem;color:var(--txt-dim)}
