@@ -893,3 +893,11 @@ body.tv .fchip__n { font-size: 1.5rem; }
 body.tv .fchip { padding: 10px 16px; }
 body.tv .mcard h4 { font-size: 1rem; }
 body.tv .dash__alerts { font-size: 1rem; }
+
+/* KPIs nunca vazam do card: encolhem e quebram se faltar espaço */
+.mkpi, .dash__stat { overflow: hidden; }
+.mkpi b, .dash__stat b { overflow-wrap: anywhere; }
+@media (max-width: 480px) {
+  .mkpi b { font-size: 1.1rem; }
+  .dash__stat b { font-size: 1.05rem; }
+}
