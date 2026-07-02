@@ -16,8 +16,19 @@
   const SITE = window.TORQUE_SITE || {};
   const DESC = window.TORQUE_DESCRICOES || {};
   const normName = s => String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  // nomes em PT dos aparelhos consagrados no Brasil (o resto fica em inglês);
+  // o nome original segue em p.nomeEn para descrições, grupos e busca
+  const NOMES_PT = window.TORQUE_NOMES_PT || {};
+  function aplicaNomesPt(list) {
+    list.forEach(p => {
+      const t = NOMES_PT[normName(p.nome)];
+      if (t && t !== p.nome) { p.nomeEn = p.nome; p.nome = t; }
+    });
+    return list;
+  }
+  aplicaNomesPt(PRODUCTS);
   function prodDescHTML(p) {
-    const d = DESC[normName(p.nome)];
+    const d = DESC[normName(p.nomeEn || p.nome)];
     if (!d) return `${esc(p.nome)} — equipamento ${p.serie ? 'da linha ' + esc(p.serie) + ' ' : ''}Torque Fitness, padrão comercial. Solicite o orçamento e fale com um consultor.`;
     const row = (lab, val) => (val && val !== '—') ? `<span class="pm-desc__row"><b>${lab}:</b> ${esc(val)}</span>` : '';
     return row('Função', d.f) + row('Músculos', d.m) + row('Biomecânica', d.b) + row('Indicação', d.i) + row('Dica de execução', d.d);
@@ -66,7 +77,7 @@
   ];
   function grupoOf(p) {
     if (p && p.grupo) return p.grupo;
-    const n = normName(p && p.nome);
+    const n = normName(p && (p.nomeEn || p.nome));
     for (let i = 0; i < GRUPO_RULES.length; i++) if (GRUPO_RULES[i][1].test(n)) return GRUPO_RULES[i][0];
     return 'Outros';
   }
@@ -105,8 +116,8 @@
   function buildSearchIndex() {
     searchIdx = new Map();
     PRODUCTS.forEach(p => {
-      const d = DESC[normName(p.nome)] || {};
-      searchIdx.set(p.codigo, fold([p.nome, p.codigo, p.serie, grupoOf(p), d.f, d.m, d.i].filter(Boolean).join(' • ')));
+      const d = DESC[normName(p.nomeEn || p.nome)] || {};
+      searchIdx.set(p.codigo, fold([p.nome, p.nomeEn, p.codigo, p.serie, grupoOf(p), d.f, d.m, d.i].filter(Boolean).join(' • ')));
     });
   }
   function matchesQuery(p, toks) {
@@ -121,7 +132,7 @@
   }
   // relevância: casar no NOME do produto vale mais que casar na descrição
   function queryScore(p, toks) {
-    const nome = fold(p.nome);
+    const nome = fold(p.nome + ' ' + (p.nomeEn || ''));
     let s = 0;
     toks.forEach(t => {
       if (nome.includes(t)) { s += 3; return; }
@@ -603,7 +614,7 @@
   function prodImageAbs(p) { try { return p.imagem ? new URL(p.imagem, BASE_URL).href : DEFAULT_META.ogImage; } catch (e) { return DEFAULT_META.ogImage; } }
   // meta description do produto: usa a descrição rica (função + músculos) quando existe
   function prodDesc(p) {
-    const d = DESC[normName(p.nome)];
+    const d = DESC[normName(p.nomeEn || p.nome)];
     if (d && d.f) {
       const musc = (d.m && d.m !== '—') ? ` Trabalha: ${String(d.m).replace(/\.+$/, '')}.` : '';
       return `${p.nome} — ${d.f}${/[.!?]$/.test(d.f) ? '' : '.'}${musc} A partir de ${money(p.preco)} na Torque Fitness.`.slice(0, 300);
@@ -1268,7 +1279,7 @@
         .filter(p => p && p.preco > 0 && !p.oculto)
         .map(p => ({ id: p.id, codigo: p.codigo || '', nome: p.nome || '', serie: p.serie || 'Geral', tipo: p.tipo || 'maquina', grupo: p.grupo || '', imagem: p.imagem || '', imagens: Array.isArray(p.imagens) ? p.imagens : [], video: p.video || '', dims: p.dims || '', disp: p.disp || '', selo: p.selo || '', preco: Number(p.preco) || 0 }));
       if (!live.length) return;
-      PRODUCTS = live;
+      PRODUCTS = aplicaNomesPt(live);
       if (data && data.banners && typeof data.banners === 'object') BANNERS = data.banners;   // banners por categoria
       if (data && data.carousel && typeof data.carousel === 'object') CAROUSEL = data.carousel;   // imagens do carrossel
       if (data && data.site && typeof data.site === 'object') SITEINFO = Object.assign(SITEINFO, data.site);   // contato/localização
