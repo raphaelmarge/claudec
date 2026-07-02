@@ -2009,9 +2009,8 @@
       <p>3.4 – Em caso de desistência por parte da COMPRADORA, esta se compromete a arcar perante a VENDEDORA com todos os custos e despesas a ela proporcionados, sem prejuízo de responder pelas perdas e danos daí decorrentes.</p>
       <h4>CLÁUSULA 4 – DAS OBRIGAÇÕES DA COMPRADORA</h4>
       <p>4.1 – Uma vez importados os EQUIPAMENTOS e efetuados os desembaraços aduaneiros, obriga-se a COMPRADORA a recebê-los da VENDEDORA, que por sua vez a ela se obriga entregá-los, sob as condições pactuadas neste instrumento previstas na CLÁUSULA 2.</p>
-      <p>4.2 – A COMPRADORA também assumirá os eventuais ônus decorrentes de alterações das normas que regem a espécie e que, de alguma forma, possam afetar ou onerar a VENDEDORA.</p>
-      <p>4.3 – Se compromete a COMPRADORA a receber os EQUIPAMENTOS nos termos pactuados na Cláusula 2 deste contrato.</p>
-      <p>4.4 – A apresentar todos os documentos solicitados pela VENDEDORA, bem como garantia que comprove que seu capital social ou patrimônio líquido são compatíveis com o valor de aquisição dos EQUIPAMENTOS importados do exterior.</p>
+      <p>4.2 – Se compromete a COMPRADORA a receber os EQUIPAMENTOS nos termos pactuados na Cláusula 2 deste contrato.</p>
+      <p>4.3 – A apresentar todos os documentos solicitados pela VENDEDORA, bem como garantia que comprove que seu capital social ou patrimônio líquido são compatíveis com o valor de aquisição dos EQUIPAMENTOS importados do exterior.</p>
       <h4>CLÁUSULA 5 – DAS OBRIGAÇÕES DA VENDEDORA</h4>
       <p>5.1 – Efetuar a operação dos EQUIPAMENTOS importados por encomenda nas condições estabelecidas entre a VENDEDORA e a COMPRADORA, em observância à Cláusula 1.</p>
       <p>5.2 – Emitir Nota Fiscal da venda dos EQUIPAMENTOS pelo preço pactuado, bem como dar quitação aos pagamentos efetuados nos termos da Cláusula 3.</p>
