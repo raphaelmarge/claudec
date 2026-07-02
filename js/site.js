@@ -452,6 +452,30 @@
   }
 
   $('#btnEnviarLead').addEventListener('click', enviarLead);
+  // orçamento entregue após o cadastro (o carrinho já foi limpo nesse ponto)
+  let ultimoOrc = null;   // { file, resumo, email }
+  function baixarArquivo(file) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(file); a.download = file.name;
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+  $('#leadBody').addEventListener('click', async e => {
+    if (!ultimoOrc) return;
+    if (e.target.closest('#posPdf') && ultimoOrc.file) { baixarArquivo(ultimoOrc.file); return; }
+    if (e.target.closest('#posWpp')) {
+      const f = ultimoOrc.file;
+      if (f && navigator.canShare && navigator.canShare({ files: [f] })) {
+        try { await navigator.share({ files: [f], title: 'Orçamento Torque Fitness' }); return; } catch (e2) { if (e2 && e2.name === 'AbortError') return; }
+      }
+      if (f) baixarArquivo(f);
+      const wpp = String(SITEINFO.whatsapp || SITE.whatsapp || '').replace(/\D/g, '');
+      window.open((wpp ? `https://wa.me/${wpp}?text=` : 'https://wa.me/?text=') + encodeURIComponent(ultimoOrc.resumo), '_blank', 'noopener');
+      return;
+    }
+    if (e.target.closest('#posMail')) {
+      location.href = `mailto:${encodeURIComponent(ultimoOrc.email || '')}?subject=${encodeURIComponent('Seu orçamento Torque Fitness')}&body=${encodeURIComponent(ultimoOrc.resumo.replace(/\*/g, ''))}`;
+    }
+  });
   async function enviarLead() {
     const nome = ($('#leadNome').value || '').trim();
     const tel = ($('#leadTel').value || '').trim();
@@ -485,12 +509,37 @@
       });
       if (window.fbq) try { fbq('track', 'Lead', { value: subtotal, currency: 'BRL' }); } catch (e) {}
       if (window.gtag) try { gtag('event', 'generate_lead', { value: subtotal, currency: 'BRL' }); } catch (e) {}
+      // garante o PDF ANTES de limpar o carrinho (o pré-gerado costuma estar pronto)
+      let pdfFile = (orcPdfPronto && orcPdfPronto.key === orcPdfKey()) ? orcPdfPronto.file : null;
+      if (!pdfFile) {
+        try {
+          const g = await gerarOrcamentoPDF(lines);
+          pdfFile = new File([g.doc.output('blob')], 'orcamento-torque-fitness.pdf', { type: 'application/pdf' });
+        } catch (e) { /* segue sem PDF — só a confirmação */ }
+      }
+      ultimoOrc = { file: pdfFile, resumo: orcamentoTexto(), email: email };
       cart = {}; appliedCoupon = null; save(); syncAll();
       $('#leadTitle').textContent = 'Pedido enviado!';
       $('#btnEnviarLead').style.display = 'none';
       $('#leadBody').innerHTML = `<div class="lead-ok"><div class="ico">✓</div>
         <h3>Recebemos seu pedido!</h3>
-        <p>Obrigado, <b>${esc(nome)}</b >. Um consultor Torque Fitness vai entrar em contato em breve pelo WhatsApp/telefone informado.</p></div>`;
+        <p>Obrigado, <b>${esc(nome)}</b>. Um consultor Torque Fitness vai entrar em contato em breve pelo WhatsApp/telefone informado.</p>
+        ${pdfFile ? `<p style="margin-top:10px">Seu orçamento em PDF está pronto:</p>
+        <div class="drawer__share" style="margin-top:8px">
+          <button class="btn btn--ghost" id="posPdf" type="button">📄 Baixar PDF</button>
+          <button class="btn btn--ghost" id="posWpp" type="button">📲 WhatsApp</button>
+          <button class="btn btn--ghost" id="posMail" type="button">✉️ E-mail</button>
+        </div>` : ''}
+        <a class="btn btn--ghost drawer__send" style="margin-top:10px" href="projeto.html">📐 Ver os aparelhos no meu projeto</a>`;
+      // automático: celular → folha de envio já com o PDF anexado (ainda no gesto do toque);
+      // computador → baixa o PDF sozinho
+      if (pdfFile) {
+        if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+          try { await navigator.share({ files: [pdfFile], title: 'Orçamento Torque Fitness', text: 'Seu orçamento Torque Fitness' }); } catch (e) {}
+        } else {
+          baixarArquivo(pdfFile);
+        }
+      }
     } catch (e) {
       console.error(e);
       err.textContent = 'Não foi possível enviar agora. Tente novamente em instantes.';

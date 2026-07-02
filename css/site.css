@@ -551,3 +551,6 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .qd__cond h4{font-size:.6rem;text-transform:uppercase;letter-spacing:.06em;color:#8a8597;margin:0 0 5px}
 .qd__cond b{color:#15151c}
 .qd__foot{padding:14px 20px 20px;font-size:.66rem;color:#8a8597;border-top:1px solid #eee}
+
+/* dica de PDF pós-cadastro no carrinho */
+.drawer__pdfhint{display:block;text-align:center;color:var(--txt-mut);font-size:.72rem;margin-top:2px}
