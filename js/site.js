@@ -1058,102 +1058,87 @@
   if (btnPdf) btnPdf.addEventListener('click', baixarCatalogoPDF);
 
   /* ---------- PDF do orçamento (visitante) ---------- */
-  // miniatura do produto em dataURL (para embutir no PDF); null se falhar
-  const fotoPdfCache = new Map();
-  function fotoParaPDF(url) {
-    if (!url) return Promise.resolve(null);
-    if (fotoPdfCache.has(url)) return Promise.resolve(fotoPdfCache.get(url));
-    return new Promise(res => {
-      const im = new Image();
-      im.crossOrigin = 'anonymous';
-      const t = setTimeout(() => res(null), 7000);
-      im.onload = () => {
-        clearTimeout(t);
-        try {
-          const max = 300, r = Math.min(max / im.width, max / im.height, 1);
-          const c = document.createElement('canvas');
-          c.width = Math.max(1, Math.round(im.width * r));
-          c.height = Math.max(1, Math.round(im.height * r));
-          const ctx = c.getContext('2d');
-          ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, c.width, c.height);
-          ctx.drawImage(im, 0, 0, c.width, c.height);
-          const out = { data: c.toDataURL('image/jpeg', 0.82), w: c.width, h: c.height };
-          fotoPdfCache.set(url, out); res(out);
-        } catch (e) { res(null); }
-      };
-      im.onerror = () => { clearTimeout(t); res(null); };
-      im.src = url;
-    });
+  // ===== documento de orçamento com o MESMO visual da área de vendas =====
+  const ORC_LOGO = `<svg class="qd__logo" viewBox="0 0 227 271" fill="#8B5CF6"><g transform="translate(0,271) scale(0.1,-0.1)"><path d="M130 2617 c-50 -26 -50 -19 -50 -685 0 -686 -2 -669 61 -691 34 -12 367 -14 406 -3 12 4 105 84 205 178 533 498 494 463 524 455 38 -10 70 -54 58 -81 -5 -11 -268 -262 -584 -558 -586 -547 -620 -584 -652 -682 -6 -19 -13 -125 -15 -236 -6 -224 -3 -234 62 -234 30 0 96 59 706 630 601 563 677 630 703 628 18 -2 37 -14 50 -31 19 -26 19 -30 5 -55 -8 -15 -289 -283 -624 -597 l-609 -570 887 -3 c609 -1 894 1 908 8 19 11 20 24 17 973 -3 944 -4 963 -24 1023 -88 255 -268 427 -539 511 l-90 27 -690 3 c-546 3 -695 1 -715 -10z"/></g></svg>`;
+  function buildOrcDoc(lines) {
+    const el = document.getElementById('orcDoc'); if (!el) return null;
+    const sub = cartTotal(); const desc = cupomDesc(sub); const tot = Math.max(0, sub - desc);
+    const maxN = Math.max(1, Math.floor(PARAMS.parcelasMax || 48));
+    const hoje = new Date(); const val = new Date(Date.now() + 7 * 864e5);
+    const dstr = d => d.toLocaleDateString('pt-BR');
+    const numero = 'ORC-' + hoje.toISOString().slice(2, 10).replace(/-/g, '') + '-' + Date.now().toString(36).slice(-4).toUpperCase();
+    const thumb = p => p.imagem
+      ? `<img class="qd__thumb" src="${esc(p.imagem)}" alt="" onerror="this.style.visibility='hidden'"/>`
+      : `<span class="qd__thumb qd__thumb--ph"></span>`;
+    const rows = lines.map(l => `
+      <tr>
+        <td class="qd__imgcell">${thumb(l.p)}</td>
+        <td><div class="qd__pname">${esc(l.p.nome)}</div>${l.p.codigo ? `<div class="qd__pcode">${esc(l.p.codigo)}</div>` : ''}${l.p.dims ? `<div class="qd__dims">${esc(l.p.dims)} mm</div>` : ''}</td>
+        <td class="num">${l.q}</td>
+        <td class="num">${money(l.p.preco)}</td>
+        <td class="num">${money(l.total)}</td>
+      </tr>`).join('');
+    const wpp = String(SITEINFO.whatsapp || SITE.whatsapp || '').replace(/\D/g, '');
+    const contato = [wpp ? 'WhatsApp +' + wpp : '', SITEINFO.email || ''].filter(Boolean).join(' · ');
+    el.innerHTML = `
+      <div class="qd__head">
+        ${ORC_LOGO}
+        <div class="qd__brand"><strong>TORQUE FITNESS</strong><span>EQUIPAMENTOS</span></div>
+        <div class="qd__meta">
+          <div><b style="color:#fff">${numero}</b></div>
+          <div>Emissão: ${dstr(hoje)}</div>
+          <div>Validade: ${dstr(val)}</div>
+        </div>
+      </div>
+      <div class="qd__client"><span>Orçamento montado no site</span>${contato ? `<span><b>${esc(contato)}</b></span>` : ''}</div>
+      <table class="qd__table">
+        <thead><tr><th colspan="2">Produto</th><th class="num">Qtd</th><th class="num">Unitário</th><th class="num">Total</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <div class="qd__totals">
+        <div class="qrow"><span>Subtotal</span><b>${money(sub)}</b></div>
+        ${desc > 0 ? `<div class="qrow"><span>Cupom ${esc(appliedCoupon ? appliedCoupon.codigo : '')} (−${appliedCoupon ? appliedCoupon.desconto : 0}%)</span><b>− ${money(desc)}</b></div>` : ''}
+        <div class="qrow qd__grand"><span>Total geral</span><b>${money(tot)}</b></div>
+      </div>
+      <div class="qd__install">
+        <div class="big">${maxN}× de ${money(tot / maxN)}</div>
+        <small>Parcelamento em até ${maxN}× sem juros.</small>
+      </div>
+      <div class="qd__cond">
+        <h4>Condições</h4>
+        Pagamento: em até ${maxN}× sem juros, conforme validação de crédito.<br>
+        Validade da proposta: <b>${dstr(val)}</b> (7 dias).<br>
+        Frete e instalação a combinar. Prazo de entrega sujeito à disponibilidade de estoque.
+      </div>
+      <div class="qd__foot">
+        Torque Fitness · Orçamento gerado em ${dstr(hoje)} pelo site · Valores estimados, sujeitos a confirmação de um consultor.
+      </div>`;
+    return { el, tot };
   }
-  // monta o documento (usado por baixar, WhatsApp e e-mail)
+  // monta o documento e converte em PDF A4 paginado (usado por baixar, WhatsApp e e-mail)
   async function gerarOrcamentoPDF(lines) {
-      await loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js');
-      const fotos = await Promise.all(lines.map(l => fotoParaPDF(l.p.imagem)));
-      const Ctor = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
-      if (!Ctor) throw new Error('jsPDF indisponível');
-      const doc = new Ctor({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-      const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight();
-      const M = 14, violet = [139, 92, 246], gray = [110, 110, 128];
-      const hoje = new Date().toLocaleDateString('pt-BR');
-      // cabeçalho
-      doc.setFillColor(11, 11, 15); doc.rect(0, 0, W, 26, 'F');
-      doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(15);
-      doc.text('TORQUE FITNESS', M, 12);
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(180, 180, 200);
-      doc.text('Orçamento estimado', M, 18.5);
-      doc.setTextColor(violet[0], violet[1], violet[2]); doc.text(hoje, W - M, 12, { align: 'right' });
-      let y = 36;
-      // itens (com a foto de cada aparelho)
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(gray[0], gray[1], gray[2]);
-      doc.text('EQUIPAMENTO', M + 22, y); doc.text('UNITÁRIO', W - M - 32, y, { align: 'right' }); doc.text('TOTAL', W - M, y, { align: 'right' });
-      y += 3; doc.setDrawColor(220, 220, 230); doc.line(M, y, W - M, y); y += 4;
-      const ROW = 20;
-      lines.forEach((l, idx) => {
-        if (y + ROW > H - 55) { doc.addPage(); y = 20; }
-        const f = fotos[idx];
-        if (f) {
-          const boxW = 18, boxH = 16;
-          const r = Math.min(boxW / f.w, boxH / f.h);
-          const iw = f.w * r, ih = f.h * r;
-          try { doc.addImage(f.data, 'JPEG', M + (boxW - iw) / 2, y + (boxH - ih) / 2, iw, ih); } catch (e) {}
-        } else {
-          doc.setFillColor(240, 240, 246); doc.roundedRect(M, y + 1, 18, 14, 2, 2, 'F');
-        }
-        const ty = y + 6;
-        doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(40, 40, 50);
-        const nome = l.p.nome.length > 44 ? l.p.nome.slice(0, 43) + '…' : l.p.nome;
-        doc.text(nome, M + 22, ty);
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(gray[0], gray[1], gray[2]);
-        doc.text(`${l.q}× ${l.p.codigo || ''}`, M + 22, ty + 4.4);
-        doc.setFontSize(9.5); doc.setTextColor(gray[0], gray[1], gray[2]);
-        doc.text(money(l.p.preco), W - M - 32, ty, { align: 'right' });
-        doc.setFont('helvetica', 'bold'); doc.setTextColor(40, 40, 50);
-        doc.text(money(l.total), W - M, ty, { align: 'right' });
-        y += ROW;
-        doc.setDrawColor(232, 232, 238); doc.line(M, y - 2, W - M, y - 2);
-      });
-      y += 2;
-      // totais
-      y += 2; doc.setDrawColor(180, 180, 200); doc.line(M, y, W - M, y); y += 8;
-      const sub = cartTotal(); const desc = cupomDesc(sub); const tot = Math.max(0, sub - desc);
-      const maxN = Math.max(1, Math.floor(PARAMS.parcelasMax || 48));
-      const tRow = (lab, val, bold, color) => {
-        doc.setFont('helvetica', bold ? 'bold' : 'normal'); doc.setFontSize(bold ? 12 : 10);
-        const c = color || (bold ? violet : gray);
-        doc.setTextColor(c[0], c[1], c[2]);
-        doc.text(lab, W - M - 60, y); doc.text(val, W - M, y, { align: 'right' }); y += bold ? 8 : 6.5;
-      };
-      if (desc > 0) { tRow('Subtotal', money(sub)); tRow(`Cupom ${appliedCoupon ? appliedCoupon.codigo : ''} (−${appliedCoupon ? appliedCoupon.desconto : 0}%)`, '−' + money(desc), false, [220, 80, 80]); }
-      tRow('Total estimado', money(tot), true);
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(gray[0], gray[1], gray[2]);
-      doc.text(`ou até ${maxN}× de ${money(tot / maxN)}`, W - M, y, { align: 'right' }); y += 12;
-      // rodapé de contato
-      doc.setFontSize(8.5);
-      doc.text('Valores estimados, sujeitos a confirmação. Frete e instalação a combinar.', M, y); y += 5;
-      const wpp = String(SITEINFO.whatsapp || SITE.whatsapp || '').replace(/\D/g, '');
-      const contato = [wpp ? 'WhatsApp: +' + wpp : '', SITEINFO.email || ''].filter(Boolean).join('   ·   ');
-      if (contato) { doc.setTextColor(violet[0], violet[1], violet[2]); doc.text(contato, M, y); }
-      return { doc, tot };
+    const built = buildOrcDoc(lines);
+    if (!built) throw new Error('doc indisponível');
+    await Promise.all([
+      loadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js'),
+      loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js')
+    ]);
+    // espera as fotos dos itens carregarem (senão saem em branco na captura)
+    await Promise.all(Array.from(built.el.querySelectorAll('img')).map(im => im.complete
+      ? Promise.resolve()
+      : new Promise(r => { im.onload = im.onerror = r; setTimeout(r, 6000); })));
+    const canvas = await html2canvas(built.el, { scale: 2, backgroundColor: '#ffffff', useCORS: true });
+    const Ctor = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+    if (!Ctor) throw new Error('jsPDF indisponível');
+    const doc = new Ctor({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pw = doc.internal.pageSize.getWidth(), ph = doc.internal.pageSize.getHeight();
+    const imgH = canvas.height * pw / canvas.width;
+    const data = canvas.toDataURL('image/jpeg', 0.92);
+    let restante = imgH, pos = 0;
+    doc.addImage(data, 'JPEG', 0, pos, pw, imgH);
+    restante -= ph;
+    while (restante > 0) { pos -= ph; doc.addPage(); doc.addImage(data, 'JPEG', 0, pos, pw, imgH); restante -= ph; }
+    return { doc, tot: built.tot };
   }
   // resumo do orçamento em texto puro (corpo do e-mail / mensagem do WhatsApp)
   function orcamentoTexto() {
