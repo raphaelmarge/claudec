@@ -499,3 +499,16 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
   html{scroll-behavior:auto}
   *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
 }
+
+/* ===================== FILTROS MINIMALISTAS ===================== */
+.selfield__lab{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;left:auto;top:auto;transform:none}
+.selfield select{padding:9px 30px 9px 12px;font-size:.85rem;border-radius:10px;border-color:var(--line)}
+.selfield::after{right:12px;width:7px;height:7px}
+.search input{padding:9px 12px 9px 38px;font-size:.88rem;border-radius:10px;border-color:var(--line)}
+.search svg{width:16px;height:16px}
+@media(max-width:680px){
+  .catalog__tools{width:100%;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+  .catalog__tools .search{grid-column:1/-1;min-width:0}
+  .selfield{width:100%;min-width:0}
+  .selfield select{width:100%;min-width:0;font-size:.8rem;padding:8px 24px 8px 10px;text-overflow:ellipsis;white-space:nowrap;overflow:hidden}
+}
