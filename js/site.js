@@ -182,7 +182,7 @@
   function renderGrupos() {
     const sel = $('#grupoFilter'); if (!sel) return;
     const groups = gruposDisponiveis();
-    sel.innerHTML = '<option value="all">Todos os músculos</option>' +
+    sel.innerHTML = '<option value="all">Músculos</option>' +
       groups.map(g => `<option value="${esc(g)}">${esc(g)}</option>`).join('');
     if (!groups.includes(filterGrupo)) filterGrupo = 'all';
     sel.value = filterGrupo;
