@@ -18,7 +18,7 @@
   <link rel="preconnect" href="https://uqwbywzuqooqzmiklqct.supabase.co" />
   <link rel="preconnect" href="https://uqwbywzuqooqzmiklqct.supabase.co" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/site.css?v=20260702b" />
+  <link rel="stylesheet" href="css/site.css?v=20260702c" />
   <style>
     .pl{max-width:1160px;margin:0 auto;padding:30px 20px 70px}
     .pl h1{font-size:2rem;line-height:1.15;margin:0 0 6px}
@@ -131,9 +131,9 @@
     </div>
   </main>
 
-  <script src="js/config.js?v=20260702b"></script>
-  <script src="js/products.js?v=20260702b"></script>
-  <script src="js/nomes.js?v=20260702b"></script>
+  <script src="js/config.js?v=20260702c"></script>
+  <script src="js/products.js?v=20260702c"></script>
+  <script src="js/nomes.js?v=20260702c"></script>
   <script>
   (function () {
     'use strict';
@@ -176,13 +176,21 @@
     }
 
     /* ---------- itens ---------- */
-    var itens = [];
-    try {
+    // 1º: ?itens=COD:QTD,COD:QTD (vindo do orçamento do vendedor); 2º: carrinho do site
+    var itens = [], viaUrl = false;
+    var qsItens = new URLSearchParams(location.search).get('itens');
+    if (qsItens) {
+      qsItens.split(',').forEach(function (par) {
+        var p = par.split(':'), cod = (p[0] || '').trim(), q = Math.max(1, Math.min(30, parseInt(p[1], 10) || 1));
+        if (cod) { itens.push({ codigo: cod, qtd: q }); viaUrl = true; }   // valida na renderização (catálogo ao vivo pode ter itens extras)
+      });
+    }
+    if (!itens.length) try {
       var cart = JSON.parse(localStorage.getItem('torque_site_cart')) || {};
       Object.keys(cart).forEach(function (c) { if (byCode(c) && cart[c] > 0) itens.push({ codigo: c, qtd: Math.min(20, cart[c]) }); });
     } catch (e) {}
     $('#plCartHint').textContent = itens.length
-      ? 'Trouxemos os ' + itens.length + ' item(ns) do seu orçamento. Ajuste à vontade.'
+      ? (viaUrl ? 'Itens do orçamento do vendedor carregados (' + itens.length + '). Ajuste à vontade.' : 'Trouxemos os ' + itens.length + ' item(ns) do seu orçamento. Ajuste à vontade.')
       : 'Seu orçamento está vazio — adicione aparelhos abaixo ou monte o orçamento no site.';
 
     function renderItens() {
