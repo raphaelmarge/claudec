@@ -1,0 +1,42 @@
+name: Blog diário
+
+on:
+  schedule:
+    - cron: '7 12 * * *'   # ~09:07 em Brasília, todo dia
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Publicar próximo post da fila
+        run: node scripts/publicar-post.mjs
+
+      - name: Commit e push
+        run: |
+          git config user.name "torque-blog-bot"
+          git config user.email "actions@github.com"
+          git add blog-posts.json blog-fila.json sitemap.xml
+          if git diff --cached --quiet; then
+            echo "Nada para publicar hoje."
+          else
+            git commit -m "blog: post diário automático ($(date -u +%Y-%m-%d))"
+            git push
+          fi
+
+      - name: Avisar se a fila esvaziou
+        run: |
+          RESTAM=$(node -e "console.log(JSON.parse(require('fs').readFileSync('blog-fila.json','utf8')).length)")
+          if [ "$RESTAM" -eq 0 ]; then
+            gh issue create --title "Fila do blog vazia" \
+              --body "A fila de posts automáticos (blog-fila.json) acabou. Peça ao Claude para reabastecer com novos artigos." \
+              --repo "$GITHUB_REPOSITORY" || true
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
