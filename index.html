@@ -51,7 +51,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/site.css?v=20260628m" />
+  <link rel="stylesheet" href="css/site.css?v=20260628n" />
   <link rel="manifest" href="site.webmanifest" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
   <meta name="mobile-web-app-capable" content="yes" />
@@ -207,6 +207,8 @@
     <div class="catalog__meta">
       <span class="catalog__count" id="resultCount"></span>
       <button class="catalog__clear" id="clearFilters" type="button" hidden>✕ Limpar filtros</button>
+      <button class="catalog__pdf" id="favToggle" type="button" hidden>♥ Favoritos <b id="favCount">0</b></button>
+      <button class="catalog__pdf" id="favShare" type="button" hidden>🔗 Compartilhar lista</button>
       <button class="catalog__pdf" id="btnCatalogoPdf" type="button">📄 Baixar catálogo (PDF)</button>
     </div>
     <div class="prod-grid" id="prodGrid"></div>
@@ -298,6 +300,7 @@
         <div class="drawer__total"><span>Total estimado</span><b id="drawerTotal">R$ 0,00</b></div>
         <small id="drawerParcela" class="drawer__parcela"></small>
         <button class="btn btn--primary drawer__send" id="btnSolicitar" type="button">Solicitar orçamento</button>
+        <button class="btn btn--ghost drawer__send" id="btnOrcPdf" type="button">📄 Baixar orçamento em PDF</button>
         <div class="trustbar">
           <span>🛡️ 1 ano de garantia</span>
           <span>🇧🇷 Atendemos todo o Brasil</span>
@@ -406,10 +409,10 @@
 
   <div id="toast" class="toast" hidden></div>
 
-  <script src="js/config.js?v=20260628m"></script>
+  <script src="js/config.js?v=20260628n"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/products.js?v=20260628m"></script>
-  <script src="js/descricoes.js?v=20260628m"></script>
-  <script src="js/site.js?v=20260628m"></script>
+  <script src="js/products.js?v=20260628n"></script>
+  <script src="js/descricoes.js?v=20260628n"></script>
+  <script src="js/site.js?v=20260628n"></script>
 </body>
 </html>
