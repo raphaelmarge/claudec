@@ -1057,9 +1057,34 @@
   if (btnPdf) btnPdf.addEventListener('click', baixarCatalogoPDF);
 
   /* ---------- PDF do orçamento (visitante) ---------- */
+  // miniatura do produto em dataURL (para embutir no PDF); null se falhar
+  function fotoParaPDF(url) {
+    if (!url) return Promise.resolve(null);
+    return new Promise(res => {
+      const im = new Image();
+      im.crossOrigin = 'anonymous';
+      const t = setTimeout(() => res(null), 7000);
+      im.onload = () => {
+        clearTimeout(t);
+        try {
+          const max = 300, r = Math.min(max / im.width, max / im.height, 1);
+          const c = document.createElement('canvas');
+          c.width = Math.max(1, Math.round(im.width * r));
+          c.height = Math.max(1, Math.round(im.height * r));
+          const ctx = c.getContext('2d');
+          ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, c.width, c.height);
+          ctx.drawImage(im, 0, 0, c.width, c.height);
+          res({ data: c.toDataURL('image/jpeg', 0.82), w: c.width, h: c.height });
+        } catch (e) { res(null); }
+      };
+      im.onerror = () => { clearTimeout(t); res(null); };
+      im.src = url;
+    });
+  }
   // monta o documento (usado por baixar, WhatsApp e e-mail)
   async function gerarOrcamentoPDF(lines) {
       await loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js');
+      const fotos = await Promise.all(lines.map(l => fotoParaPDF(l.p.imagem)));
       const Ctor = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
       if (!Ctor) throw new Error('jsPDF indisponível');
       const doc = new Ctor({ orientation: 'portrait', unit: 'mm', format: 'a4' });
@@ -1074,21 +1099,36 @@
       doc.text('Orçamento estimado', M, 18.5);
       doc.setTextColor(violet[0], violet[1], violet[2]); doc.text(hoje, W - M, 12, { align: 'right' });
       let y = 36;
-      // itens
+      // itens (com a foto de cada aparelho)
       doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(gray[0], gray[1], gray[2]);
-      doc.text('QTD', M, y); doc.text('EQUIPAMENTO', M + 14, y); doc.text('UNITÁRIO', W - M - 32, y, { align: 'right' }); doc.text('TOTAL', W - M, y, { align: 'right' });
-      y += 3; doc.setDrawColor(220, 220, 230); doc.line(M, y, W - M, y); y += 6;
-      lines.forEach(l => {
-        if (y > H - 60) { doc.addPage(); y = 20; }
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(40, 40, 50);
-        doc.text(String(l.q) + '×', M, y);
-        const nome = l.p.nome.length > 52 ? l.p.nome.slice(0, 51) + '…' : l.p.nome;
-        doc.text(nome, M + 14, y);
-        doc.text(money(l.p.preco), W - M - 32, y, { align: 'right' });
-        doc.setFont('helvetica', 'bold');
-        doc.text(money(l.total), W - M, y, { align: 'right' });
-        y += 6.5;
+      doc.text('EQUIPAMENTO', M + 22, y); doc.text('UNITÁRIO', W - M - 32, y, { align: 'right' }); doc.text('TOTAL', W - M, y, { align: 'right' });
+      y += 3; doc.setDrawColor(220, 220, 230); doc.line(M, y, W - M, y); y += 4;
+      const ROW = 20;
+      lines.forEach((l, idx) => {
+        if (y + ROW > H - 55) { doc.addPage(); y = 20; }
+        const f = fotos[idx];
+        if (f) {
+          const boxW = 18, boxH = 16;
+          const r = Math.min(boxW / f.w, boxH / f.h);
+          const iw = f.w * r, ih = f.h * r;
+          try { doc.addImage(f.data, 'JPEG', M + (boxW - iw) / 2, y + (boxH - ih) / 2, iw, ih); } catch (e) {}
+        } else {
+          doc.setFillColor(240, 240, 246); doc.roundedRect(M, y + 1, 18, 14, 2, 2, 'F');
+        }
+        const ty = y + 6;
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(40, 40, 50);
+        const nome = l.p.nome.length > 44 ? l.p.nome.slice(0, 43) + '…' : l.p.nome;
+        doc.text(nome, M + 22, ty);
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(gray[0], gray[1], gray[2]);
+        doc.text(`${l.q}× ${l.p.codigo || ''}`, M + 22, ty + 4.4);
+        doc.setFontSize(9.5); doc.setTextColor(gray[0], gray[1], gray[2]);
+        doc.text(money(l.p.preco), W - M - 32, ty, { align: 'right' });
+        doc.setFont('helvetica', 'bold'); doc.setTextColor(40, 40, 50);
+        doc.text(money(l.total), W - M, ty, { align: 'right' });
+        y += ROW;
+        doc.setDrawColor(232, 232, 238); doc.line(M, y - 2, W - M, y - 2);
       });
+      y += 2;
       // totais
       y += 2; doc.setDrawColor(180, 180, 200); doc.line(M, y, W - M, y); y += 8;
       const sub = cartTotal(); const desc = cupomDesc(sub); const tot = Math.max(0, sub - desc);
