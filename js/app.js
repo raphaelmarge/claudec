@@ -1721,7 +1721,7 @@
   $('#btnExport').addEventListener('click', () => {
     if (!cartCount()) { toast('Adicione produtos ao orçamento primeiro.'); return; }
     if (!Q().clienteId) { toast('Selecione (ou cadastre) o cliente antes de gerar.'); return; }
-    buildQuoteDoc(); openModal('#quoteModal'); registrarOrcamento();
+    buildQuoteDoc(); openModal('#quoteModal'); registrarOrcamento(); prepararShareQuote();
   });
 
   function todayStr() {
@@ -1945,26 +1945,38 @@
     window.open(`https://wa.me/${num}?text=${txt}`, '_blank');
   });
 
+  // A imagem do orçamento é preparada quando o modal ABRE: no iPhone, o
+  // navigator.share só funciona logo após o toque — gerar na hora do clique
+  // estoura essa janela e o Safari bloqueia sem avisar.
+  let shareQuoteFile = null;
+  async function prepararShareQuote() {
+    shareQuoteFile = null;
+    if (!navigator.share || !navigator.canShare) return;
+    try {
+      await loadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js');
+      const canvas = await html2canvas($('#quoteDoc'), { scale: 2, backgroundColor: '#fff', useCORS: true });
+      const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+      if (blob) shareQuoteFile = new File([blob], 'orcamento-torque.png', { type: 'image/png' });
+    } catch (e) { /* segue sem imagem — compartilha o texto */ }
+  }
   $('#btnShareQuote').addEventListener('click', async () => {
     const txt = resumoTexto();
     try {
-      // tenta compartilhar imagem como arquivo, se suportado
-      if (navigator.share) {
-        try {
-          await loadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js');
-          const canvas = await html2canvas($('#quoteDoc'), { scale: 2, backgroundColor: '#fff', useCORS: true });
-          const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
-          const file = new File([blob], 'orcamento-torque.png', { type: 'image/png' });
-          if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            await navigator.share({ files: [file], text: txt, title: 'Orçamento Torque Fitness' });
-            return;
-          }
-        } catch (e) { /* fallback abaixo */ }
-        await navigator.share({ text: txt, title: 'Orçamento Torque Fitness' });
-      } else {
-        await navigator.clipboard.writeText(txt); toast('Resumo copiado para a área de transferência.');
+      if (!navigator.share) {
+        await navigator.clipboard.writeText(txt);
+        toast('Resumo copiado para a área de transferência.');
+        return;
       }
-    } catch (e) { /* cancelado */ }
+      if (shareQuoteFile && navigator.canShare && navigator.canShare({ files: [shareQuoteFile] })) {
+        try { await navigator.share({ files: [shareQuoteFile], text: txt, title: 'Orçamento Torque Fitness' }); return; }
+        catch (e) { if (e && e.name === 'AbortError') return; /* sem arquivo → tenta só texto */ }
+      }
+      await navigator.share({ text: txt, title: 'Orçamento Torque Fitness' });
+    } catch (e) {
+      if (e && e.name === 'AbortError') return;                    // usuário fechou a folha
+      try { await navigator.clipboard.writeText(txt); toast('Resumo copiado para a área de transferência.'); }
+      catch (e2) { toast('Não foi possível compartilhar neste navegador.'); }
+    }
   });
 
   /* ------------------------------------------------------------
