@@ -434,21 +434,38 @@
   }
   function bindLeadInputs() {}
 
-  // Supabase (insere o lead na mesma base do app via REST — dispensa a lib no site público)
+  // Supabase (insere o lead na mesma base do app via REST — dispensa a lib no site público).
+  // Se alguma coluna não existir na tabela, remove e tenta de novo, dobrando o
+  // contato no "obs" para a informação nunca se perder.
   async function insertOrcamento(row) {
     const cfg = window.TORQUE_SUPABASE;
     if (!cfg || !cfg.url) throw new Error('sem config do servidor');
-    const r = await fetch(cfg.url.replace(/\/+$/, '') + '/rest/v1/orcamentos', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: cfg.anonKey,
-        Authorization: 'Bearer ' + cfg.anonKey,
-        Prefer: 'return=minimal'
-      },
-      body: JSON.stringify(row)
-    });
-    if (!r.ok) throw new Error('insert falhou: ' + r.status + ' ' + (await r.text().catch(() => '')));
+    for (let tent = 0; tent < 5; tent++) {
+      const r = await fetch(cfg.url.replace(/\/+$/, '') + '/rest/v1/orcamentos', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: cfg.anonKey,
+          Authorization: 'Bearer ' + cfg.anonKey,
+          Prefer: 'return=minimal'
+        },
+        body: JSON.stringify(row)
+      });
+      if (r.ok) return;
+      const txt = await r.text().catch(() => '');
+      const m = /Could not find the '([^']+)' column/.exec(txt);
+      if (r.status === 400 && m && (m[1] in row)) {
+        const col = m[1], val = row[col];
+        delete row[col];
+        if (col === 'contato_telefone' && val) row.obs = 'Tel/WhatsApp: ' + val + (row.obs ? ' | ' + row.obs : '');
+        if (col === 'contato_email' && val) row.obs = 'E-mail: ' + val + (row.obs ? ' | ' + row.obs : '');
+        continue;                                        // tenta de novo sem a coluna ausente
+      }
+      const e = new Error('insert falhou: ' + r.status + ' ' + txt.slice(0, 200));
+      e.status = r.status;
+      throw e;
+    }
+    throw new Error('insert falhou: esquema incompatível');
   }
 
   $('#btnEnviarLead').addEventListener('click', enviarLead);
@@ -494,6 +511,7 @@
     try {
       await insertOrcamento({
         origem: 'site',
+        numero: 'SITE-' + Date.now().toString(36).toUpperCase(),   // marca o lead mesmo sem a coluna "origem"
         cliente_nome: nome,
         contato_telefone: tel,
         contato_email: email,
@@ -542,7 +560,25 @@
       }
     } catch (e) {
       console.error(e);
-      err.textContent = 'Não foi possível enviar agora. Tente novamente em instantes.';
+      // resgate: o lead NÃO se perde — manda os dados + orçamento direto no WhatsApp da loja
+      const wpp = String(SITEINFO.whatsapp || SITE.whatsapp || '').replace(/\D/g, '');
+      if (wpp) {
+        const dados = `*Pedido de orçamento (site)*\nNome: ${nome}\nWhatsApp: ${tel}` +
+          (cidade ? `\nCidade: ${cidade}` : '') + (email ? `\nE-mail: ${email}` : '') +
+          (msg ? `\nMensagem: ${msg}` : '') + '\n\n' + orcamentoTexto();
+        err.textContent = 'Não foi possível registrar agora — envie seu pedido direto no nosso WhatsApp:';
+        let b = document.getElementById('leadWppFallback');
+        if (!b) {
+          b = document.createElement('a');
+          b.id = 'leadWppFallback'; b.className = 'btn btn--primary drawer__send';
+          b.style.marginTop = '8px'; b.target = '_blank'; b.rel = 'noopener';
+          b.textContent = '📲 Enviar pedido pelo WhatsApp';
+          err.after(b);
+        }
+        b.href = 'https://wa.me/' + wpp + '?text=' + encodeURIComponent(dados);
+      } else {
+        err.textContent = 'Não foi possível enviar agora. Tente novamente em instantes.';
+      }
       err.hidden = false;
       btn.disabled = false; btn.textContent = 'Enviar pedido';
     }
