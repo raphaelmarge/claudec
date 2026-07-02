@@ -1,0 +1,25 @@
+name: Diagnóstico insert orcamentos
+on: { workflow_dispatch: {} }
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sonda colunas uma a uma
+        run: |
+          URL="https://uqwbywzuqooqzmiklqct.supabase.co/rest/v1/orcamentos"
+          KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVxd2J5d3p1cW9vcXptaWtscWN0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxNTUxODUsImV4cCI6MjA5NzczMTE4NX0._wPjsnUhBY0NzIR8odwsKg-uqyApZNkwjIfHKv9FxL4"
+          BASE='"cliente_nome":"TESTE-DIAG (pode excluir)","itens":[],"subtotal":1,"desconto":0,"total":1,"parcelas":1,"valor_parcela":1,"status":"perdido"'
+          probe () {
+            NOME="$1"; EXTRA="$2"
+            CODE=$(curl -s -o /tmp/r.txt -w "%{http_code}" -X POST "$URL" \
+              -H "Content-Type: application/json" -H "apikey: $KEY" -H "Authorization: Bearer $KEY" -H "Prefer: return=minimal" \
+              -d "{${BASE}${EXTRA}}")
+            echo "PROBE $NOME → HTTP $CODE $(head -c 160 /tmp/r.txt)"
+          }
+          probe "base" ""
+          probe "obs" ',"obs":"t"'
+          probe "origem" ',"origem":"site"'
+          probe "vendedor_nome" ',"vendedor_nome":""'
+          probe "contato_telefone" ',"contato_telefone":"0"'
+          probe "contato_email" ',"contato_email":"t@t"'
+          probe "numero" ',"numero":"TESTE-1"'
