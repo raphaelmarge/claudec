@@ -2285,6 +2285,8 @@
     const diff = Math.round((dt - t) / DAY);
     return { dt, diff, atrasado: diff < 0 && emAberto(r) };
   }
+  const isSiteLead = r => r.origem === 'site' || /^SITE-/i.test(String(r.numero || ''));
+
   /* ===== Atividades agendadas (estilo Pipedrive) — guardadas no JSONB `atividades` =====
      Uma TAREFA é uma atividade com `due` (data/hora) e `done`=false.
      A "próxima atividade" de um negócio é a tarefa pendente mais próxima. */
@@ -2656,7 +2658,7 @@
   }
   function kcardHTML(r) {
     const flags = [];
-    if (r.origem === 'site') flags.push('<span class="dflag site">🌐 Lead</span>');
+    if (isSiteLead(r)) flags.push('<span class="dflag site">🌐 Lead</span>');
     const pb = proximaBadge(r); if (pb) flags.push(pb);
     const vb = validadeBadge(r); if (vb) flags.push(vb);
     const nItens = (r.itens || []).length;
@@ -2867,7 +2869,7 @@
   const SEEN_LEADS_KEY = 'torque_seen_leads';
   function seenLeads() { try { return new Set(JSON.parse(localStorage.getItem(SEEN_LEADS_KEY) || '[]')); } catch (e) { return new Set(); } }
   function markLeadsSeen(ids) { try { const s = seenLeads(); ids.forEach(i => s.add(i)); localStorage.setItem(SEEN_LEADS_KEY, JSON.stringify(Array.from(s).slice(-800))); } catch (e) {} }
-  function novosLeads(rows) { const s = seenLeads(); return rows.filter(r => r.origem === 'site' && stageOf(r) === 'novo' && !s.has(r.id)); }
+  function novosLeads(rows) { const s = seenLeads(); return rows.filter(r => isSiteLead(r) && stageOf(r) === 'novo' && !s.has(r.id)); }
   function notifyNewLeads(novos) {
     if (notifSupported() && Notification.permission === 'granted') {
       try { new Notification('Torque CRM · novo lead', { body: `${novos.length} pedido(s) novo(s) pela vitrine.`, icon: 'icons/icon-192.png', tag: 'torque-leads' }); } catch (e) {}
@@ -3175,7 +3177,7 @@
     const ativo = emAberto(r);
     const nx = proximaAtividade(r);
 
-    const lead = r.origem === 'site';
+    const lead = isSiteLead(r);
     const flags = [];
     if (lead) flags.push(`<span class="dflag site">🌐 Lead do site</span>`);
     const pb = proximaBadge(r); if (pb) flags.push(pb);
@@ -3601,7 +3603,7 @@
      ------------------------------------------------------------ */
   async function distribuirLeads() {
     if (!(Cloud.isAdmin && Cloud.isAdmin())) { toast('Apenas o admin distribui leads.'); return; }
-    const leads = dashData.filter(r => r.origem === 'site' && !String(r.vendedor_nome || '').trim() && emAberto(r));
+    const leads = dashData.filter(r => isSiteLead(r) && !String(r.vendedor_nome || '').trim() && emAberto(r));
     if (!leads.length) { toast('Nenhum lead do site sem vendedor.'); return; }
     let vends;
     try { vends = (await Cloud.listVendedores()).filter(v => v.role !== 'admin' && v.ativo !== false); }
