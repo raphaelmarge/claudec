@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#0B0B0F" />
   <title>Planejador de layout · Distribua os aparelhos no seu projeto · Torque Fitness</title>
-  <meta name="description" content="Envie a planta da sua academia, informe as medidas e distribua automaticamente os equipamentos do seu orçamento em escala real — cardio, musculação e peso livre nos lugares certos." />
+  <meta name="description" content="Envie a planta da sua academia: o planejador lê paredes e obstáculos, e distribui automaticamente os equipamentos do seu orçamento no espaço livre, em escala real." />
   <link rel="canonical" href="https://raphaelmarge.github.io/claudec/projeto.html" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Torque Fitness" />
   <meta property="og:title" content="Planejador de layout · Torque Fitness" />
-  <meta property="og:description" content="Distribua os equipamentos do seu orçamento na planta da academia, em escala real." />
+  <meta property="og:description" content="A planta vira projeto: leitura automática de paredes e distribuição dos equipamentos em escala real." />
   <meta property="og:url" content="https://raphaelmarge.github.io/claudec/projeto.html" />
   <meta property="og:image" content="https://raphaelmarge.github.io/claudec/assets/og.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -18,25 +18,31 @@
   <link rel="preconnect" href="https://uqwbywzuqooqzmiklqct.supabase.co" />
   <link rel="preconnect" href="https://uqwbywzuqooqzmiklqct.supabase.co" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/site.css?v=20260628u" />
+  <link rel="stylesheet" href="css/site.css?v=20260628v" />
   <style>
     .pl{max-width:1160px;margin:0 auto;padding:30px 20px 70px}
     .pl h1{font-size:2rem;line-height:1.15;margin:0 0 6px}
-    .pl__lead{color:var(--txt-dim);line-height:1.55;margin:0 0 22px;max-width:820px}
-    .pl__grid{display:grid;grid-template-columns:290px 1fr;gap:18px;align-items:start}
+    .pl__lead{color:var(--txt-dim);line-height:1.55;margin:0 0 22px;max-width:860px}
+    .pl__grid{display:grid;grid-template-columns:300px 1fr;gap:18px;align-items:start}
     .pl__panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:14px}
     .pl__panel h2{font-size:.82rem;text-transform:uppercase;letter-spacing:.06em;color:var(--txt-mut);margin:0}
     .pl__dims{display:flex;gap:8px}
     .pl__dims label{flex:1;display:flex;flex-direction:column;gap:4px;font-size:.74rem;color:var(--txt-dim)}
     .pl__dims input{width:100%;background:var(--panel-2);border:1px solid var(--line-2);color:var(--txt);border-radius:10px;padding:9px 10px;font-size:.92rem}
-    .pl__file{font-size:.78rem;color:var(--txt-dim)}
-    .pl__file input{margin-top:6px;width:100%;font-size:.72rem}
+    .pl__file{font-size:.78rem;color:var(--txt-dim);line-height:1.5}
+    .pl__file input[type=file]{margin-top:6px;width:100%;font-size:.72rem}
+    .pl__ctl{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+    .pl__ctl label{display:flex;align-items:center;gap:8px;font-size:.74rem;color:var(--txt-dim)}
+    .pl__ctl input[type=range]{flex:1;accent-color:var(--violet)}
+    .pl__brush{display:flex;gap:6px}
+    .pl__brush button{flex:1;background:var(--panel-2);border:1px solid var(--line-2);color:var(--txt-dim);border-radius:9px;padding:7px 4px;font-size:.7rem;cursor:pointer;font-family:var(--font-body)}
+    .pl__brush button.on{border-color:var(--violet);color:var(--txt);background:rgba(139,92,246,.15)}
     .pl__add{position:relative}
     .pl__add input{width:100%;background:var(--panel-2);border:1px solid var(--line-2);color:var(--txt);border-radius:10px;padding:9px 10px;font-size:.86rem}
     .pl__sug{position:absolute;left:0;right:0;top:100%;z-index:30;background:var(--panel-2);border:1px solid var(--line-2);border-radius:10px;max-height:220px;overflow:auto;display:none}
     .pl__sug button{display:block;width:100%;text-align:left;background:none;border:none;color:var(--txt);padding:8px 10px;font-size:.8rem;cursor:pointer}
     .pl__sug button:hover{background:rgba(139,92,246,.15)}
-    .pl__items{display:flex;flex-direction:column;gap:6px;max-height:300px;overflow:auto}
+    .pl__items{display:flex;flex-direction:column;gap:6px;max-height:260px;overflow:auto}
     .pl__item{display:flex;align-items:center;gap:8px;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:6px 8px;font-size:.78rem}
     .pl__item b{flex:1;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .pl__item .q{display:flex;align-items:center;gap:5px}
@@ -51,6 +57,7 @@
     .pl__leg{display:flex;align-items:center;gap:5px;font-size:.7rem;color:var(--txt-dim)}
     .pl__leg i{width:10px;height:10px;border-radius:3px;display:inline-block}
     #plSvg{display:block;width:100%;height:auto;background:#101018;border-radius:12px;touch-action:none}
+    #plSvg.brush{cursor:crosshair}
     .pl__hint{font-size:.74rem;color:var(--txt-mut);margin-top:8px}
     .pl__over{margin-top:10px;font-size:.78rem;color:#fbbf24;line-height:1.5}
     .plitem{cursor:grab}
@@ -71,21 +78,29 @@
 
   <main class="pl">
     <h1>Distribua os aparelhos no seu projeto</h1>
-    <p class="pl__lead">Informe as medidas do salão (e, se quiser, envie a foto da planta), escolha os equipamentos e clique em <b>Distribuir automaticamente</b>: o planejador posiciona tudo em escala real, por setores — cardio na entrada, musculação por grupamento e peso livre ao fundo — respeitando corredores de circulação. Depois é só arrastar para ajustar e baixar a imagem.</p>
+    <p class="pl__lead">Envie a planta baixa e informe as medidas: o planejador <b>lê as paredes, colunas e áreas fechadas</b> da planta e distribui os equipamentos do seu orçamento <b>somente no espaço livre</b>, em escala real — cardio na entrada, musculação por grupamento e peso livre ao fundo, com corredores de circulação. Ajuste com os pincéis e arraste os aparelhos como quiser.</p>
 
     <div class="pl__grid">
       <aside class="pl__panel">
         <div>
-          <h2>1 · Medidas do salão</h2>
+          <h2>1 · Medidas da área da planta</h2>
           <div class="pl__dims" style="margin-top:8px">
             <label>Largura (m)<input id="plW" type="number" min="3" max="80" step="0.5" value="12" inputmode="decimal" /></label>
             <label>Comprimento (m)<input id="plL" type="number" min="3" max="120" step="0.5" value="18" inputmode="decimal" /></label>
           </div>
         </div>
         <div class="pl__file">
-          <h2>2 · Planta (opcional)</h2>
-          Foto ou print da planta baixa — ela vira o fundo do desenho, esticada para as medidas informadas.
+          <h2>2 · Planta baixa (opcional)</h2>
+          Foto ou print da planta. As linhas escuras (paredes, colunas, banheiros) viram áreas bloqueadas — em vermelho no desenho.
           <input id="plFile" type="file" accept="image/*" />
+          <div class="pl__ctl" id="plPlanCtrl" hidden>
+            <label>Sensibilidade <input id="plSens" type="range" min="55" max="145" value="100" /></label>
+            <label><input type="checkbox" id="plShowObst" checked /> Mostrar áreas bloqueadas</label>
+            <div class="pl__brush">
+              <button id="plBrushBlock" type="button">🖌 Marcar obstáculo</button>
+              <button id="plBrushFree" type="button">🧽 Liberar área</button>
+            </div>
+          </div>
         </div>
         <div>
           <h2>3 · Equipamentos</h2>
@@ -110,15 +125,15 @@
           <div class="pl__legend" id="plLegend"></div>
         </div>
         <svg id="plSvg" xmlns="http://www.w3.org/2000/svg"></svg>
-        <p class="pl__hint">Arraste um aparelho para reposicionar · toque duas vezes para girar 90° · grade de 1 m.</p>
+        <p class="pl__hint" id="plHintBar">Arraste um aparelho para reposicionar · toque duas vezes para girar 90° · grade de 1 m.</p>
         <div class="pl__over" id="plOver" hidden></div>
       </section>
     </div>
   </main>
 
-  <script src="js/config.js?v=20260628u"></script>
-  <script src="js/products.js?v=20260628u"></script>
-  <script src="js/nomes.js?v=20260628u"></script>
+  <script src="js/config.js?v=20260628v"></script>
+  <script src="js/products.js?v=20260628v"></script>
+  <script src="js/nomes.js?v=20260628v"></script>
   <script>
   (function () {
     'use strict';
@@ -128,12 +143,12 @@
     var fold = function (s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); };
     var NOMES = window.TORQUE_NOMES_PT || {};
 
-    /* ---------- catálogo (embutido + ao vivo) ---------- */
+    /* ---------- catálogo ---------- */
     var PRODUCTS = ((window.TORQUE_PUBLIC && window.TORQUE_PUBLIC.products) || []).filter(function (p) { return p.preco > 0; });
     function nomePt(p) { return NOMES[norm(p.nome)] || p.nome; }
     var byCode = function (c) { for (var i = 0; i < PRODUCTS.length; i++) if (PRODUCTS[i].codigo === c) return PRODUCTS[i]; return null; };
 
-    /* ---------- classificação por setor ---------- */
+    /* ---------- setores ---------- */
     var ZONAS = [
       ['Cardio', '#38bdf8', /treadmill|elliptical|stair|climber|rowing|spinn?ing|spining|\bbike\b|recumbent|pedal|ergometer|kayak|dragon boat|surf/],
       ['Pernas e glúteos', '#a78bfa', /\bleg\b|squat|hack|calf|thigh|\bhip\b|glute|thrust|adduct|abduct|lunge|sissy|tibia|deadlift|pendulum|bridge|\bkick\b|belt|\binner\b|\bouter\b/],
@@ -150,7 +165,6 @@
       for (var i = 0; i < ZONAS.length; i++) if (ZONAS[i][2].test(n)) return i;
       return ZONAS.length - 1;
     }
-    /* footprint em metros: usa dims (C×L×A em mm); fallback por setor */
     var FALLBACK = { 0: [2.0, 0.95], 8: [1.8, 1.4] };
     function footprint(p) {
       var m = String(p.dims || '').match(/(\d{3,4})\s*[×xX*]\s*(\d{3,4})/);
@@ -161,8 +175,8 @@
       return FALLBACK[zonaDe(p)] || [1.4, 1.1];
     }
 
-    /* ---------- itens escolhidos (parte do carrinho do site) ---------- */
-    var itens = [];   // {codigo, qtd}
+    /* ---------- itens ---------- */
+    var itens = [];
     try {
       var cart = JSON.parse(localStorage.getItem('torque_site_cart')) || {};
       Object.keys(cart).forEach(function (c) { if (byCode(c) && cart[c] > 0) itens.push({ codigo: c, qtd: Math.min(20, cart[c]) }); });
@@ -186,8 +200,6 @@
       if (q) { var it = itens[+q.dataset.i]; it.qtd = Math.max(1, Math.min(30, it.qtd + (+q.dataset.q))); renderItens(); }
       if (rm) { itens.splice(+rm.dataset.rm, 1); renderItens(); }
     });
-
-    /* busca para adicionar */
     var sug = $('#plSug');
     $('#plBusca').addEventListener('input', function () {
       var q = fold(this.value).trim();
@@ -204,23 +216,174 @@
     });
     document.addEventListener('click', function (e) { if (!e.target.closest('.pl__add')) sug.style.display = 'none'; });
 
-    /* ---------- planta de fundo ---------- */
-    var plantaURL = '';
+    /* ================================================================
+       LEITURA DA PLANTA (visão computacional no navegador)
+       - binariza a imagem com limiar automático (Otsu) × sensibilidade
+       - células escuras = paredes/colunas/áreas fechadas (bloqueadas)
+       - fora do contorno das paredes também é bloqueado
+       - pincéis: correção manual (marcar/lib erar)
+       ================================================================ */
+    var plantaURL = '', plantaImg = null;
+    var GRID = null;   // {cs, cols, rows, obst:Uint8Array, manual:Int8Array, overlayURL}
+    function dims() { return { W: +$('#plW').value || 12, L: +$('#plL').value || 18 }; }
+
+    function analisarPlanta() {
+      if (!plantaImg) { GRID = null; desenhar(); return; }
+      var d = dims(), W = d.W, L = d.L;
+      var cs = Math.max(0.08, Math.sqrt(W * L / 160000));            // célula ~8–15 cm
+      var cols = Math.max(10, Math.round(W / cs)), rows = Math.max(10, Math.round(L / cs));
+      var cv = document.createElement('canvas'); cv.width = cols; cv.height = rows;
+      var cx = cv.getContext('2d', { willReadFrequently: true });
+      cx.fillStyle = '#fff'; cx.fillRect(0, 0, cols, rows);
+      cx.drawImage(plantaImg, 0, 0, cols, rows);
+      var px = cx.getImageData(0, 0, cols, rows).data;
+      var n = cols * rows, lum = new Float32Array(n), hist = new Uint32Array(256);
+      for (var i = 0; i < n; i++) {
+        var l = 0.299 * px[i * 4] + 0.587 * px[i * 4 + 1] + 0.114 * px[i * 4 + 2];
+        lum[i] = l; hist[Math.round(l)]++;
+      }
+      // Otsu: limiar automático entre "tinta" e "papel"
+      var total = n, sum = 0, sumB = 0, wB = 0, maxVar = 0, limiar = 127;
+      for (var t = 0; t < 256; t++) sum += t * hist[t];
+      for (var t2 = 0; t2 < 256; t2++) {
+        wB += hist[t2]; if (!wB) continue;
+        var wF = total - wB; if (!wF) break;
+        sumB += t2 * hist[t2];
+        var mB = sumB / wB, mF = (sum - sumB) / wF, v = wB * wF * (mB - mF) * (mB - mF);
+        if (v > maxVar) { maxVar = v; limiar = t2; }
+      }
+      limiar = limiar * ((+$('#plSens').value || 100) / 100);
+      var manual = (GRID && GRID.cols === cols && GRID.rows === rows) ? GRID.manual : new Int8Array(n);
+      var obst = new Uint8Array(n);
+      var minX = cols, maxX = 0, minY = rows, maxY = 0, temTinta = false;
+      for (var k = 0; k < n; k++) {
+        if (lum[k] < limiar) {
+          obst[k] = 1; temTinta = true;
+          var ix = k % cols, iy = (k / cols) | 0;
+          if (ix < minX) minX = ix; if (ix > maxX) maxX = ix;
+          if (iy < minY) minY = iy; if (iy > maxY) maxY = iy;
+        }
+      }
+      // fora do contorno das paredes (caixa do desenho) não é área útil
+      if (temTinta && (maxX - minX) > cols * 0.3 && (maxY - minY) > rows * 0.3) {
+        for (var k2 = 0; k2 < n; k2++) {
+          var jx = k2 % cols, jy = (k2 / cols) | 0;
+          if (jx < minX || jx > maxX || jy < minY || jy > maxY) obst[k2] = 1;
+        }
+      }
+      // dilata 1 célula (folga de segurança junto às paredes)
+      var dil = new Uint8Array(obst);
+      for (var y3 = 0; y3 < rows; y3++) for (var x3 = 0; x3 < cols; x3++) {
+        if (!obst[y3 * cols + x3]) continue;
+        for (var dy = -1; dy <= 1; dy++) for (var dx = -1; dx <= 1; dx++) {
+          var nx = x3 + dx, ny = y3 + dy;
+          if (nx >= 0 && nx < cols && ny >= 0 && ny < rows) dil[ny * cols + nx] = 1;
+        }
+      }
+      GRID = { cs: cs, cols: cols, rows: rows, obst: dil, manual: manual, overlayURL: '' };
+      gerarOverlay();
+      desenhar();
+    }
+    function bloqueada(k) {
+      if (!GRID) return false;
+      if (GRID.manual[k] === 2) return false;
+      if (GRID.manual[k] === 1) return true;
+      return !!GRID.obst[k];
+    }
+    function gerarOverlay() {
+      if (!GRID) return;
+      var cv = document.createElement('canvas'); cv.width = GRID.cols; cv.height = GRID.rows;
+      var cx = cv.getContext('2d');
+      var img = cx.createImageData(GRID.cols, GRID.rows);
+      for (var k = 0; k < GRID.cols * GRID.rows; k++) {
+        if (bloqueada(k)) { img.data[k * 4] = 248; img.data[k * 4 + 1] = 80; img.data[k * 4 + 2] = 96; img.data[k * 4 + 3] = 95; }
+      }
+      cx.putImageData(img, 0, 0);
+      GRID.overlayURL = cv.toDataURL();
+    }
     $('#plFile').addEventListener('change', function () {
       var f = this.files && this.files[0]; if (!f) return;
       var r = new FileReader();
-      r.onload = function () { plantaURL = r.result; desenhar(); };
+      r.onload = function () {
+        plantaURL = r.result;
+        plantaImg = new Image();
+        plantaImg.onload = function () { $('#plPlanCtrl').hidden = false; analisarPlanta(); };
+        plantaImg.src = plantaURL;
+      };
       r.readAsDataURL(f);
     });
+    var sensTimer = null;
+    $('#plSens').addEventListener('input', function () { clearTimeout(sensTimer); sensTimer = setTimeout(analisarPlanta, 220); });
+    $('#plShowObst').addEventListener('change', desenhar);
 
-    /* ---------- distribuição automática (empacotamento por setor) ---------- */
-    var S = 50;                       // px por metro
-    var placed = [];                  // {codigo,nome,zona,x,y,w,d,rot}
-    var naoCoube = [];
+    /* ---------- pincéis de correção ---------- */
+    var brush = 0;   // 0 = nenhum, 1 = marcar obstáculo, 2 = liberar
+    function setBrush(b) {
+      brush = (brush === b) ? 0 : b;
+      $('#plBrushBlock').classList.toggle('on', brush === 1);
+      $('#plBrushFree').classList.toggle('on', brush === 2);
+      $('#plSvg').classList.toggle('brush', brush !== 0);
+      $('#plHintBar').textContent = brush
+        ? (brush === 1 ? 'Pinte na planta as áreas que devem ficar SEM aparelhos.' : 'Pinte na planta as áreas que o leitor bloqueou por engano.')
+        : 'Arraste um aparelho para reposicionar · toque duas vezes para girar 90° · grade de 1 m.';
+    }
+    $('#plBrushBlock').addEventListener('click', function () { setBrush(1); });
+    $('#plBrushFree').addEventListener('click', function () { setBrush(2); });
+    function pintar(ptM) {
+      if (!GRID) return;
+      var raio = 0.35;                                   // pincel de ~70 cm
+      var c0 = Math.max(0, Math.floor((ptM.x - raio) / GRID.cs)), c1 = Math.min(GRID.cols - 1, Math.ceil((ptM.x + raio) / GRID.cs));
+      var r0 = Math.max(0, Math.floor((ptM.y - raio) / GRID.cs)), r1 = Math.min(GRID.rows - 1, Math.ceil((ptM.y + raio) / GRID.cs));
+      for (var iy = r0; iy <= r1; iy++) for (var ix = c0; ix <= c1; ix++) GRID.manual[iy * GRID.cols + ix] = brush;
+    }
+
+    /* ================================================================
+       DISTRIBUIÇÃO no espaço livre (grade de ocupação + soma integral)
+       ================================================================ */
+    var S = 50, placed = [], naoCoube = [];
     var GAP = 0.4, CORREDOR = 1.2, PAREDE = 0.3;
 
+    function novaOcupacao(W, L) {
+      var cs = GRID ? GRID.cs : 0.12;
+      var cols = GRID ? GRID.cols : Math.max(10, Math.round(W / cs));
+      var rows = GRID ? GRID.rows : Math.max(10, Math.round(L / cs));
+      var occ = new Uint8Array(cols * rows);
+      for (var iy = 0; iy < rows; iy++) for (var ix = 0; ix < cols; ix++) {
+        var k = iy * cols + ix;
+        var mx = ix * cs, my = iy * cs;
+        if (GRID) { if (bloqueada(k)) occ[k] = 1; }
+        else if (mx < PAREDE || my < PAREDE || mx > W - PAREDE || my > L - PAREDE) occ[k] = 1;
+      }
+      return { occ: occ, cols: cols, rows: rows, cs: cs };
+    }
+    function somaIntegral(g) {
+      var sat = new Int32Array((g.cols + 1) * (g.rows + 1));
+      for (var y = 0; y < g.rows; y++) for (var x = 0; x < g.cols; x++)
+        sat[(y + 1) * (g.cols + 1) + (x + 1)] = g.occ[y * g.cols + x] + sat[y * (g.cols + 1) + (x + 1)] + sat[(y + 1) * (g.cols + 1) + x] - sat[y * (g.cols + 1) + x];
+      return sat;
+    }
+    function retLivre(g, sat, x, y, w, d) {
+      var x0 = Math.floor(x / g.cs), y0 = Math.floor(y / g.cs);
+      var x1 = Math.min(g.cols, Math.ceil((x + w) / g.cs)), y1 = Math.min(g.rows, Math.ceil((y + d) / g.cs));
+      if (x0 < 0 || y0 < 0 || x1 > g.cols || y1 > g.rows) return false;
+      var s = sat[y1 * (g.cols + 1) + x1] - sat[y0 * (g.cols + 1) + x1] - sat[y1 * (g.cols + 1) + x0] + sat[y0 * (g.cols + 1) + x0];
+      return s === 0;
+    }
+    function ocupa(g, x, y, w, d) {
+      var pad = GAP / 2;
+      var x0 = Math.max(0, Math.floor((x - pad) / g.cs)), y0 = Math.max(0, Math.floor((y - pad) / g.cs));
+      var x1 = Math.min(g.cols - 1, Math.ceil((x + w + pad) / g.cs)), y1 = Math.min(g.rows - 1, Math.ceil((y + d + pad) / g.cs));
+      for (var iy = y0; iy <= y1; iy++) for (var ix = x0; ix <= x1; ix++) g.occ[iy * g.cols + ix] = 1;
+    }
+    function achaVaga(g, sat, w, d, deY, W, L) {
+      var passo = Math.max(g.cs, 0.15);
+      for (var y = deY; y + d <= L; y += passo)
+        for (var x = 0; x + w <= W; x += passo)
+          if (retLivre(g, sat, x, y, w, d)) return { x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10 };
+      return null;
+    }
     function distribuir() {
-      var W = +$('#plW').value || 12, L = +$('#plL').value || 18;
+      var dm = dims(), W = dm.W, L = dm.L;
       placed = []; naoCoube = [];
       var unidades = [];
       itens.forEach(function (it) {
@@ -228,112 +391,120 @@
         var fp = footprint(p);
         for (var k = 0; k < it.qtd; k++) unidades.push({ codigo: p.codigo, nome: nomePt(p), zona: zonaDe(p), w: fp[0], d: fp[1] });
       });
-      // ordena por setor (ordem das ZONAS) e, dentro do setor, do maior para o menor
       unidades.sort(function (a, b) { return a.zona - b.zona || (b.w * b.d) - (a.w * a.d); });
-      var x = PAREDE, y = PAREDE, rowH = 0, zonaAtual = -1;
+      var g = novaOcupacao(W, L), sat = somaIntegral(g);
+      var zonaAtual = -1, zonaY = 0, fimZona = 0;
       unidades.forEach(function (u) {
-        if (u.zona !== zonaAtual) {          // novo setor → nova fileira + corredor
-          if (rowH > 0) { y += rowH + CORREDOR; }
-          x = PAREDE; rowH = 0; zonaAtual = u.zona;
-        }
-        if (x + u.w > W - PAREDE) {          // não cabe na fileira → quebra linha
-          x = PAREDE; y += rowH + GAP + 0.5; rowH = 0;
-        }
-        if (y + u.d > L - PAREDE) { naoCoube.push(u.nome); return; }
-        placed.push({ codigo: u.codigo, nome: u.nome, zona: u.zona, x: x, y: y, w: u.w, d: u.d, rot: 0 });
-        x += u.w + GAP;
-        rowH = Math.max(rowH, u.d);
+        if (u.zona !== zonaAtual) { zonaAtual = u.zona; zonaY = fimZona > 0 ? fimZona + CORREDOR : 0; }
+        var spot = achaVaga(g, sat, u.w, u.d, zonaY, W, L), rot = 0;
+        if (!spot) { spot = achaVaga(g, sat, u.d, u.w, zonaY, W, L); if (spot) rot = 1; }
+        if (!spot) { spot = achaVaga(g, sat, u.w, u.d, 0, W, L); }                      // preenche vãos anteriores
+        if (!spot) { spot = achaVaga(g, sat, u.d, u.w, 0, W, L); if (spot) rot = 1; }
+        if (!spot) { naoCoube.push(u.nome); return; }
+        var w = rot ? u.d : u.w, h = rot ? u.w : u.d;
+        placed.push({ codigo: u.codigo, nome: u.nome, zona: u.zona, x: spot.x, y: spot.y, w: u.w, d: u.d, rot: rot });
+        ocupa(g, spot.x, spot.y, w, h);
+        sat = somaIntegral(g);
+        fimZona = Math.max(fimZona, spot.y + h);
       });
       desenhar();
     }
 
-    /* ---------- desenho SVG ---------- */
+    /* ---------- desenho ---------- */
     function desenhar() {
-      var W = +$('#plW').value || 12, L = +$('#plL').value || 18;
+      var dm = dims(), W = dm.W, L = dm.L;
       var svg = $('#plSvg');
       svg.setAttribute('viewBox', '0 0 ' + (W * S) + ' ' + (L * S));
       var out = '';
-      if (plantaURL) out += '<image href="' + plantaURL + '" x="0" y="0" width="' + (W * S) + '" height="' + (L * S) + '" preserveAspectRatio="none" opacity="0.35"/>';
-      // grade de 1 m
+      if (plantaURL) out += '<image href="' + plantaURL + '" x="0" y="0" width="' + (W * S) + '" height="' + (L * S) + '" preserveAspectRatio="none" opacity="0.38"/>';
       out += '<g stroke="#2a2a38" stroke-width="1">';
       for (var gx = 1; gx < W; gx++) out += '<line x1="' + (gx * S) + '" y1="0" x2="' + (gx * S) + '" y2="' + (L * S) + '"/>';
       for (var gy = 1; gy < L; gy++) out += '<line x1="0" y1="' + (gy * S) + '" x2="' + (W * S) + '" y2="' + (gy * S) + '"/>';
       out += '</g>';
+      if (GRID && GRID.overlayURL && $('#plShowObst').checked)
+        out += '<image id="plObst" href="' + GRID.overlayURL + '" x="0" y="0" width="' + (W * S) + '" height="' + (L * S) + '" preserveAspectRatio="none" style="image-rendering:pixelated"/>';
       out += '<rect x="1" y="1" width="' + (W * S - 2) + '" height="' + (L * S - 2) + '" fill="none" stroke="#8B5CF6" stroke-width="2" rx="6"/>';
-      out += '<text x="' + (W * S / 2) + '" y="16" fill="#6e6e80" font-size="11" text-anchor="middle">' + W + ' m — entrada / recepção</text>';
+      out += '<text x="' + (W * S / 2) + '" y="16" fill="#6e6e80" font-size="11" text-anchor="middle">' + W + ' m</text>';
       placed.forEach(function (u, i) {
         var cor = ZONAS[u.zona][1];
         var w = (u.rot % 2 ? u.d : u.w) * S, h = (u.rot % 2 ? u.w : u.d) * S;
         var nome = u.nome.length > 18 ? u.nome.slice(0, 17) + '…' : u.nome;
         var fs = Math.max(7, Math.min(10, w / nome.length * 1.7));
         out += '<g class="plitem" data-i="' + i + '" transform="translate(' + (u.x * S) + ',' + (u.y * S) + ')">' +
-          '<rect width="' + w + '" height="' + h + '" rx="5" fill="' + cor + '22" stroke="' + cor + '"/>' +
-          '<text x="' + (w / 2) + '" y="' + (h / 2 + 3) + '" fill="#e8e8f0" font-size="' + fs + '" text-anchor="middle">' + esc(nome) + '</text></g>';
+          '<rect width="' + w + '" height="' + h + '" rx="5" fill="' + cor + '30" stroke="' + cor + '"/>' +
+          '<text x="' + (w / 2) + '" y="' + (h / 2 + 3) + '" fill="#f2f2fa" font-size="' + fs + '" text-anchor="middle">' + esc(nome) + '</text></g>';
       });
       svg.innerHTML = out;
-      // stats
       var area = W * L, usada = 0;
       placed.forEach(function (u) { usada += u.w * u.d; });
       var pct = area ? Math.round(usada / area * 100) : 0;
-      $('#plStat').innerHTML = '<b>' + placed.length + '</b> aparelho(s) · <b>' + usada.toFixed(1) + ' m²</b> ocupados de ' + area.toFixed(0) + ' m² (<b>' + pct + '%</b>' + (pct > 55 ? ' — apertado, considere um salão maior' : '') + ')';
+      $('#plStat').innerHTML = '<b>' + placed.length + '</b> aparelho(s) · <b>' + usada.toFixed(1) + ' m²</b> de ' + area.toFixed(0) + ' m² (<b>' + pct + '%</b>' + (pct > 55 ? ' — apertado' : '') + ')' + (GRID ? ' · planta lida ✓' : '');
       var zonasUsadas = [];
       placed.forEach(function (u) { if (zonasUsadas.indexOf(u.zona) < 0) zonasUsadas.push(u.zona); });
       $('#plLegend').innerHTML = zonasUsadas.map(function (z) { return '<span class="pl__leg"><i style="background:' + ZONAS[z][1] + '"></i>' + ZONAS[z][0] + '</span>'; }).join('');
       var over = $('#plOver');
-      if (naoCoube.length) { over.hidden = false; over.textContent = '⚠️ Não couberam no salão: ' + naoCoube.join(', ') + '. Aumente as medidas ou reduza a lista.'; }
+      if (naoCoube.length) { over.hidden = false; over.textContent = '⚠️ Não couberam no espaço livre: ' + naoCoube.join(', ') + '. Aumente a área, libere espaço com o pincel ou reduza a lista.'; }
       else over.hidden = true;
     }
 
-    /* ---------- arrastar e girar ---------- */
-    var drag = null;
+    /* ---------- interação: arrastar, girar, pintar ---------- */
+    var drag = null, painting = false;
     var svgEl = $('#plSvg');
     function svgPoint(e) {
       var r = svgEl.getBoundingClientRect(), vb = svgEl.viewBox.baseVal;
       var cx = (e.touches ? e.touches[0].clientX : e.clientX), cy = (e.touches ? e.touches[0].clientY : e.clientY);
       return { x: (cx - r.left) / r.width * vb.width, y: (cy - r.top) / r.height * vb.height };
     }
+    function ptMetros(e) { var p = svgPoint(e); return { x: p.x / S, y: p.y / S }; }
     svgEl.addEventListener('pointerdown', function (e) {
+      if (brush && GRID) { painting = true; pintar(ptMetros(e)); svgEl.setPointerCapture(e.pointerId); return; }
       var g = e.target.closest('.plitem'); if (!g) return;
       var i = +g.dataset.i, pt = svgPoint(e);
       drag = { i: i, dx: pt.x - placed[i].x * S, dy: pt.y - placed[i].y * S };
       svgEl.setPointerCapture(e.pointerId);
     });
     svgEl.addEventListener('pointermove', function (e) {
+      if (painting) { pintar(ptMetros(e)); return; }
       if (!drag) return;
-      var pt = svgPoint(e), u = placed[drag.i];
-      var W = +$('#plW').value || 12, L = +$('#plL').value || 18;
+      var pt = svgPoint(e), u = placed[drag.i], dm = dims();
       var w = (u.rot % 2 ? u.d : u.w), h = (u.rot % 2 ? u.w : u.d);
-      u.x = Math.max(0, Math.min(W - w, Math.round((pt.x - drag.dx) / S * 10) / 10));
-      u.y = Math.max(0, Math.min(L - h, Math.round((pt.y - drag.dy) / S * 10) / 10));
+      u.x = Math.max(0, Math.min(dm.W - w, Math.round((pt.x - drag.dx) / S * 10) / 10));
+      u.y = Math.max(0, Math.min(dm.L - h, Math.round((pt.y - drag.dy) / S * 10) / 10));
       var g = svgEl.querySelector('.plitem[data-i="' + drag.i + '"]');
       if (g) g.setAttribute('transform', 'translate(' + (u.x * S) + ',' + (u.y * S) + ')');
     });
-    svgEl.addEventListener('pointerup', function () { drag = null; });
+    svgEl.addEventListener('pointerup', function () {
+      if (painting) { painting = false; gerarOverlay(); desenhar(); return; }
+      drag = null;
+    });
     var lastTap = { t: 0, i: -1 };
     svgEl.addEventListener('click', function (e) {
+      if (brush) return;
       var g = e.target.closest('.plitem'); if (!g) return;
       var i = +g.dataset.i, agora = Date.now();
       if (lastTap.i === i && agora - lastTap.t < 400) { placed[i].rot = (placed[i].rot + 1) % 2; desenhar(); }
       lastTap = { t: agora, i: i };
     });
-    $('#plW').addEventListener('change', desenhar);
-    $('#plL').addEventListener('change', desenhar);
+    $('#plW').addEventListener('change', function () { plantaImg ? analisarPlanta() : desenhar(); });
+    $('#plL').addEventListener('change', function () { plantaImg ? analisarPlanta() : desenhar(); });
 
-    /* ---------- exportar PNG / compartilhar ---------- */
+    /* ---------- exportar / compartilhar ---------- */
     function gerarPng(cb) {
       var svg = $('#plSvg');
+      var clone = svg.cloneNode(true);
+      var obstEl = clone.querySelector('#plObst'); if (obstEl) obstEl.remove();   // sem a marcação vermelha na entrega
       var vb = svg.viewBox.baseVal;
-      var xml = new XMLSerializer().serializeToString(svg);
+      var xml = new XMLSerializer().serializeToString(clone);
       var img = new Image();
       img.onload = function () {
         var c = document.createElement('canvas');
-        var esc2 = Math.min(2, 2400 / vb.width);
-        c.width = vb.width * esc2; c.height = vb.height * esc2;
+        var k = Math.min(2, 2400 / vb.width);
+        c.width = vb.width * k; c.height = vb.height * k;
         var ctx = c.getContext('2d');
         ctx.fillStyle = '#101018'; ctx.fillRect(0, 0, c.width, c.height);
         ctx.drawImage(img, 0, 0, c.width, c.height);
-        ctx.fillStyle = '#8B5CF6'; ctx.font = 'bold ' + (14 * esc2) + 'px Inter, sans-serif';
-        ctx.fillText('TORQUE FITNESS · planejador de layout', 12 * esc2, c.height - 12 * esc2);
+        ctx.fillStyle = '#8B5CF6'; ctx.font = 'bold ' + (14 * k) + 'px Inter, sans-serif';
+        ctx.fillText('TORQUE FITNESS · planejador de layout', 12 * k, c.height - 12 * k);
         c.toBlob(cb, 'image/png');
       };
       img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(xml);
@@ -359,10 +530,9 @@
         }
       });
     });
+    $('#plGo').addEventListener('click', function () { setBrush(0); distribuir(); });
 
-    $('#plGo').addEventListener('click', distribuir);
-
-    /* ---------- catálogo ao vivo por cima do embutido ---------- */
+    /* ---------- catálogo ao vivo ---------- */
     var cfg = window.TORQUE_SUPABASE;
     if (cfg && cfg.url) {
       fetch(cfg.url.replace(/\/+$/, '') + '/storage/v1/object/public/produtos/catalog.json?t=' + Date.now())
@@ -375,7 +545,7 @@
 
     renderItens();
     desenhar();
-    if (itens.length) distribuir();     // já chega distribuído se veio orçamento
+    if (itens.length) distribuir();
   })();
   </script>
 </body>
