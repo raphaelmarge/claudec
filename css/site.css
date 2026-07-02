@@ -512,3 +512,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
   .selfield{width:100%;min-width:0}
   .selfield select{width:100%;min-width:0;font-size:.8rem;padding:8px 24px 8px 10px;text-overflow:ellipsis;white-space:nowrap;overflow:hidden}
 }
+
+/* fileira de envio do orçamento (PDF / WhatsApp / e-mail) */
+.drawer__share{display:flex;gap:8px}
+.drawer__share .btn{flex:1;min-width:0;padding:10px 6px;font-size:.78rem;white-space:nowrap}

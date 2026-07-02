@@ -1054,12 +1054,8 @@
   if (btnPdf) btnPdf.addEventListener('click', baixarCatalogoPDF);
 
   /* ---------- PDF do orçamento (visitante) ---------- */
-  async function baixarOrcamentoPDF() {
-    const lines = cartLines();
-    if (!lines.length) { toast('Seu orçamento está vazio.'); return; }
-    const btn = $('#btnOrcPdf'); let old = '';
-    if (btn) { btn.disabled = true; old = btn.textContent; btn.textContent = 'Gerando…'; }
-    try {
+  // monta o documento (usado por baixar, WhatsApp e e-mail)
+  async function gerarOrcamentoPDF(lines) {
       await loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js');
       const Ctor = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
       if (!Ctor) throw new Error('jsPDF indisponível');
@@ -1110,14 +1106,75 @@
       const wpp = String(SITEINFO.whatsapp || SITE.whatsapp || '').replace(/\D/g, '');
       const contato = [wpp ? 'WhatsApp: +' + wpp : '', SITEINFO.email || ''].filter(Boolean).join('   ·   ');
       if (contato) { doc.setTextColor(violet[0], violet[1], violet[2]); doc.text(contato, M, y); }
+      return { doc, tot };
+  }
+  // resumo do orçamento em texto puro (corpo do e-mail / mensagem do WhatsApp)
+  function orcamentoTexto() {
+    const lines = cartLines();
+    const sub = cartTotal(); const desc = cupomDesc(sub); const tot = Math.max(0, sub - desc);
+    const maxN = Math.max(1, Math.floor(PARAMS.parcelasMax || 48));
+    const t = ['*Orçamento Torque Fitness* — ' + new Date().toLocaleDateString('pt-BR'), ''];
+    lines.forEach(l => t.push(`${l.q}× ${l.p.nome} — ${money(l.total)}`));
+    t.push('');
+    if (desc > 0) { t.push(`Subtotal: ${money(sub)}`); t.push(`Cupom ${appliedCoupon ? appliedCoupon.codigo : ''} (−${appliedCoupon ? appliedCoupon.desconto : 0}%): −${money(desc)}`); }
+    t.push(`Total estimado: ${money(tot)} (ou até ${maxN}× de ${money(tot / maxN)})`);
+    t.push('', location.origin + location.pathname);
+    return t.join('\n');
+  }
+  // estado "Gerando…" nos botões do orçamento
+  async function comBotao(btn, fn) {
+    let old = '';
+    if (btn) { btn.disabled = true; old = btn.textContent; btn.textContent = 'Gerando…'; }
+    try { await fn(); }
+    catch (e) { console.error(e); toast('Não foi possível gerar o PDF agora.'); }
+    finally { if (btn) { btn.disabled = false; btn.textContent = old; } }
+  }
+  async function baixarOrcamentoPDF() {
+    const lines = cartLines();
+    if (!lines.length) { toast('Seu orçamento está vazio.'); return; }
+    await comBotao($('#btnOrcPdf'), async () => {
+      const { doc, tot } = await gerarOrcamentoPDF(lines);
       doc.save('orcamento-torque-fitness.pdf');
       toast('PDF do orçamento gerado!');
       if (window.gtag) try { gtag('event', 'orcamento_pdf', { value: tot, currency: 'BRL' }); } catch (e) {}
-    } catch (e) { console.error(e); toast('Não foi possível gerar o PDF agora.'); }
-    finally { if (btn) { btn.disabled = false; btn.textContent = old; } }
+    });
+  }
+  async function enviarOrcamentoWhatsApp() {
+    const lines = cartLines();
+    if (!lines.length) { toast('Seu orçamento está vazio.'); return; }
+    await comBotao($('#btnOrcWpp'), async () => {
+      const { doc, tot } = await gerarOrcamentoPDF(lines);
+      const blob = doc.output('blob');
+      const file = new File([blob], 'orcamento-torque-fitness.pdf', { type: 'application/pdf' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        // celular: abre a folha de compartilhar com o PDF anexado (WhatsApp, e-mail…)
+        try { await navigator.share({ files: [file], title: 'Orçamento Torque Fitness', text: 'Meu orçamento Torque Fitness' }); }
+        catch (e) { if (e && e.name !== 'AbortError') throw e; }
+      } else {
+        // sem suporte a compartilhar arquivo: baixa o PDF e abre o WhatsApp com o resumo
+        doc.save('orcamento-torque-fitness.pdf');
+        const wpp = String(SITEINFO.whatsapp || SITE.whatsapp || '').replace(/\D/g, '');
+        const url = (wpp ? `https://wa.me/${wpp}?text=` : 'https://wa.me/?text=') + encodeURIComponent(orcamentoTexto());
+        window.open(url, '_blank', 'noopener');
+        toast('PDF baixado — anexe na conversa se quiser.');
+      }
+      if (window.gtag) try { gtag('event', 'orcamento_whatsapp', { value: tot, currency: 'BRL' }); } catch (e) {}
+    });
+  }
+  function enviarOrcamentoEmail() {
+    const lines = cartLines();
+    if (!lines.length) { toast('Seu orçamento está vazio.'); return; }
+    const para = SITEINFO.email || '';
+    const url = `mailto:${encodeURIComponent(para)}?subject=${encodeURIComponent('Orçamento Torque Fitness')}&body=${encodeURIComponent(orcamentoTexto().replace(/\*/g, ''))}`;
+    location.href = url;
+    if (window.gtag) try { gtag('event', 'orcamento_email'); } catch (e) {}
   }
   const btnOrcPdf = $('#btnOrcPdf');
   if (btnOrcPdf) btnOrcPdf.addEventListener('click', baixarOrcamentoPDF);
+  const btnOrcWpp = $('#btnOrcWpp');
+  if (btnOrcWpp) btnOrcWpp.addEventListener('click', enviarOrcamentoWhatsApp);
+  const btnOrcMail = $('#btnOrcMail');
+  if (btnOrcMail) btnOrcMail.addEventListener('click', enviarOrcamentoEmail);
 
   /* ---------- comparador de produtos ---------- */
   function toggleCompare(code) {
