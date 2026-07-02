@@ -2151,6 +2151,10 @@
     save();
     document.body.dataset.auth = 'in';
     render();
+    if (new URLSearchParams(location.search).get('tv') === '1') {   // modo TV: abre o painel direto, sem interface de edição
+      document.body.classList.add('tv');
+      openDashboard().then(() => switchDashView('metrics'));
+    }
   }
 
   function resetToLogin() {
@@ -2353,7 +2357,7 @@
     $('#viewMetrics').hidden = dashView !== 'metrics';
     renderDashboard();
   });
-  $('#dashClose').addEventListener('click', () => { $('#dashScreen').hidden = true; document.body.style.overflow = ''; });
+  $('#dashClose').addEventListener('click', () => { stopDashPoll(); $('#dashScreen').hidden = true; document.body.style.overflow = ''; });
   $('#dashSearch').addEventListener('input', renderDashboard);
   $('#dashVendedorFilter').addEventListener('change', renderDashboard);
   $('#dashFunnel').addEventListener('click', e => {
@@ -2486,8 +2490,42 @@
         const pend = pendentesRetorno(dashData);
         if (pend.length) { remindShown = true; toast(`📅 ${pend.length} retorno(s) atrasado(s) ou para hoje — veja a aba Agenda.`); }
       }
+      startDashPoll();
     } catch (e) { console.error(e); $('#dashList').innerHTML = '<p class="dash__empty">Erro ao carregar os orçamentos.</p>'; }
   }
+  // ---- tempo real: enquanto o CRM está aberto, busca leads novos a cada minuto ----
+  let dashPollTimer = null;
+  function beepLead() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sine'; o.frequency.value = 880;
+      g.gain.setValueAtTime(0.001, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.18, ctx.currentTime + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+      o.connect(g); g.connect(ctx.destination);
+      o.start(); o.stop(ctx.currentTime + 0.55);
+      o.onended = () => { try { ctx.close(); } catch (e) {} };
+    } catch (e) { /* navegador sem áudio liberado — segue só com o toast */ }
+  }
+  async function pollDash() {
+    if ($('#dashScreen').hidden) { stopDashPoll(); return; }
+    const ae = document.activeElement;
+    const digitando = ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName) && ae.id !== 'dashSearch';
+    try {
+      const rows = await Cloud.listOrcamentos();
+      const novos = novosLeads(rows);
+      dashData = rows;
+      if (dashData.length && ativColumn === null) ativColumn = dashData.some(r => 'atividades' in r);
+      if (!digitando) renderDashboard();
+      if (novos.length) {
+        beepLead(); notifyNewLeads(novos); markLeadsSeen(novos.map(r => r.id));
+        toast(`🌐 ${novos.length} novo(s) lead(s) do site agora mesmo!`);
+      }
+    } catch (e) { /* rede oscilou — tenta de novo no próximo ciclo */ }
+  }
+  function startDashPoll() { stopDashPoll(); dashPollTimer = setInterval(pollDash, 60000); }
+  function stopDashPoll() { if (dashPollTimer) { clearInterval(dashPollTimer); dashPollTimer = null; } }
   function baseRows() {
     const q = ($('#dashSearch').value || '').toLowerCase().trim();
     const vf = $('#dashVendedorFilter').value;
@@ -3008,7 +3046,35 @@
       }
     }
 
-    $('#dashMetrics').innerHTML = kpis + convCard + fcCard + metasCard + teamCard +
+    // ---- ciclo de venda: dias entre a criação e o fechamento (pela última atividade) ----
+    let cicloCard = '';
+    {
+      const won = base.filter(r => stageOf(r) === 'ganho' && r.criado_em);
+      const dias = [], porVend = {};
+      won.forEach(r => {
+        const ini = new Date(r.criado_em).getTime(); if (isNaN(ini)) return;
+        const ativs = atvOf(r).map(a => new Date(a.doneAt || a.at).getTime()).filter(n => !isNaN(n) && n >= ini);
+        if (!ativs.length) return;                                  // sem histórico → sem como medir
+        const d = Math.max(0, (Math.max(...ativs) - ini) / DAY);
+        dias.push(d);
+        const n = r.vendedor_nome || '—';
+        (porVend[n] = porVend[n] || []).push(d);
+      });
+      if (dias.length) {
+        const media = arr => arr.reduce((s, x) => s + x, 0) / arr.length;
+        const fmtD = d => d < 1 ? '<1 dia' : Math.round(d) + ' dia' + (Math.round(d) === 1 ? '' : 's');
+        const geral = media(dias);
+        const rows = Object.entries(porVend).filter(([n]) => n !== '—')
+          .map(([n, arr]) => ({ n, m: media(arr), c: arr.length }))
+          .sort((a, b) => a.m - b.m).slice(0, 6);
+        const maxM = Math.max(1, ...rows.map(r => r.m));
+        const bars = rows.map(r =>
+          `<div class="mbar"><span class="mbar__lab">${esc(r.n)} <small class="mbar__prob">${r.c}</small></span><div class="mbar__track"><div class="mbar__fill" style="width:${Math.round(r.m / maxM * 100)}%"></div></div><span class="mbar__val">${fmtD(r.m)}</span></div>`).join('');
+        cicloCard = `<div class="mcard"><h3 class="mcard__t">Ciclo de venda · média <b style="color:var(--violet)">${fmtD(geral)}</b></h3>${bars}<p class="mcard__hint">Tempo entre o pedido chegar e o fechamento (última atividade registrada), nas ${dias.length} venda(s) com histórico. Quanto menor, melhor.</p></div>`;
+      }
+    }
+
+    $('#dashMetrics').innerHTML = kpis + convCard + fcCard + metasCard + teamCard + cicloCard +
       `<div class="mcard"><h3 class="mcard__t">Distribuição do funil</h3>${funil}</div>` +
       prodCard +
       cupCard +
