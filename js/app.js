@@ -2178,6 +2178,11 @@
       document.body.classList.add('tv');
       openDashboard().then(() => switchDashView('metrics'));
     }
+    // pré-carrega as libs do PDF em ocioso: o Compartilhar deve estar pronto no 1º toque
+    setTimeout(() => {
+      loadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js').catch(() => {});
+      loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js').catch(() => {});
+    }, 3000);
   }
 
   function resetToLogin() {
