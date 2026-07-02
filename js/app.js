@@ -2581,8 +2581,8 @@
     const fechados = cnt.ganho + cnt.perdido;
     const conv = fechados ? Math.round(cnt.ganho / fechados * 100) : 0;
     $('#dashStats').innerHTML =
-      `<div class="dash__stat"><b>${money(emAbertoVal)}</b><span>em aberto</span></div>` +
-      `<div class="dash__stat"><b>${money(val.ganho)}</b><span>fechadas</span></div>` +
+      `<div class="dash__stat"><b title="${money(emAbertoVal)}">${moneyK(emAbertoVal)}</b><span>em aberto</span></div>` +
+      `<div class="dash__stat"><b title="${money(val.ganho)}">${moneyK(val.ganho)}</b><span>fechadas</span></div>` +
       `<div class="dash__stat"><b>${conv}%</b><span>conversão</span></div>`;
 
     // ---- lista (aplica a fase + ordena por prioridade/follow-up) ----
@@ -2866,10 +2866,10 @@
     const fcTotal = fcRows.reduce((t, r) => t + r.pond, 0);
 
     const kpis = `<div class="mkpis">
-      <div class="mkpi"><b>${money(abertoV)}</b><span>Pipeline aberto (${abertoC})</span></div>
-      <div class="mkpi"><b>${money(fcTotal)}</b><span>Previsão ponderada</span></div>
-      <div class="mkpi"><b>${money(val.ganho)}</b><span>Fechado (${cnt.ganho})</span></div>
-      <div class="mkpi"><b>${money(ticket)}</b><span>Ticket médio</span></div>
+      <div class="mkpi"><b title="${money(abertoV)}">${moneyK(abertoV)}</b><span>Pipeline aberto (${abertoC})</span></div>
+      <div class="mkpi"><b title="${money(fcTotal)}">${moneyK(fcTotal)}</b><span>Previsão ponderada</span></div>
+      <div class="mkpi"><b title="${money(val.ganho)}">${moneyK(val.ganho)}</b><span>Fechado (${cnt.ganho})</span></div>
+      <div class="mkpi"><b title="${money(ticket)}">${moneyK(ticket)}</b><span>Ticket médio</span></div>
     </div>`;
 
     // ---- card de previsão ponderada (contribuição por etapa) ----
