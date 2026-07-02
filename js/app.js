@@ -1900,6 +1900,15 @@
   }
   $('#btnPdfQuote').addEventListener('click', gerarPDF);
 
+  // abre o planejador de layout já com os itens deste orçamento
+  const btnProjetoQuote = $('#btnProjetoQuote');
+  if (btnProjetoQuote) btnProjetoQuote.addEventListener('click', () => {
+    const lines = cartLines();
+    if (!lines.length) { toast('Adicione itens ao orçamento primeiro.'); return; }
+    const itens = lines.map(l => `${l.p.codigo}:${l.q}`).join(',');
+    window.open('projeto.html?itens=' + encodeURIComponent(itens), '_blank', 'noopener');
+  });
+
   $('#btnImageQuote').addEventListener('click', async () => {
     try {
       toast('Gerando imagem…');
