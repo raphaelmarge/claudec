@@ -1,0 +1,17 @@
+name: Diagnóstico insert orcamentos
+on: { workflow_dispatch: {} }
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: POST de teste no REST do Supabase (mesma chamada do site)
+        run: |
+          URL="https://uqwbywzuqooqzmiklqct.supabase.co/rest/v1/orcamentos"
+          KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVxd2J5d3p1cW9vcXptaWtscWN0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxNTUxODUsImV4cCI6MjA5NzczMTE4NX0._wPjsnUhBY0NzIR8odwsKg-uqyApZNkwjIfHKv9FxL4"
+          BODY='{"origem":"site","cliente_nome":"TESTE-DIAGNOSTICO (pode excluir)","contato_telefone":"000","vendedor_nome":"","itens":[],"subtotal":1,"desconto":0,"total":1,"parcelas":1,"valor_parcela":1,"status":"novo","obs":"teste automatico de diagnostico"}'
+          echo "== POST =="
+          curl -s -o /tmp/resp.txt -w "HTTP %{http_code}\n" -X POST "$URL" \
+            -H "Content-Type: application/json" -H "apikey: $KEY" -H "Authorization: Bearer $KEY" -H "Prefer: return=minimal" \
+            -d "$BODY"
+          echo "== corpo da resposta =="
+          cat /tmp/resp.txt || true
