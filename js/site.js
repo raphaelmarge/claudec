@@ -905,7 +905,10 @@
   function slideImg(s) { return CAROUSEL[s.id] || (s.kind === 'linha' ? bannerImg(s.linha) : ''); }
   function slideBg(s) {
     const img = slideImg(s);
-    return img ? `linear-gradient(to right, rgba(11,11,15,.92), rgba(11,11,15,.38)), url("${img}")` : s.grad;
+    if (!img) return s.grad;
+    // vai dentro de style="…" (aspas duplas): usa aspas simples no url() e escapa o que sobrar
+    const u = String(img).replace(/["'()\\]/g, c => encodeURIComponent(c));
+    return `linear-gradient(to right, rgba(11,11,15,.92), rgba(11,11,15,.38)), url('${u}')`;
   }
   function ctaBtnHTML(c) {
     const cls = 'btn ' + (c.ghost ? 'btn--ghost' : 'btn--primary');
