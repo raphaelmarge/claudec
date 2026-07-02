@@ -50,8 +50,10 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preconnect" href="https://uqwbywzuqooqzmiklqct.supabase.co" />
+  <link rel="preconnect" href="https://uqwbywzuqooqzmiklqct.supabase.co" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/site.css?v=20260628n" />
+  <link rel="stylesheet" href="css/site.css?v=20260628o" />
   <link rel="manifest" href="site.webmanifest" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
   <meta name="mobile-web-app-capable" content="yes" />
@@ -60,6 +62,7 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20100%20100%27%3E%3Crect%20width%3D%27100%27%20height%3D%27100%27%20rx%3D%2722%27%20fill%3D%27%230B0B0F%27%2F%3E%3Cg%20transform%3D%27translate%2824.0%2C19.0%29%20scale%280.2288%29%27%20fill%3D%27%238B5CF6%27%3E%3Cg%20transform%3D%27translate%280%2C271%29%20scale%280.1%2C-0.1%29%27%3E%3Cpath%20d%3D%22M130%202617%20c-50%20-26%20-50%20-19%20-50%20-685%200%20-686%20-2%20-669%2061%20-691%2034%20-12%20367%20-14%20406%20-3%2012%204%20105%2084%20205%20178%20533%20498%20494%20463%20524%20455%2038%20-10%2070%20-54%2058%20-81%20-5%20-11%20-268%20-262%20-584%20-558%20-586%20-547%20-620%20-584%20-652%20-682%20-6%20-19%20-13%20-125%20-15%20-236%20-6%20-224%20-3%20-234%2062%20-234%2030%200%2096%2059%20706%20630%20601%20563%20677%20630%20703%20628%2018%20-2%2037%20-14%2050%20-31%2019%20-26%2019%20-30%205%20-55%20-8%20-15%20-289%20-283%20-624%20-597%20l-609%20-570%20887%20-3%20c609%20-1%20894%201%20908%208%2019%2011%2020%2024%2017%20973%20-3%20944%20-4%20963%20-24%201023%20-88%20255%20-268%20427%20-539%20511%20l-90%2027%20-690%203%20c-546%203%20-695%201%20-715%20-10z%22%2F%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E" />
 </head>
 <body class="catalog-hidden">
+  <a class="skip" href="#produtos" data-catalog>Pular para o catálogo</a>
 
   <!-- ===================== HEADER ===================== -->
   <header class="nav" id="nav">
@@ -88,7 +91,7 @@
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18a2 2 0 100 4 2 2 0 000-4zm10 0a2 2 0 100 4 2 2 0 000-4zM2 2v2h2l3.6 7.6-1.35 2.45A2 2 0 008 17h11v-2H8.42a.25.25 0 01-.22-.37L9 13h7a2 2 0 001.8-1.1l3.58-6.49A1 1 0 0020.5 4H6.21l-.94-2z"/></svg>
         Orçamento <b id="cartCount">0</b>
       </button>
-      <button class="nav__burger" id="navBurger" type="button" aria-label="Menu"><span></span><span></span><span></span></button>
+      <button class="nav__burger" id="navBurger" type="button" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
     </div>
   </header>
 
@@ -289,7 +292,7 @@
   <!-- ===================== QUOTE DRAWER ===================== -->
   <aside class="drawer" id="drawer" hidden>
     <div class="drawer__backdrop" data-dclose></div>
-    <div class="drawer__panel">
+    <div class="drawer__panel" role="dialog" aria-modal="true" aria-label="Meu orçamento">
       <header class="drawer__head">
         <h2>Meu orçamento</h2>
         <button class="drawer__x" data-dclose type="button" aria-label="Fechar">✕</button>
@@ -313,7 +316,7 @@
   <!-- ===================== LEAD FORM MODAL ===================== -->
   <div class="lmodal" id="leadModal" hidden>
     <div class="lmodal__backdrop" data-lclose></div>
-    <div class="lmodal__card">
+    <div class="lmodal__card" role="dialog" aria-modal="true" aria-labelledby="leadTitle">
       <header class="lmodal__head">
         <h2 id="leadTitle">Solicitar orçamento</h2>
         <button class="lmodal__x" data-lclose type="button" aria-label="Fechar">✕</button>
@@ -339,7 +342,7 @@
   <!-- ===================== PRODUCT DETAIL MODAL ===================== -->
   <div class="pmodal" id="prodModal" hidden>
     <div class="pmodal__backdrop" data-pclose></div>
-    <div class="pmodal__card">
+    <div class="pmodal__card" role="dialog" aria-modal="true" aria-labelledby="pmNome">
       <button class="pmodal__x" data-pclose type="button" aria-label="Fechar">✕</button>
       <div class="pmodal__media" id="pmMedia"></div>
       <div class="pmodal__info">
@@ -393,7 +396,7 @@
   <!-- ===================== POP-UP DE BOAS-VINDAS (CUPOM) ===================== -->
   <div class="promo" id="promoModal" hidden>
     <div class="promo__backdrop" data-promo-close></div>
-    <div class="promo__card">
+    <div class="promo__card" role="dialog" aria-modal="true" aria-labelledby="promoDesc">
       <button class="promo__x" data-promo-close type="button" aria-label="Fechar">✕</button>
       <span class="promo__tag">🎁 Oferta de boas-vindas</span>
       <h2 class="promo__title" id="promoDesc">Desconto no seu primeiro orçamento</h2>
@@ -407,12 +410,11 @@
     </div>
   </div>
 
-  <div id="toast" class="toast" hidden></div>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
-  <script src="js/config.js?v=20260628n"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/products.js?v=20260628n"></script>
-  <script src="js/descricoes.js?v=20260628n"></script>
-  <script src="js/site.js?v=20260628n"></script>
+  <script src="js/config.js?v=20260628o"></script>
+  <script src="js/products.js?v=20260628o"></script>
+  <script src="js/descricoes.js?v=20260628o"></script>
+  <script src="js/site.js?v=20260628o"></script>
 </body>
 </html>

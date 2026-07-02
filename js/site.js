@@ -257,7 +257,7 @@
       ? `<div class="pcard__stepper" data-code="${esc(p.codigo)}"><button data-act="dec">−</button><input data-act="qty" inputmode="numeric" value="${q}"/><button data-act="inc">+</button></div>`
       : `<button class="pcard__add" data-act="add" data-code="${esc(p.codigo)}">+ Adicionar</button>`;
     return `<article class="pcard ${q > 0 ? 'in' : ''}" data-code="${esc(p.codigo)}">
-      <div class="pcard__media">${p.selo ? `<span class="pcard__selo">${esc(p.selo)}</span>` : ''}<button class="pcard__fav ${favs.has(p.codigo) ? 'on' : ''}" data-act="fav" data-code="${esc(p.codigo)}" type="button" title="Favoritar" aria-label="Favoritar">♥</button><button class="pcard__cmp ${compare.has(p.codigo) ? 'on' : ''}" data-act="cmp" data-code="${esc(p.codigo)}" type="button" title="Comparar" aria-label="Comparar">⇄</button>${media}</div>
+      <div class="pcard__media">${p.selo ? `<span class="pcard__selo">${esc(p.selo)}</span>` : ''}<button class="pcard__fav ${favs.has(p.codigo) ? 'on' : ''}" data-act="fav" data-code="${esc(p.codigo)}" type="button" title="Favoritar" aria-label="Favoritar ${esc(p.nome)}" aria-pressed="${favs.has(p.codigo)}">♥</button><button class="pcard__cmp ${compare.has(p.codigo) ? 'on' : ''}" data-act="cmp" data-code="${esc(p.codigo)}" type="button" title="Comparar" aria-label="Comparar ${esc(p.nome)}" aria-pressed="${compare.has(p.codigo)}">⇄</button>${media}</div>
       <div class="pcard__b">
         <span class="pcard__serie">${esc(p.serie || '')}</span>
         <span class="pcard__name">${esc(p.nome)}</span>
@@ -419,14 +419,21 @@
   }
   function bindLeadInputs() {}
 
-  // Supabase (insere o lead na mesma base do app)
-  let sb = null;
-  function db() {
-    if (sb) return sb;
+  // Supabase (insere o lead na mesma base do app via REST — dispensa a lib no site público)
+  async function insertOrcamento(row) {
     const cfg = window.TORQUE_SUPABASE;
-    if (!cfg || !window.supabase) return null;
-    sb = window.supabase.createClient(cfg.url, cfg.anonKey);
-    return sb;
+    if (!cfg || !cfg.url) throw new Error('sem config do servidor');
+    const r = await fetch(cfg.url.replace(/\/+$/, '') + '/rest/v1/orcamentos', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: cfg.anonKey,
+        Authorization: 'Bearer ' + cfg.anonKey,
+        Prefer: 'return=minimal'
+      },
+      body: JSON.stringify(row)
+    });
+    if (!r.ok) throw new Error('insert falhou: ' + r.status + ' ' + (await r.text().catch(() => '')));
   }
 
   $('#btnEnviarLead').addEventListener('click', enviarLead);
@@ -438,9 +445,6 @@
     const msg = ($('#leadMsg').value || '').trim();
     const err = $('#leadErr');
     if (!nome || !tel) { err.textContent = 'Informe nome e WhatsApp/telefone.'; err.hidden = false; return; }
-    const client = db();
-    if (!client) { err.textContent = 'Sem conexão com o servidor. Tente novamente.'; err.hidden = false; return; }
-
     const lines = cartLines();
     const subtotal = cartTotal();
     const desc = cupomDesc(subtotal);
@@ -449,7 +453,7 @@
     const cupomObs = appliedCoupon ? `Cupom: ${appliedCoupon.codigo} (${appliedCoupon.desconto}%${appliedCoupon.quem ? ' · ' + appliedCoupon.quem : ''})` : '';
     const btn = $('#btnEnviarLead'); btn.disabled = true; btn.textContent = 'Enviando…';
     try {
-      const { error } = await client.from('orcamentos').insert({
+      await insertOrcamento({
         origem: 'site',
         cliente_nome: nome,
         contato_telefone: tel,
@@ -464,7 +468,6 @@
         status: 'novo',
         obs: [cidade ? 'Cidade: ' + cidade : '', msg ? 'Mensagem: ' + msg : '', cupomObs].filter(Boolean).join(' | ')
       });
-      if (error) throw error;
       if (window.fbq) try { fbq('track', 'Lead', { value: subtotal, currency: 'BRL' }); } catch (e) {}
       if (window.gtag) try { gtag('event', 'generate_lead', { value: subtotal, currency: 'BRL' }); } catch (e) {}
       cart = {}; appliedCoupon = null; save(); syncAll();
@@ -482,9 +485,10 @@
   }
 
   /* ---------- menu mobile ---------- */
-  function closeMenu() { $('#mmenu').hidden = true; $('#navBurger').classList.remove('open'); }
+  function closeMenu() { $('#mmenu').hidden = true; $('#navBurger').classList.remove('open'); $('#navBurger').setAttribute('aria-expanded', 'false'); }
   $('#navBurger').addEventListener('click', () => {
     const m = $('#mmenu'); m.hidden = !m.hidden; $('#navBurger').classList.toggle('open', !m.hidden);
+    $('#navBurger').setAttribute('aria-expanded', String(!m.hidden));
   });
   // dropdown "Linhas" do menu (desktop)
   const linhasTrig = $('#linhasTrig');
