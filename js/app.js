@@ -1860,32 +1860,36 @@
     } catch (e) { console.error(e); toast('Falhou salvar na nuvem (verifique conexão).'); }
   }
 
-  // Gera um PDF A4 de verdade a partir do documento (#quoteDoc), paginado.
-  // Cai no diálogo de impressão se as libs (CDN) não carregarem (ex.: offline).
-  async function gerarPDF() {
+  // Monta o PDF A4 paginado a partir do documento (#quoteDoc).
+  // Usado pelo botão PDF (salvar) e pelo Compartilhar (arquivo).
+  async function montarPdfQuote() {
     const el = $('#quoteDoc');
-    if (!el) return;
-    toast('Gerando PDF…');
-    try {
-      await loadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js');
-      await loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js');
-      const jsPDFCtor = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
-      if (!jsPDFCtor) throw new Error('jsPDF indisponível');
-      const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#ffffff', useCORS: true });
-      const pdf = new jsPDFCtor({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-      const pw = pdf.internal.pageSize.getWidth();
-      const ph = pdf.internal.pageSize.getHeight();
-      const imgH = canvas.height * pw / canvas.width;   // altura proporcional à largura A4
-      const data = canvas.toDataURL('image/jpeg', 0.92);
-      let heightLeft = imgH, position = 0;
+    if (!el) throw new Error('sem documento');
+    await loadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js');
+    await loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js');
+    const jsPDFCtor = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+    if (!jsPDFCtor) throw new Error('jsPDF indisponível');
+    const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#ffffff', useCORS: true, imageTimeout: 6000 });
+    const pdf = new jsPDFCtor({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pw = pdf.internal.pageSize.getWidth();
+    const ph = pdf.internal.pageSize.getHeight();
+    const imgH = canvas.height * pw / canvas.width;   // altura proporcional à largura A4
+    const data = canvas.toDataURL('image/jpeg', 0.92);
+    let heightLeft = imgH, position = 0;
+    pdf.addImage(data, 'JPEG', 0, position, pw, imgH);
+    heightLeft -= ph;
+    while (heightLeft > 0) {                            // fatia em páginas A4
+      position -= ph;
+      pdf.addPage();
       pdf.addImage(data, 'JPEG', 0, position, pw, imgH);
       heightLeft -= ph;
-      while (heightLeft > 0) {                            // fatia em páginas A4
-        position -= ph;
-        pdf.addPage();
-        pdf.addImage(data, 'JPEG', 0, position, pw, imgH);
-        heightLeft -= ph;
-      }
+    }
+    return pdf;
+  }
+  async function gerarPDF() {
+    toast('Gerando PDF…');
+    try {
+      const pdf = await montarPdfQuote();
       pdf.save(`orcamento-${lastQuoteNumero || 'torque'}.pdf`);
       toast('PDF gerado.');
     } catch (e) {
@@ -1945,19 +1949,21 @@
     window.open(`https://wa.me/${num}?text=${txt}`, '_blank');
   });
 
-  // A imagem do orçamento é preparada quando o modal ABRE: no iPhone, o
+  // O PDF do orçamento é preparado quando o modal ABRE: no iPhone, o
   // navigator.share só funciona logo após o toque — gerar na hora do clique
   // estoura essa janela e o Safari bloqueia sem avisar.
-  let shareQuoteFile = null;
-  async function prepararShareQuote() {
+  let shareQuoteFile = null, shareQuotePrep = null;
+  function prepararShareQuote() {
     shareQuoteFile = null;
-    if (!navigator.share || !navigator.canShare) return;
-    try {
-      await loadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js');
-      const canvas = await html2canvas($('#quoteDoc'), { scale: 2, backgroundColor: '#fff', useCORS: true });
-      const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
-      if (blob) shareQuoteFile = new File([blob], 'orcamento-torque.png', { type: 'image/png' });
-    } catch (e) { /* segue sem imagem — compartilha o texto */ }
+    if (!navigator.share || !navigator.canShare) { shareQuotePrep = null; return; }
+    shareQuotePrep = (async () => {
+      try {
+        const pdf = await montarPdfQuote();
+        const file = new File([pdf.output('blob')], `orcamento-${lastQuoteNumero || 'torque'}.pdf`, { type: 'application/pdf' });
+        shareQuoteFile = file;
+        return file;
+      } catch (e) { return null; }
+    })();
   }
   $('#btnShareQuote').addEventListener('click', async () => {
     const txt = resumoTexto();
@@ -1967,13 +1973,18 @@
         toast('Resumo copiado para a área de transferência.');
         return;
       }
-      if (shareQuoteFile && navigator.canShare && navigator.canShare({ files: [shareQuoteFile] })) {
-        try { await navigator.share({ files: [shareQuoteFile], text: txt, title: 'Orçamento Torque Fitness' }); return; }
-        catch (e) { if (e && e.name === 'AbortError') return; /* sem arquivo → tenta só texto */ }
+      let file = shareQuoteFile;
+      if (!file && shareQuotePrep) { toast('Preparando o PDF…'); file = await shareQuotePrep; }
+      if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+        try { await navigator.share({ files: [file], title: 'Orçamento Torque Fitness' }); return; }
+        catch (e) {
+          if (e && e.name === 'AbortError') return;                            // usuário fechou a folha
+          if (e && e.name === 'NotAllowedError') { toast('PDF pronto! Toque em Compartilhar de novo.'); return; }
+        }
       }
-      await navigator.share({ text: txt, title: 'Orçamento Torque Fitness' });
+      await navigator.share({ text: txt, title: 'Orçamento Torque Fitness' }); // último recurso: resumo em texto
     } catch (e) {
-      if (e && e.name === 'AbortError') return;                    // usuário fechou a folha
+      if (e && e.name === 'AbortError') return;
       try { await navigator.clipboard.writeText(txt); toast('Resumo copiado para a área de transferência.'); }
       catch (e2) { toast('Não foi possível compartilhar neste navegador.'); }
     }
