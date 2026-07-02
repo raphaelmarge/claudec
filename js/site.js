@@ -200,7 +200,10 @@
   }
 
   function load() { try { return JSON.parse(localStorage.getItem(CART_KEY)) || {}; } catch (e) { return {}; } }
-  function save() { try { localStorage.setItem(CART_KEY, JSON.stringify(cart)); } catch (e) {} }
+  function save() {
+    try { localStorage.setItem(CART_KEY, JSON.stringify(cart)); } catch (e) {}
+    prepararOrcPdf();          // PDF de compartilhar sempre pronto antes do 1º toque
+  }
 
   const plate = `<svg class="pcard__plate-svg" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="46" fill="none" stroke="#3A3A48" stroke-width="3"/><circle cx="50" cy="50" r="13" fill="#1D1D27" stroke="#8B5CF6" stroke-width="3"/><g stroke="#3A3A48" stroke-width="3"><line x1="50" y1="6" x2="50" y2="20"/><line x1="50" y1="80" x2="50" y2="94"/><line x1="6" y1="50" x2="20" y2="50"/><line x1="80" y1="50" x2="94" y2="50"/></g></svg>`;
 
@@ -1370,6 +1373,11 @@
   buildSearchIndex(); renderSeries(); renderChips(); renderGrupos(); renderGrid(); refreshCounts(); renderRecent(); renderFavBar();
   renderLinhasMenu(); renderLinhaHead();
   renderCarousel(); startCar(); renderContato(); renderDepo(); renderFaq();
+  // pré-carrega as libs do PDF em ocioso: o compartilhar precisa estar pronto já no 1º toque
+  setTimeout(() => {
+    loadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js').catch(() => {});
+    loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js').catch(() => {});
+  }, 3500);
   // deep-link: ?linha=Cardio ou ?tipo=acessorio já entram filtrados
   (function initView() {
     const tp = currentTipo(), dl = currentLinha();
