@@ -1088,6 +1088,8 @@
       '<button type="button" class="btn" id="btnExport">⬇ Exportar backup (JSON)</button>' +
       '<button type="button" class="btn btn--ghost" id="btnImport">⬆ Importar backup</button>' +
       '</div><div class="btn-row" style="margin-top:10px;">' +
+      '<a class="btn btn--ghost" href="manutencao-tv.html" style="text-decoration:none;">📺 Modo TV (telão)</a>' +
+      '</div><div class="btn-row" style="margin-top:10px;">' +
       (state.exemplo ? '<button type="button" class="btn btn--danger" id="btnLimparExemplo">Apagar dados de exemplo e começar do zero</button>' : '') +
       '</div>';
     openModal('Backup e dados', h);

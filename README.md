@@ -151,6 +151,18 @@ entre aparelhos.
 - **Ativos**: cadastro de aparelhos e locais (marca, nº de série, data de
   compra), com **histórico de manutenções e total gasto por ativo**.
 
+### Modo TV (telão) 📺
+
+`manutencao-tv.html` é um painel de tela cheia para deixar numa TV ou monitor
+da academia: KPIs grandes (chamados em aberto, atrasados, preventivas
+vencidas, gasto do mês), lista de "atenção agora", medidor da limpeza do dia
+e infográficos — chamados por área, por etapa e gasto por mês. Atualiza
+sozinho a cada 30 s, reage na hora a mudanças feitas no app em outra aba do
+mesmo aparelho e tem relógio/data. Abra pelo menu **⚙ → Modo TV** do app.
+Como os dados moram no navegador, o telão mostra os dados **do aparelho em
+que está aberto** — importe um backup nele uma vez, ou deixe o app aberto no
+mesmo computador que alimenta a TV.
+
 ### Arquivos
 
 ```
@@ -158,6 +170,9 @@ manutencao.html          estrutura do app (tabs, modal)
 css/manutencao.css       identidade visual (mesma paleta violeta + preto)
 js/manutencao.js         estado, chamados, preventivas, ativos, backup
 manutencao.webmanifest   PWA do app de manutenções
+manutencao-tv.html       painel de TV (telão) com os infográficos
+css/manutencao-tv.css    layout 16:9 em tela cheia, tipografia grande
+js/manutencao-tv.js      leitura dos dados + gráficos + auto-atualização
 ```
 
 A primeira abertura traz **dados de exemplo** para ver o app funcionando —
