@@ -476,9 +476,23 @@
     a.href = URL.createObjectURL(file); a.download = file.name;
     document.body.appendChild(a); a.click(); a.remove();
   }
+  // No iPhone o download clássico é ignorado — entrega pela folha nativa
+  // ("Salvar em Arquivos"); no computador, baixa normal.
+  let pdfShareCache = null;   // { key, file }
+  async function entregarPdfArquivo(file, key) {
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      pdfShareCache = { key, file };
+      try { await navigator.share({ files: [file], title: file.name }); return; }
+      catch (e) {
+        if (e && e.name === 'AbortError') return;
+        if (e && e.name === 'NotAllowedError') { toast('PDF pronto! Toque de novo para salvar.'); return; }
+      }
+    }
+    baixarArquivo(file);
+  }
   $('#leadBody').addEventListener('click', async e => {
     if (!ultimoOrc) return;
-    if (e.target.closest('#posPdf') && ultimoOrc.file) { baixarArquivo(ultimoOrc.file); return; }
+    if (e.target.closest('#posPdf') && ultimoOrc.file) { entregarPdfArquivo(ultimoOrc.file, 'pos'); return; }
     if (e.target.closest('#posWpp')) {
       const f = ultimoOrc.file;
       if (f && navigator.canShare && navigator.canShare({ files: [f] })) {
@@ -1084,6 +1098,11 @@
     const btn = $('#btnCatalogoPdf');
     const list = filtered();
     if (!list.length) { toast('Nenhum produto para exportar.'); return; }
+    // 2º toque no iPhone: o PDF já gerado sai na hora, dentro do gesto
+    if (pdfShareCache && String(pdfShareCache.key).startsWith('cat-') && navigator.canShare && navigator.canShare({ files: [pdfShareCache.file] })) {
+      try { await navigator.share({ files: [pdfShareCache.file], title: pdfShareCache.file.name }); return; }
+      catch (e) { if (e && e.name === 'AbortError') return; }
+    }
     let old = '';
     if (btn) { btn.disabled = true; old = btn.textContent; btn.textContent = 'Gerando…'; }
     try {
@@ -1134,7 +1153,7 @@
       });
       footer(page);
       const nm = 'catalogo-torque-fitness' + (viewName ? '-' + viewName.replace(/\s+/g, '-').toLowerCase() : '') + '.pdf';
-      doc.save(nm);
+      await entregarPdfArquivo(new File([doc.output('blob')], nm, { type: 'application/pdf' }), 'cat-' + nm);
       toast('Catálogo gerado!');
     } catch (e) {
       console.error(e); toast('Não foi possível gerar o PDF agora.');

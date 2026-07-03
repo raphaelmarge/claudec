@@ -1908,11 +1908,15 @@
     return pdf;
   }
   async function gerarPDF() {
-    toast('Gerando PDF…');
     try {
-      const pdf = await montarPdfQuote();
-      pdf.save(`orcamento-${lastQuoteNumero || 'torque'}.pdf`);
-      toast('PDF gerado.');
+      const nome = `orcamento-${lastQuoteNumero || 'torque'}.pdf`;
+      // o PDF pré-gerado no abrir do modal serve aqui também (1º toque instantâneo no iPhone)
+      if (shareQuoteFile && navigator.canShare && navigator.canShare({ files: [shareQuoteFile] })) {
+        try { await navigator.share({ files: [shareQuoteFile], title: nome }); return; }
+        catch (e) { if (e && e.name === 'AbortError') return; }
+      }
+      toast('Gerando PDF…');
+      await entregarPdf(montarPdfQuote, nome, 'q-' + (lastQuoteNumero || ''));
     } catch (e) {
       console.error(e);
       toast('Abrindo impressão para salvar em PDF…');
@@ -1956,7 +1960,29 @@
     return s;
   }
   const MESES_PT = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+  // Entrega de PDF que funciona no iPhone: a.download é ignorado no iOS
+  // (sobretudo com o app na tela de início) — usa a folha nativa de
+  // compartilhar ("Salvar em Arquivos"); no computador, download normal.
+  let pdfEntregaCache = null;   // { key, file } — 2º toque sai instantâneo (regra de gesto do iOS)
+  async function entregarPdf(fazerDoc, nome, key) {
+    if (pdfEntregaCache && pdfEntregaCache.key === key && navigator.canShare && navigator.canShare({ files: [pdfEntregaCache.file] })) {
+      try { await navigator.share({ files: [pdfEntregaCache.file], title: nome }); return; }
+      catch (e) { if (e && e.name === 'AbortError') return; }
+    }
+    const doc = await fazerDoc();
+    const file = new File([doc.output('blob')], nome, { type: 'application/pdf' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      pdfEntregaCache = { key, file };
+      try { await navigator.share({ files: [file], title: nome }); return; }
+      catch (e) {
+        if (e && e.name === 'AbortError') return;
+        if (e && e.name === 'NotAllowedError') { toast('PDF pronto! Toque no botão de novo para salvar.'); return; }
+      }
+    }
+    doc.save(nome);
+  }
   let ctCtx = null;   // dados da venda em contrato
+  let ctRev = 0;      // muda a cada re-render (chave do cache de entrega)
   const ctVal = id => ($('#' + id) ? $('#' + id).value : '').trim();
   const ctGap = (v, ph) => v ? `<b class="ctok">${esc(v)}</b>` : `<b class="ctmiss">(${esc(ph)})</b>`;
   function abrirContrato(d) {
@@ -1980,6 +2006,7 @@
   }
   function renderContrato() {
     if (!ctCtx) return;
+    ctRev++;                       // conteúdo mudou → invalida o PDF em cache
     const d = ctCtx, emp = P().contrato || {};
     const pct = Math.min(100, Math.max(0, parseInt(ctVal('cwPctSinal'), 10) || 0));
     const pctSaldo = 100 - pct;
@@ -2042,23 +2069,25 @@
   ['cwNome', 'cwDoc', 'cwEnd', 'cwRep', 'cwCargo', 'cwCpf', 'cwEndEntrega', 'cwPrazo', 'cwPctSinal', 'cwFormaSinal', 'cwFormaSaldo', 'cwMulta', 'cwAbat', 'cwReinc', 'cwCidadeAss'].forEach(id => {
     const el = $('#' + id); if (el) el.addEventListener('input', renderContrato);
   });
+  async function montarPdfContrato() {
+    await loadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js');
+    await loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js');
+    const jsPDFCtor = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+    const canvas = await html2canvas($('#contractDoc'), { scale: 2, backgroundColor: '#ffffff', imageTimeout: 6000 });
+    const pdf = new jsPDFCtor({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pw = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight();
+    const imgH = canvas.height * pw / canvas.width;
+    const data = canvas.toDataURL('image/jpeg', 0.92);
+    let restante = imgH, pos = 0;
+    pdf.addImage(data, 'JPEG', 0, pos, pw, imgH); restante -= ph;
+    while (restante > 0) { pos -= ph; pdf.addPage(); pdf.addImage(data, 'JPEG', 0, pos, pw, imgH); restante -= ph; }
+    return pdf;
+  }
   $('#btnPdfContract').addEventListener('click', async () => {
-    toast('Gerando contrato…');
     try {
-      await loadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js');
-      await loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js');
-      const jsPDFCtor = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
-      const canvas = await html2canvas($('#contractDoc'), { scale: 2, backgroundColor: '#ffffff', imageTimeout: 6000 });
-      const pdf = new jsPDFCtor({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-      const pw = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight();
-      const imgH = canvas.height * pw / canvas.width;
-      const data = canvas.toDataURL('image/jpeg', 0.92);
-      let restante = imgH, pos = 0;
-      pdf.addImage(data, 'JPEG', 0, pos, pw, imgH); restante -= ph;
-      while (restante > 0) { pos -= ph; pdf.addPage(); pdf.addImage(data, 'JPEG', 0, pos, pw, imgH); restante -= ph; }
       const nomeArq = 'contrato-' + slugify(ctVal('cwNome') || 'torque') + '.pdf';
-      pdf.save(nomeArq);
-      toast('Contrato gerado.');
+      if (!(pdfEntregaCache && pdfEntregaCache.key === 'ct' + ctRev)) toast('Gerando contrato…');
+      await entregarPdf(montarPdfContrato, nomeArq, 'ct' + ctRev);
     } catch (e) { console.error(e); toast('Não foi possível gerar o contrato agora.'); }
   });
   // do orçamento em edição (botão no modal do orçamento)
