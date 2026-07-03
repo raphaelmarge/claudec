@@ -136,9 +136,11 @@ entre aparelhos.
   mês, com a lista de "atenção agora" (urgentes + vencidos).
 - **Chamados (ordens de serviço)**: registre qualquer problema ou serviço com
   área (equipamentos, predial, elétrica, hidráulica, climatização…),
-  prioridade, prazo, responsável/prestador, custo e observações. Status:
-  aberta → em andamento → aguardando peça → concluída. Numeração automática
-  (OS-001, OS-002…), busca e filtros.
+  prioridade, prazo, responsável/prestador, custo, observações e **fotos**
+  (tire na hora pelo celular ou escolha da galeria — as imagens são
+  comprimidas automaticamente para caber no armazenamento do navegador).
+  Status: aberta → em andamento → aguardando peça → concluída. Numeração
+  automática (OS-001, OS-002…), busca e filtros.
 - **Preventivas recorrentes**: rotinas do tipo "lubrificar a lona das esteiras
   a cada 30 dias". O app calcula a próxima data, avisa quando vence e, ao tocar
   em **✓ Feita hoje**, registra a execução no histórico e reagenda sozinho.

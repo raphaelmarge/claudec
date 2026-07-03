@@ -60,6 +60,37 @@
     v = Number(v) || 0;
     return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   }
+  /* Reduz a foto (máx. 1200px, JPEG) para caber no armazenamento do navegador */
+  function comprimirFoto(file) {
+    return new Promise(function (resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function () {
+        var img = new Image();
+        img.onload = function () {
+          var MAX = 1200;
+          var k = Math.min(1, MAX / Math.max(img.width, img.height));
+          var c = document.createElement('canvas');
+          c.width = Math.max(1, Math.round(img.width * k));
+          c.height = Math.max(1, Math.round(img.height * k));
+          c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+          resolve(c.toDataURL('image/jpeg', 0.72));
+        };
+        img.onerror = function () { reject(new Error('imagem inválida')); };
+        img.src = reader.result;
+      };
+      reader.onerror = function () { reject(reader.error); };
+      reader.readAsDataURL(file);
+    });
+  }
+  function abrirLightbox(src) {
+    $('#lightboxImg').src = src;
+    $('#lightbox').hidden = false;
+  }
+  function fecharLightbox() {
+    $('#lightbox').hidden = true;
+    $('#lightboxImg').src = '';
+  }
+
   function toast(msg) {
     var t = $('#toast');
     t.textContent = msg;
@@ -87,7 +118,13 @@
     return seed();
   }
   function save() {
-    localStorage.setItem(LS_KEY, JSON.stringify(state));
+    try {
+      localStorage.setItem(LS_KEY, JSON.stringify(state));
+      return true;
+    } catch (e) {
+      toast('⚠ Memória do navegador cheia. Remova fotos de chamados antigos ou exporte um backup.');
+      return false;
+    }
   }
 
   /* Dados de exemplo na primeira abertura, para ver o app funcionando */
@@ -222,9 +259,11 @@
     if (late) cls += ' item--late';
     if (!osAtiva(o)) cls += ' item--done';
 
+    var fotos = o.fotos || [];
     var meta = '<span class="badge badge--' + o.status + '">' + esc(STATUS[o.status] || o.status) + '</span>' +
                '<span class="badge badge--' + o.prioridade + '">' + esc(PRIORIDADE[o.prioridade] || o.prioridade) + '</span>' +
                '<span class="badge">' + (AREA_ICO[o.area] || '') + ' ' + esc(o.area) + '</span>';
+    if (fotos.length) meta += '<span class="badge">📷 ' + fotos.length + '</span>';
     if (late) meta += '<span class="badge badge--late">Atrasado</span>';
 
     var sub = [];
@@ -243,12 +282,20 @@
         '</div>';
     }
 
+    var thumbs = '';
+    if (!compact && fotos.length) {
+      thumbs = '<div class="thumbs thumbs--mini">' + fotos.slice(0, 4).map(function (f, i) {
+        return '<button type="button" class="thumb" data-foto-os="' + o.id + '" data-foto-i="' + i + '">' +
+          '<img src="' + f + '" alt="Foto ' + (i + 1) + '" loading="lazy" /></button>';
+      }).join('') + '</div>';
+    }
+
     return '<div class="' + cls + '" data-os="' + o.id + '" role="button" tabindex="0">' +
       '<div class="item__top"><div class="item__title">' + esc(o.titulo) + '</div>' +
       '<span class="item__num">OS-' + String(o.num).padStart(3, '0') + '</span></div>' +
       '<div class="item__meta">' + meta + '</div>' +
       (sub.length ? '<div class="item__sub">' + sub.join(' · ') + '</div>' : '') +
-      quick + '</div>';
+      thumbs + quick + '</div>';
   }
 
   function renderChamados(el) {
@@ -434,6 +481,14 @@
       });
     });
 
+    $$('[data-foto-os]', el).forEach(function (b) {
+      b.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        var o = osById(b.dataset.fotoOs);
+        if (o && o.fotos && o.fotos[+b.dataset.fotoI]) abrirLightbox(o.fotos[+b.dataset.fotoI]);
+      });
+    });
+
     $$('[data-os]', el).forEach(function (it) {
       it.addEventListener('click', function () { openOSForm(it.dataset.os); });
     });
@@ -492,9 +547,12 @@
   }
 
   /* ---------- formulário de chamado (OS) ---------- */
+  var fotosPickCb = null; // callback do input global de fotos (form aberto no momento)
+
   function openOSForm(id) {
     var o = id ? osById(id) : null;
     var hoje = todayISO();
+    var fotosTmp = (o && o.fotos) ? o.fotos.slice() : [];
     var h = '<form id="formOS">' +
       '<label class="field"><span>O que precisa ser feito? *</span>' +
       '<input name="titulo" type="text" required placeholder="Ex.: Trocar correia da esteira 03" value="' + esc(o ? o.titulo : '') + '" /></label>' +
@@ -528,12 +586,53 @@
       '<label class="field"><span>Observações</span>' +
       '<textarea name="notas" placeholder="Detalhes, orçamento, o que foi feito…">' + esc(o ? o.notas : '') + '</textarea></label>' +
 
+      '<div class="field"><span>Fotos</span>' +
+      '<div class="thumbs" id="osThumbs"></div>' +
+      '<button type="button" class="btn btn--ghost btn--sm" id="btnAddFoto">📷 Adicionar foto</button></div>' +
+
       '<div class="btn-row">' +
       '<button type="submit" class="btn">' + (o ? 'Salvar alterações' : 'Abrir chamado') + '</button>' +
       (o ? '<button type="button" class="btn btn--danger" id="btnExcluirOS">Excluir</button>' : '') +
       '</div></form>';
 
     openModal(o ? 'Chamado OS-' + String(o.num).padStart(3, '0') : 'Novo chamado', h);
+
+    function renderThumbs() {
+      var box = $('#osThumbs');
+      if (!box) return;
+      box.innerHTML = fotosTmp.map(function (f, i) {
+        return '<div class="thumb" data-i="' + i + '">' +
+          '<img src="' + f + '" alt="Foto ' + (i + 1) + '" />' +
+          '<button type="button" class="thumb__del" data-del="' + i + '" aria-label="Remover foto">✕</button></div>';
+      }).join('');
+      $$('.thumb__del', box).forEach(function (b) {
+        b.addEventListener('click', function (ev) {
+          ev.stopPropagation();
+          fotosTmp.splice(+b.dataset.del, 1);
+          renderThumbs();
+        });
+      });
+      $$('.thumb', box).forEach(function (t) {
+        t.addEventListener('click', function () { abrirLightbox(fotosTmp[+t.dataset.i]); });
+      });
+    }
+    renderThumbs();
+
+    $('#btnAddFoto').addEventListener('click', function () {
+      fotosPickCb = function (arquivos) {
+        var btn = $('#btnAddFoto');
+        if (btn) { btn.disabled = true; btn.textContent = 'Processando…'; }
+        Promise.all(arquivos.map(comprimirFoto)).then(function (fotos) {
+          fotos.forEach(function (f) { fotosTmp.push(f); });
+          renderThumbs();
+        }).catch(function () {
+          toast('Não consegui ler uma das imagens.');
+        }).then(function () {
+          if (btn) { btn.disabled = false; btn.textContent = '📷 Adicionar foto'; }
+        });
+      };
+      $('#fotoFile').click();
+    });
 
     $('#formOS').addEventListener('submit', function (ev) {
       ev.preventDefault();
@@ -555,8 +654,10 @@
       if (novoStatus === 'concluida' && o.status !== 'concluida') o.concluida = todayISO();
       if (novoStatus !== 'concluida') o.concluida = '';
       o.status = novoStatus;
-      save(); closeModal(); render();
-      toast('Chamado salvo ✓');
+      o.fotos = fotosTmp;
+      var ok = save();
+      closeModal(); render();
+      if (ok) toast('Chamado salvo ✓');
     });
 
     var del = $('#btnExcluirOS');
@@ -786,6 +887,12 @@
     reader.readAsText(file);
   });
 
+  $('#fotoFile').addEventListener('change', function () {
+    var arquivos = Array.prototype.slice.call(this.files || []);
+    this.value = '';
+    if (arquivos.length && fotosPickCb) fotosPickCb(arquivos);
+  });
+
   /* ========================= boot ========================= */
   $$('.tab').forEach(function (t) {
     t.addEventListener('click', function () { view = t.dataset.tab; render(); });
@@ -793,8 +900,12 @@
   $('#btnBackup').addEventListener('click', openBackup);
   $('#modalClose').addEventListener('click', closeModal);
   $('#modal').addEventListener('click', function (ev) { if (ev.target === this) closeModal(); });
+  $('#lightboxClose').addEventListener('click', fecharLightbox);
+  $('#lightbox').addEventListener('click', function (ev) { if (ev.target === this) fecharLightbox(); });
   document.addEventListener('keydown', function (ev) {
-    if (ev.key === 'Escape' && !$('#modal').hidden) closeModal();
+    if (ev.key !== 'Escape') return;
+    if (!$('#lightbox').hidden) fecharLightbox();
+    else if (!$('#modal').hidden) closeModal();
   });
 
   render();
