@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0B0B0F" />
+  <title>Torque Fitness · Manutenções</title>
+  <meta name="description" content="Organize as manutenções da academia: aparelhos, predial, elétrica, hidráulica e mais. Chamados, preventivas recorrentes e histórico por equipamento." />
+  <meta name="robots" content="noindex" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/manutencao.css?v=20260703a" />
+  <link rel="manifest" href="manutencao.webmanifest" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Manutenções" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20100%20100%27%3E%3Crect%20width%3D%27100%27%20height%3D%27100%27%20rx%3D%2722%27%20fill%3D%27%230B0B0F%27%2F%3E%3Cg%20transform%3D%27translate%2824.0%2C19.0%29%20scale%280.2288%29%27%20fill%3D%27%238B5CF6%27%3E%3Cg%20transform%3D%27translate%280%2C271%29%20scale%280.1%2C-0.1%29%27%3E%3Cpath%20d%3D%22M130%202617%20c-50%20-26%20-50%20-19%20-50%20-685%200%20-686%20-2%20-669%2061%20-691%2034%20-12%20367%20-14%20406%20-3%2012%204%20105%2084%20205%20178%20533%20498%20494%20463%20524%20455%2038%20-10%2070%20-54%2058%20-81%20-5%20-11%20-268%20-262%20-584%20-558%20-586%20-547%20-620%20-584%20-652%20-682%20-6%20-19%20-13%20-125%20-15%20-236%20-6%20-224%20-3%20-234%2062%20-234%2030%200%2096%2059%20706%20630%20601%20563%20677%20630%20703%20628%2018%20-2%2037%20-14%2050%20-31%2019%20-26%2019%20-30%205%20-55%20-8%20-15%20-289%20-283%20-624%20-597%20l-609%20-570%20887%20-3%20c609%20-1%20894%201%20908%208%2019%2011%2020%2024%2017%20973%20-3%20944%20-4%20963%20-24%201023%20-88%20255%20-268%20427%20-539%20511%20l-90%2027%20-690%203%20c-546%203%20-695%201%20-715%20-10z%22%2F%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E" />
+</head>
+<body>
+
+  <!-- ===================== HEADER ===================== -->
+  <header class="topbar">
+    <div class="brand__mark">
+      <svg viewBox="0 0 227 271" class="logo-mark" aria-hidden="true"><g transform="translate(0,271) scale(0.1,-0.1)"><path d="M130 2617 c-50 -26 -50 -19 -50 -685 0 -686 -2 -669 61 -691 34 -12 367 -14 406 -3 12 4 105 84 205 178 533 498 494 463 524 455 38 -10 70 -54 58 -81 -5 -11 -268 -262 -584 -558 -586 -547 -620 -584 -652 -682 -6 -19 -13 -125 -15 -236 -6 -224 -3 -234 62 -234 30 0 96 59 706 630 601 563 677 630 703 628 18 -2 37 -14 50 -31 19 -26 19 -30 5 -55 -8 -15 -289 -283 -624 -597 l-609 -570 887 -3 c609 -1 894 1 908 8 19 11 20 24 17 973 -3 944 -4 963 -24 1023 -88 255 -268 427 -539 511 l-90 27 -690 3 c-546 3 -695 1 -715 -10z"/></g></svg>
+    </div>
+    <div class="brand__text"><strong>TORQUE FITNESS</strong><em>MANUTENÇÕES</em></div>
+    <button type="button" class="iconbtn" id="btnBackup" title="Backup e dados" aria-label="Backup e dados">⚙</button>
+  </header>
+
+  <main class="wrap">
+    <section id="view-painel" class="view"></section>
+    <section id="view-chamados" class="view" hidden></section>
+    <section id="view-planos" class="view" hidden></section>
+    <section id="view-ativos" class="view" hidden></section>
+  </main>
+
+  <!-- ===================== TAB BAR ===================== -->
+  <nav class="tabbar" aria-label="Seções">
+    <button type="button" class="tab is-active" data-tab="painel"><span class="tab__ico">📊</span>Painel</button>
+    <button type="button" class="tab" data-tab="chamados"><span class="tab__ico">🛠️</span>Chamados</button>
+    <button type="button" class="tab" data-tab="planos"><span class="tab__ico">🔁</span>Preventivas</button>
+    <button type="button" class="tab" data-tab="ativos"><span class="tab__ico">🏋️</span>Ativos</button>
+  </nav>
+
+  <!-- ===================== MODAL ===================== -->
+  <div id="modal" class="modal" hidden>
+    <div class="modal__card" role="dialog" aria-modal="true">
+      <div class="modal__head">
+        <h3 id="modalTitle"></h3>
+        <button type="button" class="iconbtn" id="modalClose" aria-label="Fechar">✕</button>
+      </div>
+      <div class="modal__body" id="modalBody"></div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <input type="file" id="importFile" accept="application/json,.json" hidden />
+
+  <script src="js/manutencao.js?v=20260703a"></script>
+</body>
+</html>

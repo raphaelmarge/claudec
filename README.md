@@ -121,6 +121,42 @@ as fontes são carregadas por CDN sob demanda — exigem internet apenas para
 importar `.xlsx` e exportar PNG. CSV, PDF (impressão) e todo o resto funcionam
 offline.
 
+## App separado: Manutenções da Academia 🔧
+
+Ferramenta interna para organizar **toda a manutenção da academia** — aparelhos
+(esteiras, bikes, musculação) e também o prédio (elétrica, hidráulica,
+climatização, limpeza, segurança…). Abra `manutencao.html` (ou instale como
+PWA). Tudo roda no navegador, sem servidor: os dados ficam no aparelho
+(localStorage), com **exportação/importação de backup em JSON** para transferir
+entre aparelhos.
+
+### O que dá para fazer
+
+- **Painel**: chamados em aberto, atrasados, preventivas vencidas e gasto do
+  mês, com a lista de "atenção agora" (urgentes + vencidos).
+- **Chamados (ordens de serviço)**: registre qualquer problema ou serviço com
+  área (equipamentos, predial, elétrica, hidráulica, climatização…),
+  prioridade, prazo, responsável/prestador, custo e observações. Status:
+  aberta → em andamento → aguardando peça → concluída. Numeração automática
+  (OS-001, OS-002…), busca e filtros.
+- **Preventivas recorrentes**: rotinas do tipo "lubrificar a lona das esteiras
+  a cada 30 dias". O app calcula a próxima data, avisa quando vence e, ao tocar
+  em **✓ Feita hoje**, registra a execução no histórico e reagenda sozinho.
+- **Ativos**: cadastro de aparelhos e locais (marca, nº de série, data de
+  compra), com **histórico de manutenções e total gasto por ativo**.
+
+### Arquivos
+
+```
+manutencao.html          estrutura do app (tabs, modal)
+css/manutencao.css       identidade visual (mesma paleta violeta + preto)
+js/manutencao.js         estado, chamados, preventivas, ativos, backup
+manutencao.webmanifest   PWA do app de manutenções
+```
+
+A primeira abertura traz **dados de exemplo** para ver o app funcionando —
+apague-os no menu ⚙ para começar do zero.
+
 ## App separado: Montar Treino por IA 🏋️
 
 Além da ferramenta de orçamento, este repositório inclui um **app independente**
