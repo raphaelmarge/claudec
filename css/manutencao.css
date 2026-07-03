@@ -113,6 +113,19 @@ button.stat { color: inherit; }
 .stat--warn b { color: var(--warn); }
 .stat--ok b { color: var(--ok); }
 .stat--violet b { color: var(--violet); }
+.stat--wide { grid-column: 1 / -1; }
+
+/* barra de progresso (limpeza do dia) */
+.bar {
+  height: 8px; margin-top: 10px; border-radius: 999px;
+  background: var(--black); border: 1px solid var(--line-2); overflow: hidden;
+}
+.bar i {
+  display: block; height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg, var(--violet), var(--violet-700));
+  transition: width .25s;
+}
+.bar--full i { background: linear-gradient(90deg, #10B981, var(--ok)); }
 
 .section-title {
   font-family: var(--font-title); font-size: .78rem; font-weight: 800;
@@ -203,6 +216,20 @@ button.stat { color: inherit; }
 .field input[type="date"] { -webkit-appearance: none; appearance: none; min-height: 46px; }
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
 
+/* chips de seleção (checkbox/radio escondido) — dias da semana etc. */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chips input { position: absolute; opacity: 0; pointer-events: none; }
+.chips label {
+  display: inline-flex; align-items: center; padding: 9px 13px;
+  background: var(--black); border: 1px solid var(--line-2);
+  border-radius: 999px; font-size: .85rem; font-weight: 600; color: var(--txt-dim);
+  user-select: none; transition: all .15s;
+}
+.chips input:checked + label {
+  background: linear-gradient(135deg, var(--violet), var(--violet-700));
+  border-color: transparent; color: #fff; box-shadow: var(--shadow-violet);
+}
+
 /* ============================ BOTÕES ============================ */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
@@ -254,12 +281,12 @@ button.stat { color: inherit; }
   border-top: 1px solid var(--line);
 }
 .tab {
-  flex: 1; max-width: 130px;
+  flex: 1; max-width: 116px; min-width: 0;
   display: flex; flex-direction: column; align-items: center; gap: 3px;
-  padding: 7px 4px; border: none; border-radius: 12px;
+  padding: 7px 2px; border: none; border-radius: 12px;
   background: transparent; color: var(--txt-mut);
-  font-size: .68rem; font-weight: 700; letter-spacing: .02em;
-  transition: all .15s;
+  font-size: .64rem; font-weight: 700; letter-spacing: .01em;
+  white-space: nowrap; transition: all .15s;
 }
 .tab__ico { font-size: 1.25rem; line-height: 1; filter: grayscale(1) opacity(.6); transition: filter .15s; }
 .tab.is-active { color: var(--violet); background: rgba(139,92,246,.1); }

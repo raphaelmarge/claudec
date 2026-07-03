@@ -144,6 +144,10 @@ entre aparelhos.
 - **Preventivas recorrentes**: rotinas do tipo "lubrificar a lona das esteiras
   a cada 30 dias". O app calcula a próxima data, avisa quando vence e, ao tocar
   em **✓ Feita hoje**, registra a execução no histórico e reagenda sozinho.
+- **Limpeza**: rotinas de limpeza por dia da semana (diária, seg/qua/sex, só
+  sexta…). A aba mostra o **checklist do dia** com barra de progresso — é só
+  tocar em **✓ Marcar feita** (com desfazer) — e o painel exibe o andamento
+  (ex.: 3/5 feitas hoje). Cada rotina guarda o histórico de execuções.
 - **Ativos**: cadastro de aparelhos e locais (marca, nº de série, data de
   compra), com **histórico de manutenções e total gasto por ativo**.
 

@@ -26,6 +26,7 @@
   };
   var PRIORIDADE = { urgente: 'Urgente', alta: 'Alta', media: 'Média', baixa: 'Baixa' };
   var PRIO_ORDEM = { urgente: 0, alta: 1, media: 2, baixa: 3 };
+  var DIAS_NOMES = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
   /* ========================= helpers ========================= */
   function $(s, el) { return (el || document).querySelector(s); }
@@ -112,7 +113,10 @@
       var raw = localStorage.getItem(LS_KEY);
       if (raw) {
         var s = JSON.parse(raw);
-        if (s && Array.isArray(s.os) && Array.isArray(s.ativos) && Array.isArray(s.planos)) return s;
+        if (s && Array.isArray(s.os) && Array.isArray(s.ativos) && Array.isArray(s.planos)) {
+          normalizar(s);
+          return s;
+        }
       }
     } catch (e) { /* dados corrompidos → recomeça com exemplo */ }
     return seed();
@@ -127,10 +131,33 @@
     }
   }
 
+  /* Dados salvos por versões antigas do app podem não ter os campos novos */
+  function normalizar(s) {
+    if (!Array.isArray(s.limpeza)) s.limpeza = [];
+    if (!Array.isArray(s.limpezaLog)) s.limpezaLog = [];
+    if (s.exemplo && !s.limpeza.length) seedLimpeza(s);
+  }
+
+  function seedLimpeza(s) {
+    var hoje = todayISO();
+    s.limpeza.push(
+      { id: uid(), titulo: 'Limpar e desinfetar banheiros e vestiários', local: 'Vestiários', dias: [0, 1, 2, 3, 4, 5, 6], responsavel: 'Equipe de limpeza', notas: '' },
+      { id: uid(), titulo: 'Passar pano com desinfetante nos aparelhos', local: 'Área de musculação', dias: [0, 1, 2, 3, 4, 5, 6], responsavel: '', notas: 'Bancos, pegadas e encostos.' },
+      { id: uid(), titulo: 'Limpar espelhos do salão', local: 'Salão principal', dias: [1, 3, 5], responsavel: '', notas: '' },
+      { id: uid(), titulo: 'Limpeza pesada (lavar piso e tatame)', local: 'Academia toda', dias: [5], responsavel: 'Equipe de limpeza', notas: '' }
+    );
+    var d = new Date();
+    s.limpezaLog.push({
+      taskId: s.limpeza[0].id, data: hoje,
+      hora: String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0')
+    });
+  }
+
   /* Dados de exemplo na primeira abertura, para ver o app funcionando */
   function seed() {
     var hoje = todayISO();
-    var s = { ativos: [], os: [], planos: [], seqOS: 0, exemplo: true };
+    var s = { ativos: [], os: [], planos: [], limpeza: [], limpezaLog: [], seqOS: 0, exemplo: true };
+    seedLimpeza(s);
 
     function ativo(nome, categoria, local, marca) {
       var a = { id: uid(), nome: nome, categoria: categoria, local: local, marca: marca || '', serie: '', compra: '', notas: '' };
@@ -185,6 +212,26 @@
     for (var i = 0; i < state.planos.length; i++) if (state.planos[i].id === id) return state.planos[i];
     return null;
   }
+  function limpezaById(id) {
+    for (var i = 0; i < state.limpeza.length; i++) if (state.limpeza[i].id === id) return state.limpeza[i];
+    return null;
+  }
+  function limpezaFeitaHoje(t) {
+    var hoje = todayISO();
+    return state.limpezaLog.some(function (l) { return l.taskId === t.id && l.data === hoje; });
+  }
+  function limpezaLogHoje(t) {
+    var hoje = todayISO();
+    for (var i = 0; i < state.limpezaLog.length; i++) {
+      var l = state.limpezaLog[i];
+      if (l.taskId === t.id && l.data === hoje) return l;
+    }
+    return null;
+  }
+  function limpezaDeHoje() {
+    var dow = new Date().getDay();
+    return state.limpeza.filter(function (t) { return (t.dias || []).indexOf(dow) !== -1; });
+  }
   function osAtiva(o) { return o.status !== 'concluida' && o.status !== 'cancelada'; }
   function osAtrasada(o) { return osAtiva(o) && o.prazo && o.prazo < todayISO(); }
   function planoVencido(p) { return p.proxima && p.proxima < todayISO(); }
@@ -199,6 +246,7 @@
     if (view === 'painel') renderPainel(el);
     else if (view === 'chamados') renderChamados(el);
     else if (view === 'planos') renderPlanos(el);
+    else if (view === 'limpeza') renderLimpeza(el);
     else renderAtivos(el);
   }
 
@@ -230,11 +278,21 @@
          '<p>' + fmtDate(hoje) + ' · visão geral da manutenção</p></div>' +
          '<button type="button" class="addbtn" data-act="nova-os">+ Chamado</button></div>';
 
+    var tarefasHoje = limpezaDeHoje();
+    var feitasHoje = tarefasHoje.filter(limpezaFeitaHoje).length;
+    var pct = tarefasHoje.length ? Math.round(100 * feitasHoje / tarefasHoje.length) : 0;
+    var limpezaCls = !tarefasHoje.length ? '' : (feitasHoje >= tarefasHoje.length ? 'stat--ok' : 'stat--warn');
+
     h += '<div class="stats">' +
       '<button type="button" class="stat stat--violet" data-goto="chamados" data-fstatus="ativas"><b>' + abertas + '</b><span>Chamados em aberto</span></button>' +
       '<button type="button" class="stat ' + (atrasadas ? 'stat--bad' : 'stat--ok') + '" data-goto="chamados" data-fstatus="atrasadas"><b>' + atrasadas + '</b><span>Chamados atrasados</span></button>' +
       '<button type="button" class="stat ' + (prevVencidas ? 'stat--warn' : 'stat--ok') + '" data-goto="planos"><b>' + prevVencidas + '</b><span>Preventivas vencidas</span></button>' +
       '<div class="stat"><b class="mono">' + fmtMoney(custoMes) + '</b><span>Gasto no mês (' + concluidasMes + ' concluída' + (concluidasMes === 1 ? '' : 's') + ')</span></div>' +
+      '<button type="button" class="stat stat--wide ' + limpezaCls + '" data-goto="limpeza">' +
+        '<b>' + (tarefasHoje.length ? feitasHoje + '<small style="font-size:.85rem;color:var(--txt-mut);"> / ' + tarefasHoje.length + '</small>' : '—') + '</b>' +
+        '<span>🧹 Limpeza de hoje' + (tarefasHoje.length ? '' : ' (nada programado)') + '</span>' +
+        (tarefasHoje.length ? '<div class="bar' + (pct === 100 ? ' bar--full' : '') + '"><i style="width:' + pct + '%"></i></div>' : '') +
+      '</button>' +
       '</div>';
 
     h += '<div class="section-title">⚠ Atenção agora</div>';
@@ -402,6 +460,112 @@
     wireListEvents(el);
   }
 
+  /* ========================= LIMPEZA ========================= */
+  function diasLabel(dias) {
+    dias = dias || [];
+    if (dias.length === 7) return 'Todos os dias';
+    if (dias.length === 5 && dias.indexOf(0) === -1 && dias.indexOf(6) === -1) return 'Seg a Sex';
+    // exibe na ordem Seg…Dom
+    return [1, 2, 3, 4, 5, 6, 0].filter(function (d) { return dias.indexOf(d) !== -1; })
+      .map(function (d) { return DIAS_NOMES[d]; }).join(' · ') || 'Sem dias';
+  }
+
+  function limpezaItemHTML(t, hojeTem) {
+    var feita = limpezaFeitaHoje(t);
+    var log = feita ? limpezaLogHoje(t) : null;
+    var cls = 'item';
+    if (hojeTem && feita) cls += ' item--done';
+
+    var meta = '';
+    if (hojeTem) {
+      meta = feita
+        ? '<span class="badge badge--okday">✓ Feita' + (log && log.hora ? ' às ' + esc(log.hora) : '') + '</span>'
+        : '<span class="badge badge--soon">Pendente hoje</span>';
+    }
+    meta += '<span class="badge">' + esc(diasLabel(t.dias)) + '</span>';
+
+    var sub = [];
+    if (t.local) sub.push(esc(t.local));
+    if (t.responsavel) sub.push(esc(t.responsavel));
+
+    var quick = '';
+    if (hojeTem) {
+      quick = '<div class="quick"><button type="button" class="' + (feita ? '' : 'q-ok') + '" data-check="' + t.id + '">' +
+        (feita ? '↩ Desfazer' : '✓ Marcar feita') + '</button></div>';
+    }
+
+    return '<div class="' + cls + '" data-limpeza="' + t.id + '" role="button" tabindex="0">' +
+      '<div class="item__top"><div class="item__title">🧹 ' + esc(t.titulo) + '</div></div>' +
+      '<div class="item__meta">' + meta + '</div>' +
+      (sub.length ? '<div class="item__sub">' + sub.join(' · ') + '</div>' : '') +
+      quick + '</div>';
+  }
+
+  function renderLimpeza(el) {
+    var dow = new Date().getDay();
+    var deHoje = limpezaDeHoje().sort(function (a, b) {
+      var fa = limpezaFeitaHoje(a) ? 1 : 0, fb = limpezaFeitaHoje(b) ? 1 : 0;
+      if (fa !== fb) return fa - fb;
+      return a.titulo.localeCompare(b.titulo);
+    });
+    var outras = state.limpeza.filter(function (t) { return (t.dias || []).indexOf(dow) === -1; })
+      .sort(function (a, b) { return a.titulo.localeCompare(b.titulo); });
+    var feitas = deHoje.filter(limpezaFeitaHoje).length;
+    var pct = deHoje.length ? Math.round(100 * feitas / deHoje.length) : 0;
+
+    var h = '<div class="view-head"><div><h1>Limpeza</h1>' +
+      '<p>Rotinas de limpeza da academia, dia a dia</p></div>' +
+      '<button type="button" class="addbtn" data-act="nova-limpeza">+ Nova</button></div>';
+
+    if (state.limpeza.length) {
+      h += '<div class="card" style="margin-bottom:16px;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;">' +
+        '<strong style="font-family:var(--font-title);">Hoje, ' + DIAS_NOMES[dow].toLowerCase() + ' (' + fmtDate(todayISO()) + ')</strong>' +
+        '<span class="mono" style="font-size:.86rem;color:' + (deHoje.length && feitas >= deHoje.length ? 'var(--ok)' : 'var(--txt-dim)') + ';">' +
+        feitas + ' / ' + deHoje.length + '</span></div>' +
+        (deHoje.length ? '<div class="bar' + (pct === 100 ? ' bar--full' : '') + '"><i style="width:' + pct + '%"></i></div>' : '') +
+        '</div>';
+    }
+
+    if (!state.limpeza.length) {
+      h += '<div class="empty">Nenhuma rotina de limpeza cadastrada.<br/>Ex.: “Desinfetar aparelhos — todos os dias”.</div>';
+    } else {
+      if (deHoje.length) {
+        h += '<div class="section-title">Programadas para hoje</div>';
+        h += '<div class="list">' + deHoje.map(function (t) { return limpezaItemHTML(t, true); }).join('') + '</div>';
+      } else {
+        h += '<div class="empty">Nada programado para hoje. 🎉</div>';
+      }
+      if (outras.length) {
+        h += '<div class="section-title">Outros dias</div>';
+        h += '<div class="list">' + outras.map(function (t) { return limpezaItemHTML(t, false); }).join('') + '</div>';
+      }
+    }
+
+    el.innerHTML = h;
+    wireListEvents(el);
+  }
+
+  function toggleLimpeza(id) {
+    var t = limpezaById(id);
+    if (!t) return;
+    var hoje = todayISO();
+    var log = limpezaLogHoje(t);
+    if (log) {
+      state.limpezaLog = state.limpezaLog.filter(function (l) { return !(l.taskId === id && l.data === hoje); });
+      save(); render();
+      toast('Desfeito — voltou para pendente');
+    } else {
+      var d = new Date();
+      state.limpezaLog.push({
+        taskId: id, data: hoje,
+        hora: String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0')
+      });
+      save(); render();
+      toast('Limpeza registrada ✓');
+    }
+  }
+
   /* ========================= ATIVOS ========================= */
   function renderAtivos(el) {
     var lista = state.ativos.slice().sort(function (a, b) {
@@ -445,6 +609,7 @@
     $$('[data-act="nova-os"]', el).forEach(function (b) { b.addEventListener('click', function () { openOSForm(null); }); });
     $$('[data-act="novo-plano"]', el).forEach(function (b) { b.addEventListener('click', function () { openPlanoForm(null); }); });
     $$('[data-act="novo-ativo"]', el).forEach(function (b) { b.addEventListener('click', function () { openAtivoForm(null); }); });
+    $$('[data-act="nova-limpeza"]', el).forEach(function (b) { b.addEventListener('click', function () { openLimpezaForm(null); }); });
 
     $$('[data-goto]', el).forEach(function (b) {
       b.addEventListener('click', function () {
@@ -479,6 +644,15 @@
         ev.stopPropagation();
         execPlano(b.dataset.exec);
       });
+    });
+    $$('[data-check]', el).forEach(function (b) {
+      b.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        toggleLimpeza(b.dataset.check);
+      });
+    });
+    $$('[data-limpeza]', el).forEach(function (it) {
+      it.addEventListener('click', function () { openLimpezaForm(it.dataset.limpeza); });
     });
 
     $$('[data-foto-os]', el).forEach(function (b) {
@@ -743,6 +917,77 @@
       }).join('') + '</ul>';
   }
 
+  /* ---------- formulário de rotina de limpeza ---------- */
+  function openLimpezaForm(id) {
+    var t = id ? limpezaById(id) : null;
+    var diasSel = t ? (t.dias || []) : [0, 1, 2, 3, 4, 5, 6];
+
+    var chipsDias = [1, 2, 3, 4, 5, 6, 0].map(function (d) {
+      return '<input type="checkbox" name="dias" id="dia' + d + '" value="' + d + '"' +
+        (diasSel.indexOf(d) !== -1 ? ' checked' : '') + ' /><label for="dia' + d + '">' + DIAS_NOMES[d] + '</label>';
+    }).join('');
+
+    var h = '<form id="formLimpeza">' +
+      '<label class="field"><span>Tarefa *</span>' +
+      '<input name="titulo" type="text" required placeholder="Ex.: Desinfetar aparelhos de musculação" value="' + esc(t ? t.titulo : '') + '" /></label>' +
+
+      '<div class="field"><span>Em quais dias? *</span><div class="chips">' + chipsDias + '</div></div>' +
+
+      '<div class="grid-2">' +
+      '<label class="field"><span>Local</span>' +
+      '<input name="local" type="text" placeholder="Ex.: Vestiários" value="' + esc(t ? t.local : '') + '" /></label>' +
+      '<label class="field"><span>Responsável</span>' +
+      '<input name="responsavel" type="text" value="' + esc(t ? t.responsavel : '') + '" /></label>' +
+      '</div>' +
+
+      '<label class="field"><span>Observações</span>' +
+      '<textarea name="notas" placeholder="Produto, cuidado especial…">' + esc(t ? t.notas : '') + '</textarea></label>' +
+
+      '<div class="btn-row">' +
+      '<button type="submit" class="btn">' + (t ? 'Salvar alterações' : 'Criar rotina') + '</button>' +
+      (t ? '<button type="button" class="btn btn--danger" id="btnExcluirLimpeza">Excluir</button>' : '') +
+      '</div>' +
+      (t ? histLimpezaHTML(t) : '') +
+      '</form>';
+
+    openModal(t ? 'Rotina de limpeza' : 'Nova rotina de limpeza', h);
+
+    $('#formLimpeza').addEventListener('submit', function (ev) {
+      ev.preventDefault();
+      var f = new FormData(ev.target);
+      var dias = f.getAll('dias').map(Number);
+      if (!dias.length) { alert('Escolha pelo menos um dia da semana.'); return; }
+      if (!t) { t = { id: uid() }; state.limpeza.push(t); }
+      t.titulo = String(f.get('titulo') || '').trim();
+      t.dias = dias;
+      t.local = String(f.get('local') || '').trim();
+      t.responsavel = String(f.get('responsavel') || '').trim();
+      t.notas = String(f.get('notas') || '').trim();
+      save(); closeModal(); render();
+      toast('Rotina salva ✓');
+    });
+
+    var del = $('#btnExcluirLimpeza');
+    if (del) del.addEventListener('click', function () {
+      if (!confirm('Excluir esta rotina de limpeza e o histórico dela?')) return;
+      state.limpeza = state.limpeza.filter(function (x) { return x.id !== t.id; });
+      state.limpezaLog = state.limpezaLog.filter(function (l) { return l.taskId !== t.id; });
+      save(); closeModal(); render();
+      toast('Rotina excluída');
+    });
+  }
+
+  function histLimpezaHTML(t) {
+    var logs = state.limpezaLog.filter(function (l) { return l.taskId === t.id; })
+      .sort(function (a, b) { return (b.data + (b.hora || '')).localeCompare(a.data + (a.hora || '')); });
+    if (!logs.length) return '';
+    return '<div class="section-title">Últimas execuções</div><ul class="hist">' +
+      logs.slice(0, 10).map(function (l) {
+        return '<li><span class="h-date">' + fmtDate(l.data) + (l.hora ? ' ' + esc(l.hora) : '') + '</span>' +
+          '<span class="h-txt">Feita</span></li>';
+      }).join('') + '</ul>';
+  }
+
   /* ---------- formulário de ativo ---------- */
   function openAtivoForm(id) {
     var a = id ? ativoById(id) : null;
@@ -834,7 +1079,8 @@
 
   /* ========================= BACKUP ========================= */
   function openBackup() {
-    var n = state.os.length + ' chamados · ' + state.planos.length + ' preventivas · ' + state.ativos.length + ' ativos';
+    var n = state.os.length + ' chamados · ' + state.planos.length + ' preventivas · ' +
+      state.limpeza.length + ' rotinas de limpeza · ' + state.ativos.length + ' ativos';
     var h = '<p style="color:var(--txt-dim);font-size:.9rem;margin:0 0 14px;">' +
       'Os dados ficam salvos <b>neste aparelho</b> (navegador). Exporte um backup de vez em quando ' +
       'e importe-o em outro aparelho para transferir tudo.<br/><br/><span class="mono" style="font-size:.8rem;">' + n + '</span></p>' +
@@ -860,7 +1106,7 @@
     var limpar = $('#btnLimparExemplo');
     if (limpar) limpar.addEventListener('click', function () {
       if (!confirm('Apagar os dados de exemplo? Você começa com o app vazio.')) return;
-      state = { ativos: [], os: [], planos: [], seqOS: 0, exemplo: false };
+      state = { ativos: [], os: [], planos: [], limpeza: [], limpezaLog: [], seqOS: 0, exemplo: false };
       save(); closeModal(); render();
       toast('Pronto! App zerado para os seus dados.');
     });
@@ -878,6 +1124,7 @@
         if (!confirm('Importar backup com ' + s.os.length + ' chamados, ' + s.planos.length +
           ' preventivas e ' + s.ativos.length + ' ativos? Isso substitui os dados atuais deste aparelho.')) return;
         s.exemplo = false;
+        normalizar(s);
         state = s; save(); closeModal(); render();
         toast('Backup importado ✓');
       } catch (e) {
