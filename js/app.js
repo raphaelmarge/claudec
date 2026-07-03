@@ -1635,12 +1635,19 @@
     return rows;
   }
 
+  const scriptsPendentes = {};   // src → Promise (evita "tag existe mas ainda não carregou")
   function loadScript(src) {
-    return new Promise((res, rej) => {
-      if (document.querySelector(`script[src="${src}"]`)) return res();
-      const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = rej;
-      document.head.appendChild(s);
-    });
+    if (!scriptsPendentes[src]) {
+      scriptsPendentes[src] = new Promise((res, rej) => {
+        const s = document.createElement('script'); s.src = src;
+        const falha = () => { delete scriptsPendentes[src]; s.remove(); rej(new Error('falha ao carregar componente')); };
+        const prazo = setTimeout(falha, 20000);   // rede pendurada vira erro visível
+        s.onload = () => { clearTimeout(prazo); res(); };
+        s.onerror = () => { clearTimeout(prazo); falha(); };   // some do mapa → próximo clique tenta de novo
+        document.head.appendChild(s);
+      });
+    }
+    return scriptsPendentes[src];
   }
   async function parseXLSX(file) {
     toast('Lendo planilha…');
@@ -1881,21 +1888,46 @@
     } catch (e) { console.error(e); toast('Falhou salvar na nuvem (verifique conexão).'); }
   }
 
+  // Trava-segurança: converte qualquer etapa pendurada em erro visível
+  // (sem isso, uma captura que não termina deixa o botão "mudo" no iPhone).
+  function comPrazo(promise, ms, etapa) {
+    return Promise.race([promise, new Promise((_, rej) => setTimeout(() => rej(new Error(etapa + ' demorou demais — tente de novo')), ms))]);
+  }
+  // O iPhone limita o canvas a ~16,7 milhões de pixels: acima disso a captura
+  // sai em branco ou nunca termina. Reduz a escala para caber com folga.
+  function escalaSegura(el, desejada) {
+    const w = Math.max(1, el.scrollWidth), h = Math.max(1, el.scrollHeight);
+    const s = Math.min(desejada, Math.sqrt(12e6 / (w * h)));
+    return Math.max(0.75, Math.round(s * 100) / 100);
+  }
+  function conferirCaptura(canvas) {
+    if (!canvas || !canvas.width || !canvas.height) throw new Error('captura vazia');
+    const data = canvas.toDataURL('image/jpeg', 0.92);
+    if (!data || data.indexOf('data:image') !== 0 || data.length < 1000) throw new Error('captura vazia');
+    return data;
+  }
   // Monta o PDF A4 paginado a partir do documento (#quoteDoc).
   // Usado pelo botão PDF (salvar) e pelo Compartilhar (arquivo).
-  async function montarPdfQuote() {
+  async function montarPdfQuote(avisar = () => {}) {
     const el = $('#quoteDoc');
     if (!el) throw new Error('sem documento');
-    await loadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js');
-    await loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js');
+    avisar('Carregando componentes…');
+    await comPrazo(Promise.all([
+      loadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js'),
+      loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js')
+    ]), 22000, 'o carregamento dos componentes');
     const jsPDFCtor = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
     if (!jsPDFCtor) throw new Error('jsPDF indisponível');
-    const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#ffffff', useCORS: true, imageTimeout: 6000 });
+    avisar('Capturando o documento…');
+    const canvas = await comPrazo(
+      html2canvas(el, { scale: escalaSegura(el, 2), backgroundColor: '#ffffff', useCORS: true, imageTimeout: 6000 }),
+      25000, 'a captura do documento');
+    avisar('Montando o PDF…');
     const pdf = new jsPDFCtor({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     const pw = pdf.internal.pageSize.getWidth();
     const ph = pdf.internal.pageSize.getHeight();
     const imgH = canvas.height * pw / canvas.width;   // altura proporcional à largura A4
-    const data = canvas.toDataURL('image/jpeg', 0.92);
+    const data = conferirCaptura(canvas);
     let heightLeft = imgH, position = 0;
     pdf.addImage(data, 'JPEG', 0, position, pw, imgH);
     heightLeft -= ph;
@@ -1916,7 +1948,7 @@
         catch (e) { if (e && e.name === 'AbortError') return; }
       }
       toast('Gerando PDF…');
-      await entregarPdf(montarPdfQuote, nome, 'q-' + (lastQuoteNumero || ''));
+      await entregarPdf(() => montarPdfQuote(toast), nome, 'q-' + (lastQuoteNumero || ''));
     } catch (e) {
       console.error(e);
       toast('Abrindo impressão para salvar em PDF…');
@@ -2082,29 +2114,85 @@
   ['cwNome', 'cwDoc', 'cwEnd', 'cwRep', 'cwCargo', 'cwCpf', 'cwEndEntrega', 'cwPrazo', 'cwPctSinal', 'cwFormaSinal', 'cwFormaSaldo', 'cwMulta', 'cwAbat', 'cwReinc', 'cwCidadeAss'].forEach(id => {
     const el = $('#' + id); if (el) el.addEventListener('input', renderContrato);
   });
-  async function montarPdfContrato() {
-    await loadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js');
-    await loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js');
-    const jsPDFCtor = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
-    const canvas = await html2canvas($('#contractDoc'), { scale: 2, backgroundColor: '#ffffff', imageTimeout: 6000 });
-    const pdf = new jsPDFCtor({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    const pw = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight();
-    const imgH = canvas.height * pw / canvas.width;
-    const data = canvas.toDataURL('image/jpeg', 0.92);
-    let restante = imgH, pos = 0;
-    pdf.addImage(data, 'JPEG', 0, pos, pw, imgH); restante -= ph;
-    while (restante > 0) { pos -= ph; pdf.addPage(); pdf.addImage(data, 'JPEG', 0, pos, pw, imgH); restante -= ph; }
+  // Plano B à prova de tudo: o contrato inteiro em PDF de texto puro (jsPDF),
+  // sem captura de tela — nunca esbarra nos limites de canvas do iPhone.
+  function montarPdfContratoTexto(Ctor) {
+    const el = $('#contractDoc');
+    const pdf = new Ctor({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const W = pdf.internal.pageSize.getWidth(), H = pdf.internal.pageSize.getHeight();
+    const M = 18; let y = 22;
+    const quebra = h => { if (y + h > H - 18) { pdf.addPage(); y = 22; } };
+    const bloco = (txt, o) => {
+      const { bold = false, size = 10, gap = 4.4, center = false } = o || {};
+      pdf.setFont('times', bold ? 'bold' : 'normal'); pdf.setFontSize(size);
+      pdf.splitTextToSize(txt, W - 2 * M).forEach(l => {
+        quebra(gap + 1);
+        if (center) pdf.text(l, W / 2, y, { align: 'center' }); else pdf.text(l, M, y);
+        y += gap;
+      });
+    };
+    Array.from(el.children).forEach(node => {
+      const t = (node.textContent || '').replace(/\s+/g, ' ').trim();
+      if (node.tagName === 'H3') { bloco(t, { bold: true, size: 12.5, gap: 5.2, center: true }); y += 3; }
+      else if (node.tagName === 'H4') { y += 2.5; quebra(10); bloco(t, { bold: true, size: 10.5, gap: 4.8 }); y += 1; }
+      else if (node.classList && node.classList.contains('ct__ass')) {
+        Array.from(node.children).forEach(d => {
+          quebra(24); y += 13;
+          pdf.setDrawColor(60); pdf.line(W / 2 - 45, y, W / 2 + 45, y); y += 4.5;
+          const b = d.querySelector('b'), s = d.querySelector('small');
+          pdf.setFont('times', 'bold'); pdf.setFontSize(9.5);
+          pdf.text(((b && b.textContent) || '').trim(), W / 2, y, { align: 'center' }); y += 4;
+          const nm = ((s && s.textContent) || '').replace(/\u00a0/g, ' ').trim();
+          if (nm) { pdf.setFont('times', 'normal'); pdf.setFontSize(9); pdf.text(nm, W / 2, y, { align: 'center' }); y += 4; }
+        });
+      }
+      else if (t) { bloco(t, {}); y += 1.6; }
+    });
     return pdf;
   }
+  async function montarPdfContrato(avisar = () => {}) {
+    avisar('Carregando componentes…');
+    await comPrazo(Promise.all([
+      loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js'),
+      // sem html2canvas ainda dá contrato: cai no plano B de texto puro
+      loadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js').catch(() => {})
+    ]), 22000, 'o carregamento dos componentes');
+    const jsPDFCtor = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+    if (!jsPDFCtor) throw new Error('jsPDF indisponível');
+    const el = $('#contractDoc');
+    try {
+      if (typeof html2canvas !== 'function') throw new Error('sem html2canvas');
+      avisar('Capturando o documento…');
+      const canvas = await comPrazo(
+        html2canvas(el, { scale: escalaSegura(el, 2), backgroundColor: '#ffffff', imageTimeout: 6000 }),
+        25000, 'a captura do documento');
+      avisar('Montando o PDF…');
+      const data = conferirCaptura(canvas);
+      const pdf = new jsPDFCtor({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const pw = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight();
+      const imgH = canvas.height * pw / canvas.width;
+      let restante = imgH, pos = 0;
+      pdf.addImage(data, 'JPEG', 0, pos, pw, imgH); restante -= ph;
+      while (restante > 0) { pos -= ph; pdf.addPage(); pdf.addImage(data, 'JPEG', 0, pos, pw, imgH); restante -= ph; }
+      return pdf;
+    } catch (e) {
+      console.error('captura do contrato falhou — gerando em texto puro', e);
+      avisar('Montando o PDF (modo compatível)…');
+      return montarPdfContratoTexto(jsPDFCtor);
+    }
+  }
   $('#btnPdfContract').addEventListener('click', async () => {
+    const btn = $('#btnPdfContract'), rotulo = btn.textContent;
     try {
       const nomeArq = 'contrato-' + slugify(ctVal('cwNome') || 'torque') + '.pdf';
-      if (!(pdfEntregaCache && pdfEntregaCache.key === 'ct' + ctRev)) toast('Gerando contrato…');
-      await entregarPdf(montarPdfContrato, nomeArq, 'ct' + ctRev);
+      if (!(pdfEntregaCache && pdfEntregaCache.key === 'ct' + ctRev)) {
+        toast('Gerando contrato…'); btn.disabled = true; btn.textContent = 'Gerando…';
+      }
+      await entregarPdf(() => montarPdfContrato(toast), nomeArq, 'ct' + ctRev);
     } catch (e) {
       console.error(e);
       toast('Não foi possível gerar o contrato: ' + ((e && e.name) || 'erro') + ' — ' + String((e && e.message) || e).slice(0, 90));
-    }
+    } finally { btn.disabled = false; btn.textContent = rotulo; }
   });
   // do orçamento em edição (botão no modal do orçamento)
   const btnContratoQuote = $('#btnContratoQuote');
@@ -2144,8 +2232,9 @@
   $('#btnImageQuote').addEventListener('click', async () => {
     try {
       toast('Gerando imagem…');
-      await loadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js');
-      const canvas = await html2canvas($('#quoteDoc'), { scale: 2, backgroundColor: '#ffffff', useCORS: true });
+      await comPrazo(loadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js'), 22000, 'o carregamento dos componentes');
+      const el = $('#quoteDoc');
+      const canvas = await comPrazo(html2canvas(el, { scale: escalaSegura(el, 2), backgroundColor: '#ffffff', useCORS: true, imageTimeout: 6000 }), 25000, 'a captura do documento');
       const url = canvas.toDataURL('image/png');
       const a = document.createElement('a'); a.href = url; a.download = 'orcamento-torque.png'; a.click();
       toast('Imagem salva.');

@@ -1094,12 +1094,30 @@
   })();
 
   /* ---------- catálogo em PDF (jsPDF via CDN, sob demanda) ---------- */
+  const scriptsPendentes = {};   // src → Promise (evita "tag existe mas ainda não carregou")
   function loadScript(src) {
-    return new Promise((res, rej) => {
-      if (document.querySelector(`script[src="${src}"]`)) return res();
-      const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = rej;
-      document.head.appendChild(s);
-    });
+    if (!scriptsPendentes[src]) {
+      scriptsPendentes[src] = new Promise((res, rej) => {
+        const s = document.createElement('script'); s.src = src;
+        const falha = () => { delete scriptsPendentes[src]; s.remove(); rej(new Error('falha ao carregar componente')); };
+        const prazo = setTimeout(falha, 20000);   // rede pendurada vira erro visível
+        s.onload = () => { clearTimeout(prazo); res(); };
+        s.onerror = () => { clearTimeout(prazo); falha(); };   // some do mapa → próximo clique tenta de novo
+        document.head.appendChild(s);
+      });
+    }
+    return scriptsPendentes[src];
+  }
+  // Trava-segurança: etapa pendurada vira erro visível em vez de botão "mudo"
+  function comPrazo(promise, ms, etapa) {
+    return Promise.race([promise, new Promise((_, rej) => setTimeout(() => rej(new Error(etapa + ' demorou demais — tente de novo')), ms))]);
+  }
+  // O iPhone limita o canvas a ~16,7 milhões de pixels: acima disso a captura
+  // sai em branco ou nunca termina. Reduz a escala para caber com folga.
+  function escalaSegura(el, desejada) {
+    const w = Math.max(1, el.scrollWidth), h = Math.max(1, el.scrollHeight);
+    const s = Math.min(desejada, Math.sqrt(12e6 / (w * h)));
+    return Math.max(0.75, Math.round(s * 100) / 100);
   }
   async function baixarCatalogoPDF() {
     const btn = $('#btnCatalogoPdf');
@@ -1233,17 +1251,20 @@
   async function gerarOrcamentoPDF(lines) {
     const built = buildOrcDoc(lines);
     if (!built) throw new Error('doc indisponível');
-    await Promise.all([
+    await comPrazo(Promise.all([
       loadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js'),
       loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js')
-    ]);
+    ]), 22000, 'o carregamento dos componentes');
     // espera as fotos dos itens carregarem (senão saem em branco na captura)
     await Promise.all(Array.from(built.el.querySelectorAll('img')).map(im => im.complete
       ? Promise.resolve()
       : new Promise(r => { im.onload = im.onerror = r; setTimeout(r, 6000); })));
-    const canvas = await html2canvas(built.el, { scale: 2, backgroundColor: '#ffffff', useCORS: true, imageTimeout: 6000 });
+    const canvas = await comPrazo(
+      html2canvas(built.el, { scale: escalaSegura(built.el, 2), backgroundColor: '#ffffff', useCORS: true, imageTimeout: 6000 }),
+      25000, 'a captura do documento');
     const Ctor = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
     if (!Ctor) throw new Error('jsPDF indisponível');
+    if (!canvas || !canvas.width || !canvas.height) throw new Error('captura vazia');
     const doc = new Ctor({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     const pw = doc.internal.pageSize.getWidth(), ph = doc.internal.pageSize.getHeight();
     const imgH = canvas.height * pw / canvas.width;
