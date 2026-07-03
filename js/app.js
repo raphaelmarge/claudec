@@ -1943,7 +1943,7 @@
     try {
       const nome = `orcamento-${lastQuoteNumero || 'torque'}.pdf`;
       // o PDF pré-gerado no abrir do modal serve aqui também (1º toque instantâneo no iPhone)
-      if (shareQuoteFile && navigator.canShare && navigator.canShare({ files: [shareQuoteFile] })) {
+      if (ehMovel && shareQuoteFile && navigator.canShare && navigator.canShare({ files: [shareQuoteFile] })) {
         try { await navigator.share({ files: [shareQuoteFile], title: nome }); return; }
         catch (e) { if (e && e.name === 'AbortError') return; }
       }
@@ -1996,35 +1996,57 @@
   // (sobretudo com o app na tela de início) — usa a folha nativa de
   // compartilhar ("Salvar em Arquivos"); no computador, download normal.
   let pdfEntregaCache = null;   // { key, file } — 2º toque sai instantâneo (regra de gesto do iOS)
-  function abrirPdfNaTela(file) {
-    // último recurso à prova de iPhone: abre o PDF no visualizador do Safari
-    // (dali dá para salvar/compartilhar pelo ícone de compartilhar)
-    const url = URL.createObjectURL(file);
-    const w = window.open(url, '_blank');
-    if (!w) location.href = url;
+  const ehMovel = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+    || (navigator.maxTouchPoints > 1 && /Mac/i.test(navigator.userAgent));   // iPadOS se apresenta como Mac
+  function baixarArquivo(file) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(file); a.download = file.name;
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+  // Barra verde fixa com o link do PDF pronto: o toque nela é um gesto novo,
+  // então abre/baixa sempre — imune a folha de compartilhar que não aparece,
+  // popup bloqueado e regra de gesto do iOS.
+  let pdfBarUrl = null;
+  function mostrarLinkPdf(file) {
+    let bar = document.getElementById('pdfBar');
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.id = 'pdfBar';
+      bar.innerHTML = '<a id="pdfBarLink" target="_blank" rel="noopener"></a><button id="pdfBarClose" type="button" aria-label="Fechar">✕</button>';
+      document.body.appendChild(bar);
+      bar.querySelector('#pdfBarClose').addEventListener('click', ocultarLinkPdf);
+    }
+    if (pdfBarUrl) URL.revokeObjectURL(pdfBarUrl);
+    pdfBarUrl = URL.createObjectURL(file);
+    const a = bar.querySelector('#pdfBarLink');
+    a.href = pdfBarUrl; a.download = file.name;
+    a.textContent = '📄 PDF pronto — toque para abrir';
+    bar.classList.add('on');
+  }
+  function ocultarLinkPdf() {
+    const b = document.getElementById('pdfBar');
+    if (b) b.classList.remove('on');
   }
   async function entregarPdf(fazerDoc, nome, key) {
-    if (pdfEntregaCache && pdfEntregaCache.key === key) {
-      const f = pdfEntregaCache.file;
-      if (navigator.canShare && navigator.canShare({ files: [f] })) {
-        try { await navigator.share({ files: [f], title: nome }); return; }
-        catch (e) { if (e && e.name === 'AbortError') return; }
-      }
-      abrirPdfNaTela(f);           // ainda dentro do gesto do toque
+    let file = (pdfEntregaCache && pdfEntregaCache.key === key) ? pdfEntregaCache.file : null;
+    if (!file) {
+      const doc = await fazerDoc();
+      file = new File([doc.output('blob')], nome, { type: 'application/pdf' });
+      pdfEntregaCache = { key, file };
+    }
+    if (!ehMovel) {              // computador: download direto, sem folha de compartilhar
+      baixarArquivo(file);
+      mostrarLinkPdf(file);      // garantia visível caso o navegador bloqueie o download
       return;
     }
-    const doc = await fazerDoc();
-    const file = new File([doc.output('blob')], nome, { type: 'application/pdf' });
-    pdfEntregaCache = { key, file };
+    mostrarLinkPdf(file);        // aparece ANTES do share: se a folha não abrir, tem onde tocar
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      try { await navigator.share({ files: [file], title: nome }); return; }
+      try { await navigator.share({ files: [file], title: nome }); ocultarLinkPdf(); return; }
       catch (e) {
-        if (e && e.name === 'AbortError') return;
-        if (e && e.name === 'NotAllowedError') { toast('PDF pronto! Toque no botão de novo para salvar.'); return; }
+        if (e && e.name === 'AbortError') return;                     // usuário fechou a folha
+        toast('PDF pronto! Toque na barra verde para abrir.');
       }
     }
-    try { doc.save(nome); }
-    catch (e) { abrirPdfNaTela(file); }
   }
   let ctCtx = null;   // dados da venda em contrato
   let ctRev = 0;      // muda a cada re-render (chave do cache de entrega)
@@ -2285,7 +2307,7 @@
   let shareQuoteFile = null, shareQuotePrep = null;
   function prepararShareQuote() {
     shareQuoteFile = null;
-    if (!navigator.share || !navigator.canShare) { shareQuotePrep = null; return; }
+    if (!ehMovel || !navigator.share || !navigator.canShare) { shareQuotePrep = null; return; }
     shareQuotePrep = (async () => {
       try {
         const pdf = await montarPdfQuote();
@@ -2298,9 +2320,12 @@
   $('#btnShareQuote').addEventListener('click', async () => {
     const txt = resumoTexto();
     try {
-      if (!navigator.share) {
-        await navigator.clipboard.writeText(txt);
-        toast('Resumo copiado para a área de transferência.');
+      if (!ehMovel || !navigator.share) {
+        // computador: baixa o PDF e copia o resumo (folha de compartilhar é coisa de celular)
+        try { await navigator.clipboard.writeText(txt); } catch (e2) {}
+        toast('Gerando PDF…');
+        await entregarPdf(() => montarPdfQuote(toast), `orcamento-${lastQuoteNumero || 'torque'}.pdf`, 'q-' + (lastQuoteNumero || ''));
+        toast('PDF baixado — resumo copiado para a área de transferência.');
         return;
       }
       let file = shareQuoteFile;

@@ -479,30 +479,54 @@
   // No iPhone o download clássico é ignorado — entrega pela folha nativa
   // ("Salvar em Arquivos"); no computador, baixa normal.
   let pdfShareCache = null;   // { key, file }
-  function abrirPdfNaTela(file) {
-    // último recurso à prova de iPhone: abre o PDF no visualizador do Safari
-    const url = URL.createObjectURL(file);
-    const w = window.open(url, '_blank');
-    if (!w) location.href = url;
+  const ehMovel = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+    || (navigator.maxTouchPoints > 1 && /Mac/i.test(navigator.userAgent));   // iPadOS se apresenta como Mac
+  // Barra verde fixa com o link do PDF pronto: o toque nela é um gesto novo,
+  // então abre/baixa sempre — imune a folha de compartilhar que não aparece,
+  // popup bloqueado e regra de gesto do iOS.
+  let pdfBarUrl = null;
+  function mostrarLinkPdf(file) {
+    let bar = document.getElementById('pdfBar');
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.id = 'pdfBar';
+      bar.innerHTML = '<a id="pdfBarLink" target="_blank" rel="noopener"></a><button id="pdfBarClose" type="button" aria-label="Fechar">✕</button>';
+      document.body.appendChild(bar);
+      bar.querySelector('#pdfBarClose').addEventListener('click', ocultarLinkPdf);
+    }
+    if (pdfBarUrl) URL.revokeObjectURL(pdfBarUrl);
+    pdfBarUrl = URL.createObjectURL(file);
+    const a = bar.querySelector('#pdfBarLink');
+    a.href = pdfBarUrl; a.download = file.name;
+    a.textContent = '📄 PDF pronto — toque para abrir';
+    bar.classList.add('on');
+  }
+  function ocultarLinkPdf() {
+    const b = document.getElementById('pdfBar');
+    if (b) b.classList.remove('on');
   }
   async function entregarPdfArquivo(file, key) {
+    pdfShareCache = { key, file };
+    if (!ehMovel) {              // computador: download direto, sem folha de compartilhar
+      try { baixarArquivo(file); } catch (e) {}
+      mostrarLinkPdf(file);      // garantia visível caso o navegador bloqueie o download
+      return;
+    }
+    mostrarLinkPdf(file);        // aparece ANTES do share: se a folha não abrir, tem onde tocar
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      pdfShareCache = { key, file };
-      try { await navigator.share({ files: [file], title: file.name }); return; }
+      try { await navigator.share({ files: [file], title: file.name }); ocultarLinkPdf(); return; }
       catch (e) {
-        if (e && e.name === 'AbortError') return;
-        if (e && e.name === 'NotAllowedError') { toast('PDF pronto! Toque de novo para salvar.'); return; }
-        abrirPdfNaTela(file); return;
+        if (e && e.name === 'AbortError') return;                     // usuário fechou a folha
+        toast('PDF pronto! Toque na barra verde para abrir.');
       }
     }
-    try { baixarArquivo(file); } catch (e) { abrirPdfNaTela(file); }
   }
   $('#leadBody').addEventListener('click', async e => {
     if (!ultimoOrc) return;
     if (e.target.closest('#posPdf') && ultimoOrc.file) { entregarPdfArquivo(ultimoOrc.file, 'pos'); return; }
     if (e.target.closest('#posWpp')) {
       const f = ultimoOrc.file;
-      if (f && navigator.canShare && navigator.canShare({ files: [f] })) {
+      if (ehMovel && f && navigator.canShare && navigator.canShare({ files: [f] })) {
         try { await navigator.share({ files: [f], title: 'Orçamento Torque Fitness' }); return; } catch (e2) { if (e2 && e2.name === 'AbortError') return; }
       }
       if (f) baixarArquivo(f);
@@ -573,7 +597,7 @@
       // automático: celular → folha de envio já com o PDF anexado (ainda no gesto do toque);
       // computador → baixa o PDF sozinho
       if (pdfFile) {
-        if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+        if (ehMovel && navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
           try { await navigator.share({ files: [pdfFile], title: 'Orçamento Torque Fitness', text: 'Seu orçamento Torque Fitness' }); } catch (e) {}
         } else {
           baixarArquivo(pdfFile);
@@ -1124,7 +1148,7 @@
     const list = filtered();
     if (!list.length) { toast('Nenhum produto para exportar.'); return; }
     // 2º toque no iPhone: o PDF já gerado sai na hora, dentro do gesto
-    if (pdfShareCache && String(pdfShareCache.key).startsWith('cat-') && navigator.canShare && navigator.canShare({ files: [pdfShareCache.file] })) {
+    if (ehMovel && pdfShareCache && String(pdfShareCache.key).startsWith('cat-') && navigator.canShare && navigator.canShare({ files: [pdfShareCache.file] })) {
       try { await navigator.share({ files: [pdfShareCache.file], title: pdfShareCache.file.name }); return; }
       catch (e) { if (e && e.name === 'AbortError') return; }
     }
@@ -1299,9 +1323,15 @@
   async function baixarOrcamentoPDF() {
     const lines = cartLines();
     if (!lines.length) { toast('Seu orçamento está vazio.'); return; }
+    // 2º toque no celular: o PDF pré-gerado sai na hora, dentro do gesto
+    if (ehMovel && orcPdfPronto && orcPdfPronto.key === orcPdfKey() && navigator.canShare && navigator.canShare({ files: [orcPdfPronto.file] })) {
+      try { await navigator.share({ files: [orcPdfPronto.file], title: 'Orçamento Torque Fitness' }); return; }
+      catch (e) { if (e && e.name === 'AbortError') return; }
+    }
     await comBotao($('#btnOrcPdf'), async () => {
       const { doc, tot } = await gerarOrcamentoPDF(lines);
-      doc.save('orcamento-torque-fitness.pdf');
+      const file = new File([doc.output('blob')], 'orcamento-torque-fitness.pdf', { type: 'application/pdf' });
+      await entregarPdfArquivo(file, 'orc-' + orcPdfKey());
       toast('PDF do orçamento gerado!');
       if (window.gtag) try { gtag('event', 'orcamento_pdf', { value: tot, currency: 'BRL' }); } catch (e) {}
     });
@@ -1312,7 +1342,7 @@
   let orcPdfTimer = null;
   function orcPdfKey() { return JSON.stringify(cart) + '|' + (appliedCoupon ? appliedCoupon.codigo : ''); }
   function prepararOrcPdf() {
-    if (!(navigator.share && navigator.canShare)) return;      // só onde há compartilhamento nativo
+    if (!ehMovel || !(navigator.share && navigator.canShare)) return;   // só no celular (no PC é download direto)
     clearTimeout(orcPdfTimer);
     orcPdfTimer = setTimeout(async () => {
       const lines = cartLines();
@@ -1330,7 +1360,7 @@
     const lines = cartLines();
     if (!lines.length) { toast('Seu orçamento está vazio.'); return; }
     // caminho rápido: PDF já preparado → compartilha ainda dentro do gesto do toque
-    if (orcPdfPronto && orcPdfPronto.key === orcPdfKey() && navigator.canShare && navigator.canShare({ files: [orcPdfPronto.file] })) {
+    if (ehMovel && orcPdfPronto && orcPdfPronto.key === orcPdfKey() && navigator.canShare && navigator.canShare({ files: [orcPdfPronto.file] })) {
       try {
         await navigator.share({ files: [orcPdfPronto.file], title: 'Orçamento Torque Fitness', text: 'Meu orçamento Torque Fitness' });
         if (window.gtag) try { gtag('event', 'orcamento_whatsapp', { value: orcPdfPronto.tot, currency: 'BRL' }); } catch (e) {}
@@ -1341,7 +1371,7 @@
       const { doc, tot } = await gerarOrcamentoPDF(lines);
       const blob = doc.output('blob');
       const file = new File([blob], 'orcamento-torque-fitness.pdf', { type: 'application/pdf' });
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      if (ehMovel && navigator.canShare && navigator.canShare({ files: [file] })) {
         // celular: abre a folha de compartilhar com o PDF anexado (WhatsApp, e-mail…)
         orcPdfPronto = { key: orcPdfKey(), file, tot };            // guarda: o próximo toque compartilha na hora
         try { await navigator.share({ files: [file], title: 'Orçamento Torque Fitness', text: 'Meu orçamento Torque Fitness' }); }
