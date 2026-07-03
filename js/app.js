@@ -1964,22 +1964,35 @@
   // (sobretudo com o app na tela de início) — usa a folha nativa de
   // compartilhar ("Salvar em Arquivos"); no computador, download normal.
   let pdfEntregaCache = null;   // { key, file } — 2º toque sai instantâneo (regra de gesto do iOS)
+  function abrirPdfNaTela(file) {
+    // último recurso à prova de iPhone: abre o PDF no visualizador do Safari
+    // (dali dá para salvar/compartilhar pelo ícone de compartilhar)
+    const url = URL.createObjectURL(file);
+    const w = window.open(url, '_blank');
+    if (!w) location.href = url;
+  }
   async function entregarPdf(fazerDoc, nome, key) {
-    if (pdfEntregaCache && pdfEntregaCache.key === key && navigator.canShare && navigator.canShare({ files: [pdfEntregaCache.file] })) {
-      try { await navigator.share({ files: [pdfEntregaCache.file], title: nome }); return; }
-      catch (e) { if (e && e.name === 'AbortError') return; }
+    if (pdfEntregaCache && pdfEntregaCache.key === key) {
+      const f = pdfEntregaCache.file;
+      if (navigator.canShare && navigator.canShare({ files: [f] })) {
+        try { await navigator.share({ files: [f], title: nome }); return; }
+        catch (e) { if (e && e.name === 'AbortError') return; }
+      }
+      abrirPdfNaTela(f);           // ainda dentro do gesto do toque
+      return;
     }
     const doc = await fazerDoc();
     const file = new File([doc.output('blob')], nome, { type: 'application/pdf' });
+    pdfEntregaCache = { key, file };
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      pdfEntregaCache = { key, file };
       try { await navigator.share({ files: [file], title: nome }); return; }
       catch (e) {
         if (e && e.name === 'AbortError') return;
         if (e && e.name === 'NotAllowedError') { toast('PDF pronto! Toque no botão de novo para salvar.'); return; }
       }
     }
-    doc.save(nome);
+    try { doc.save(nome); }
+    catch (e) { abrirPdfNaTela(file); }
   }
   let ctCtx = null;   // dados da venda em contrato
   let ctRev = 0;      // muda a cada re-render (chave do cache de entrega)
@@ -2088,7 +2101,10 @@
       const nomeArq = 'contrato-' + slugify(ctVal('cwNome') || 'torque') + '.pdf';
       if (!(pdfEntregaCache && pdfEntregaCache.key === 'ct' + ctRev)) toast('Gerando contrato…');
       await entregarPdf(montarPdfContrato, nomeArq, 'ct' + ctRev);
-    } catch (e) { console.error(e); toast('Não foi possível gerar o contrato agora.'); }
+    } catch (e) {
+      console.error(e);
+      toast('Não foi possível gerar o contrato: ' + ((e && e.name) || 'erro') + ' — ' + String((e && e.message) || e).slice(0, 90));
+    }
   });
   // do orçamento em edição (botão no modal do orçamento)
   const btnContratoQuote = $('#btnContratoQuote');
