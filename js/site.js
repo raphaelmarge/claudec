@@ -479,6 +479,12 @@
   // No iPhone o download clássico é ignorado — entrega pela folha nativa
   // ("Salvar em Arquivos"); no computador, baixa normal.
   let pdfShareCache = null;   // { key, file }
+  function abrirPdfNaTela(file) {
+    // último recurso à prova de iPhone: abre o PDF no visualizador do Safari
+    const url = URL.createObjectURL(file);
+    const w = window.open(url, '_blank');
+    if (!w) location.href = url;
+  }
   async function entregarPdfArquivo(file, key) {
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
       pdfShareCache = { key, file };
@@ -486,9 +492,10 @@
       catch (e) {
         if (e && e.name === 'AbortError') return;
         if (e && e.name === 'NotAllowedError') { toast('PDF pronto! Toque de novo para salvar.'); return; }
+        abrirPdfNaTela(file); return;
       }
     }
-    baixarArquivo(file);
+    try { baixarArquivo(file); } catch (e) { abrirPdfNaTela(file); }
   }
   $('#leadBody').addEventListener('click', async e => {
     if (!ultimoOrc) return;
@@ -1265,7 +1272,7 @@
     let old = '';
     if (btn) { btn.disabled = true; old = btn.textContent; btn.textContent = 'Gerando…'; }
     try { await fn(); }
-    catch (e) { console.error(e); toast('Não foi possível gerar o PDF agora.'); }
+    catch (e) { console.error(e); toast('Não foi possível gerar o PDF: ' + ((e && e.name) || 'erro') + ' — ' + String((e && e.message) || e).slice(0, 90)); }
     finally { if (btn) { btn.disabled = false; btn.textContent = old; } }
   }
   async function baixarOrcamentoPDF() {
