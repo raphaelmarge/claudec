@@ -919,3 +919,9 @@ body.tv .dash__alerts { font-size: 1rem; }
 .contract-doc .ct__ass div { display: flex; flex-direction: column; align-items: center; gap: 3px; text-align: center; }
 .contract-doc .ct__ass span { letter-spacing: -1px; color: #444; }
 .contract-doc .ct__ass small { color: #777; font-size: .64rem; }
+
+/* barra fixa "PDF pronto" — link com gesto novo, entrega garantida */
+#pdfBar{position:fixed;left:12px;right:12px;bottom:14px;z-index:9999;display:none;gap:10px;align-items:center;background:#16a34a;color:#fff;border-radius:14px;padding:13px 15px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+#pdfBar.on{display:flex}
+#pdfBar a{color:#fff;font-weight:700;text-decoration:none;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#pdfBar button{background:rgba(255,255,255,.22);border:0;color:#fff;width:30px;height:30px;border-radius:50%;font-size:14px;cursor:pointer;flex:none}
