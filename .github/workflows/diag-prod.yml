@@ -1,0 +1,27 @@
+name: diag-prod
+on:
+  push:
+    branches: [claude/torque-fitness-budget-tool-qjes5f]
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checar producao
+        run: |
+          echo '--- app.html: versao dos scripts ---'
+          curl -s https://raphaelmarge.github.io/claudec/app.html | grep -o 'js/[a-z]*\.js?v=[0-9a-z]*' | sort -u
+          echo '--- index.html: versao dos scripts ---'
+          curl -s https://raphaelmarge.github.io/claudec/index.html | grep -o 'js/[a-z]*\.js?v=[0-9a-z]*' | sort -u
+          echo '--- app.js publicado tem o codigo novo? ---'
+          curl -s 'https://raphaelmarge.github.io/claudec/js/app.js?v=20260703a' | grep -c 'comPrazo' || true
+          curl -s 'https://raphaelmarge.github.io/claudec/js/app.js?v=20260703a' | grep -c 'escalaSegura' || true
+          echo '--- site.js publicado tem o codigo novo? ---'
+          curl -s 'https://raphaelmarge.github.io/claudec/js/site.js?v=20260703a' | grep -c 'comPrazo' || true
+          echo '--- headers ---'
+          curl -sI https://raphaelmarge.github.io/claudec/app.html | grep -iE 'last-modified|etag|x-github'
+          echo '--- sintaxe do app.js publicado ---'
+          curl -s 'https://raphaelmarge.github.io/claudec/js/app.js?v=20260703a' -o /tmp/app.js && node --check /tmp/app.js && echo APP_JS_OK
+          curl -s 'https://raphaelmarge.github.io/claudec/js/site.js?v=20260703a' -o /tmp/site.js && node --check /tmp/site.js && echo SITE_JS_OK
+          echo '--- cdn jsdelivr acessivel? ---'
+          curl -s -o /dev/null -w 'jspdf: %{http_code}\n' https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js
+          curl -s -o /dev/null -w 'html2canvas: %{http_code}\n' https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js
