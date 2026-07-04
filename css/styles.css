@@ -406,7 +406,7 @@ body[data-auth="out"] .login { display: flex; }
 
 /* ============================ DASHBOARD ============================ */
 .dash { position: fixed; inset: 0; z-index: 70; background: var(--black); display: flex; flex-direction: column;
-  padding-top: env(safe-area-inset-top,0px); animation: sheetUp .2s ease; }
+  padding-top: env(safe-area-inset-top,0px); animation: sheetUp .2s ease; overflow-x: hidden; }
 .dash[hidden] { display: none; }
 .dash__head { display: flex; align-items: center; justify-content: space-between; padding: 16px; border-bottom: 1px solid var(--line);
   position: sticky; top: 0; background: rgba(11,11,15,.9); backdrop-filter: blur(10px); }
@@ -900,6 +900,16 @@ body.tv .dash__alerts { font-size: 1rem; }
 @media (max-width: 480px) {
   .mkpi b { font-size: 1.1rem; }
   .dash__stat b { font-size: 1.05rem; }
+}
+
+/* Celular: nada estoura para o lado — ferramentas e botões dos cards quebram linha */
+@media (max-width: 640px) {
+  .dash__tools { flex-wrap: wrap; }
+  .dash__tools .search { flex: 1 1 100%; }              /* busca ocupa a linha de cima */
+  .dash__tools select { flex: 1 1 auto; max-width: none; min-width: 0; padding: 8px 10px; }
+  .dash__tools .dash__backup { flex: 1 1 auto; padding: 8px 10px; font-size: .78rem; }
+  .dcard__actions { flex-wrap: wrap; }
+  .dcard__actions button { flex: 1 1 calc(33.33% - 8px); min-width: 0; white-space: nowrap; }
 }
 
 /* ===================== CONTRATO DE COMPRA E VENDA ===================== */
