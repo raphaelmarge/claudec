@@ -121,20 +121,26 @@
     } catch (e) { /* dados corrompidos → recomeça com exemplo */ }
     return seed();
   }
-  function save() {
+  function save(semNuvem) {
+    var ok;
     try {
       localStorage.setItem(LS_KEY, JSON.stringify(state));
-      return true;
+      ok = true;
     } catch (e) {
       toast('⚠ Memória do navegador cheia. Remova fotos de chamados antigos ou exporte um backup.');
-      return false;
+      ok = false;
     }
+    /* avisa a camada de nuvem (se conectada) para enviar as mudanças */
+    if (!semNuvem && window.ManutCloud) ManutCloud.localChanged();
+    return ok;
   }
 
   /* Dados salvos por versões antigas do app podem não ter os campos novos */
   function normalizar(s) {
     if (!Array.isArray(s.limpeza)) s.limpeza = [];
     if (!Array.isArray(s.limpezaLog)) s.limpezaLog = [];
+    /* a sincronização identifica cada registro pelo id */
+    s.limpezaLog.forEach(function (l) { if (!l.id) l.id = uid(); });
     if (s.exemplo && !s.limpeza.length) seedLimpeza(s);
   }
 
@@ -148,7 +154,7 @@
     );
     var d = new Date();
     s.limpezaLog.push({
-      taskId: s.limpeza[0].id, data: hoje,
+      id: uid(), taskId: s.limpeza[0].id, data: hoje,
       hora: String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0')
     });
   }
@@ -558,7 +564,7 @@
     } else {
       var d = new Date();
       state.limpezaLog.push({
-        taskId: id, data: hoje,
+        id: uid(), taskId: id, data: hoje,
         hora: String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0')
       });
       save(); render();
@@ -1077,13 +1083,86 @@
       }).join('') + '</ul>';
   }
 
-  /* ========================= BACKUP ========================= */
+  /* ========================= BACKUP / CONTA ========================= */
+  function syncSectionHTML() {
+    if (!window.ManutCloud || !ManutCloud.available()) {
+      return '<div class="section-title">☁ Sincronização entre aparelhos</div>' +
+        '<p style="color:var(--txt-mut);font-size:.85rem;margin:0 0 6px;">Nuvem indisponível agora ' +
+        '(sem internet?). O app continua funcionando normalmente neste aparelho.</p>';
+    }
+    var st = ManutCloud.getStatus();
+    var h = '<div class="section-title">☁ Sincronização entre aparelhos</div>';
+    if (ManutCloud.isOn()) {
+      h += '<p style="color:var(--txt-dim);font-size:.88rem;margin:0 0 12px;">Conectado como ' +
+        '<b id="syncEmail">…</b>. Chamados, preventivas, limpeza e ativos sincronizam em tempo real ' +
+        'com todos os aparelhos (e a TV) conectados.</p>' +
+        '<div class="btn-row"><button type="button" class="btn btn--ghost" id="btnSyncOut">Sair da conta</button></div>';
+    } else {
+      if (st.status === 'err') {
+        h += '<p style="color:var(--danger);font-size:.85rem;margin:0 0 10px;">Erro ao sincronizar: ' +
+          esc(st.err) + '</p>';
+      }
+      h += '<p style="color:var(--txt-dim);font-size:.88rem;margin:0 0 12px;">Entre com a conta da equipe ' +
+        'para os dados sincronizarem entre celulares, computador e a TV.</p>' +
+        '<label class="field"><span>E-mail</span><input type="email" id="syncMail" autocomplete="username" /></label>' +
+        '<label class="field"><span>Senha</span><input type="password" id="syncPass" autocomplete="current-password" /></label>' +
+        '<div class="btn-row">' +
+        '<button type="button" class="btn" id="btnSyncIn">Entrar</button>' +
+        '<button type="button" class="btn btn--ghost" id="btnSyncUp">Criar conta</button>' +
+        '</div>';
+    }
+    return h;
+  }
+
+  function wireSyncSection() {
+    var emailEl = $('#syncEmail');
+    if (emailEl && window.ManutCloud) {
+      ManutCloud.email().then(function (em) { emailEl.textContent = em || 'equipe'; });
+    }
+    var out = $('#btnSyncOut');
+    if (out) out.addEventListener('click', function () {
+      if (!confirm('Sair da conta? Os dados continuam neste aparelho, mas param de sincronizar.')) return;
+      ManutCloud.signOut().then(function () { closeModal(); render(); toast('Você saiu da conta.'); });
+    });
+    function credenciais() {
+      var em = ($('#syncMail').value || '').trim();
+      var pw = $('#syncPass').value || '';
+      if (!em || !pw) { alert('Preencha e-mail e senha.'); return null; }
+      return { em: em, pw: pw };
+    }
+    var entra = $('#btnSyncIn');
+    if (entra) entra.addEventListener('click', function () {
+      var c = credenciais(); if (!c) return;
+      entra.disabled = true; entra.textContent = 'Entrando…';
+      ManutCloud.signIn(c.em, c.pw).then(function () {
+        closeModal(); render(); toast('Conectado ✓ sincronizando…');
+      }).catch(function (e) {
+        entra.disabled = false; entra.textContent = 'Entrar';
+        alert('Não foi possível entrar: ' + (e.message || e));
+      });
+    });
+    var cria = $('#btnSyncUp');
+    if (cria) cria.addEventListener('click', function () {
+      var c = credenciais(); if (!c) return;
+      cria.disabled = true;
+      ManutCloud.signUp(c.em, c.pw).then(function (logado) {
+        if (logado) { closeModal(); render(); toast('Conta criada ✓ sincronizando…'); }
+        else { closeModal(); alert('Conta criada! Confirme o e-mail que enviamos e depois entre por aqui.'); }
+      }).catch(function (e) {
+        cria.disabled = false;
+        alert('Não foi possível criar a conta: ' + (e.message || e));
+      });
+    });
+  }
+
   function openBackup() {
     var n = state.os.length + ' chamados · ' + state.planos.length + ' preventivas · ' +
       state.limpeza.length + ' rotinas de limpeza · ' + state.ativos.length + ' ativos';
-    var h = '<p style="color:var(--txt-dim);font-size:.9rem;margin:0 0 14px;">' +
-      'Os dados ficam salvos <b>neste aparelho</b> (navegador). Exporte um backup de vez em quando ' +
-      'e importe-o em outro aparelho para transferir tudo.<br/><br/><span class="mono" style="font-size:.8rem;">' + n + '</span></p>' +
+    var h = syncSectionHTML() +
+      '<div class="section-title">Backup</div>' +
+      '<p style="color:var(--txt-dim);font-size:.9rem;margin:0 0 14px;">' +
+      'Os dados ficam salvos neste aparelho e, se você estiver conectado, também na nuvem. ' +
+      'O backup em arquivo continua útil como garantia extra.<br/><br/><span class="mono" style="font-size:.8rem;">' + n + '</span></p>' +
       '<div class="btn-row">' +
       '<button type="button" class="btn" id="btnExport">⬇ Exportar backup (JSON)</button>' +
       '<button type="button" class="btn btn--ghost" id="btnImport">⬆ Importar backup</button>' +
@@ -1092,7 +1171,8 @@
       '</div><div class="btn-row" style="margin-top:10px;">' +
       (state.exemplo ? '<button type="button" class="btn btn--danger" id="btnLimparExemplo">Apagar dados de exemplo e começar do zero</button>' : '') +
       '</div>';
-    openModal('Backup e dados', h);
+    openModal('Conta, backup e dados', h);
+    wireSyncSection();
 
     $('#btnExport').addEventListener('click', function () {
       var blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
@@ -1162,5 +1242,25 @@
     setTimeout(function () {
       toast('Você está vendo dados de exemplo. Apague-os em ⚙ quando quiser.');
     }, 600);
+  }
+
+  /* ---------- nuvem (opcional; sem login o app é 100% local) ---------- */
+  function atualizaSyncDot(st) {
+    var dot = $('#syncDot');
+    if (!dot) return;
+    dot.hidden = (st === 'local');
+    dot.className = 'sync-dot sync-dot--' + st;
+    $('#btnBackup').title = st === 'ok' ? 'Sincronizado com a nuvem'
+      : st === 'sync' ? 'Sincronizando…'
+      : st === 'err' ? 'Erro de sincronização — toque para ver'
+      : 'Backup e dados';
+  }
+  if (window.ManutCloud) {
+    ManutCloud.start({
+      getState: function () { return state; },
+      persist: function () { save(true); },
+      rerender: render,
+      onStatus: atualizaSyncDot
+    });
   }
 })();

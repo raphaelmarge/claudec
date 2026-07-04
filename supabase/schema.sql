@@ -131,6 +131,33 @@ create index if not exists idx_orc_vendedor on public.orcamentos (vendedor_id);
 create index if not exists idx_orc_cliente  on public.orcamentos (cliente_id);
 create index if not exists idx_cli_vendedor on public.clientes  (vendedor_id);
 
+-- ---------- MANUTENÇÕES DA ACADEMIA (apps manutencao.html + manutencao-tv.html) ----------
+-- Uma linha por item (chamado, preventiva, rotina de limpeza, ativo, execução),
+-- com o conteúdo em JSON. Exclusões viram "tombstones" (deleted = true) para
+-- sincronizarem entre aparelhos.
+create table if not exists public.manutencao_itens (
+  id         text primary key,            -- id gerado no aparelho
+  tipo       text not null,               -- 'ativo' | 'os' | 'plano' | 'limpeza' | 'log'
+  data       jsonb not null default '{}',
+  deleted    boolean not null default false,
+  updated_at timestamptz not null default now(),
+  updated_by uuid default auth.uid()
+);
+alter table public.manutencao_itens enable row level security;
+
+-- app interno: toda a equipe logada lê e escreve
+drop policy if exists manutencao_rw on public.manutencao_itens;
+create policy manutencao_rw on public.manutencao_itens
+  for all to authenticated using (true) with check (true);
+
+create index if not exists idx_manut_tipo on public.manutencao_itens (tipo);
+create index if not exists idx_manut_upd  on public.manutencao_itens (updated_at);
+
+-- tempo real: a TV e os outros aparelhos atualizam na hora
+do $$ begin
+  alter publication supabase_realtime add table public.manutencao_itens;
+exception when duplicate_object then null; end $$;
+
 -- ============================================================
 -- DEPOIS de criar seu usuário admin em Authentication > Users,
 -- rode este comando (troque o e-mail) para virar admin:

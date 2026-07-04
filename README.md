@@ -126,9 +126,24 @@ offline.
 Ferramenta interna para organizar **toda a manutenção da academia** — aparelhos
 (esteiras, bikes, musculação) e também o prédio (elétrica, hidráulica,
 climatização, limpeza, segurança…). Abra `manutencao.html` (ou instale como
-PWA). Tudo roda no navegador, sem servidor: os dados ficam no aparelho
-(localStorage), com **exportação/importação de backup em JSON** para transferir
-entre aparelhos.
+PWA). Os dados ficam no aparelho (localStorage) e, com a **sincronização na
+nuvem** ativada, em todos os aparelhos da equipe ao mesmo tempo. O backup em
+JSON continua disponível como garantia extra.
+
+### Sincronização entre aparelhos ☁
+
+Com login (menu **⚙ → Entrar**), chamados, preventivas, limpeza e ativos
+sincronizam **em tempo real** entre celulares, computador e a TV — usa o mesmo
+Supabase dos outros apps. Sem login (ou sem internet), o app continua 100%
+funcional só no aparelho; ao reconectar, as mudanças sobem sozinhas.
+
+- A mesclagem é **por item**: em conflito, vale a edição mais recente daquele
+  item, sem sobrescrever o resto. Exclusões também sincronizam.
+- Para ativar pela primeira vez: rode o `supabase/schema.sql` no SQL Editor do
+  Supabase (é idempotente — pode colar o arquivo inteiro de novo) e crie as
+  contas da equipe (⚙ → Criar conta, ou em Authentication → Users).
+- A TV usa a sessão do aparelho: abra o app na TV/computador do telão, entre
+  na conta uma vez e pronto.
 
 ### O que dá para fazer
 
@@ -159,9 +174,9 @@ vencidas, gasto do mês), lista de "atenção agora", medidor da limpeza do dia
 e infográficos — chamados por área, por etapa e gasto por mês. Atualiza
 sozinho a cada 30 s, reage na hora a mudanças feitas no app em outra aba do
 mesmo aparelho e tem relógio/data. Abra pelo menu **⚙ → Modo TV** do app.
-Como os dados moram no navegador, o telão mostra os dados **do aparelho em
-que está aberto** — importe um backup nele uma vez, ou deixe o app aberto no
-mesmo computador que alimenta a TV.
+Com a **sincronização ativada** (login feito no app do mesmo aparelho), o
+telão acompanha em tempo real o que a equipe faz em qualquer celular. Sem
+login, mostra os dados do próprio aparelho (importe um backup uma vez).
 
 ### Arquivos
 
@@ -169,11 +184,13 @@ mesmo computador que alimenta a TV.
 manutencao.html          estrutura do app (tabs, modal)
 css/manutencao.css       identidade visual (mesma paleta violeta + preto)
 js/manutencao.js         estado, chamados, preventivas, ativos, backup
+js/manutencao-cloud.js   sincronização na nuvem (Supabase, tempo real)
 manutencao.webmanifest   PWA do app de manutenções
 manutencao-tv.html       painel de TV (telão) com os infográficos
 css/manutencao-tv.css    layout 16:9 em tela cheia, tipografia grande
 js/manutencao-tv.js      leitura dos dados + gráficos + auto-atualização
 ```
+A tabela usada é a `manutencao_itens` (ver `supabase/schema.sql`).
 
 A primeira abertura traz **dados de exemplo** para ver o app funcionando —
 apague-os no menu ⚙ para começar do zero.

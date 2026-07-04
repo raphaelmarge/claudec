@@ -298,4 +298,23 @@
   setInterval(render, 30000);
   /* mudanças feitas no app em outra aba deste aparelho aparecem na hora */
   window.addEventListener('storage', function (ev) { if (ev.key === LS_KEY) render(); });
+
+  /* ---------- nuvem: usa a sessão salva neste aparelho (login feito no app) ---------- */
+  if (window.ManutCloud) {
+    var tvState = load() || { ativos: [], os: [], planos: [], limpeza: [], limpezaLog: [], seqOS: 0, exemplo: false };
+    ManutCloud.start({
+      getState: function () { return tvState; },
+      persist: function () {
+        try { localStorage.setItem(LS_KEY, JSON.stringify(tvState)); } catch (e) { /* segue só exibindo */ }
+      },
+      rerender: render,
+      onStatus: function (st) {
+        $('#footInfo').textContent = st === 'ok' || st === 'sync'
+          ? '☁ Sincronizado com a nuvem — atualiza em tempo real'
+          : st === 'err'
+            ? '⚠ Erro de sincronização — mostrando os últimos dados deste aparelho'
+            : 'Atualiza sozinho a cada 30 segundos · dados deste aparelho';
+      }
+    });
+  }
 })();

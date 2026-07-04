@@ -71,7 +71,7 @@
       <h1>Painel de TV — Manutenções</h1>
       <p>Ainda não há dados neste aparelho. Para o telão funcionar:</p>
       <ol>
-        <li>Abra o app <b>manutencao.html</b> neste mesmo aparelho/navegador; <em>ou</em></li>
+        <li><b>Recomendado:</b> abra o app <b>manutencao.html</b> neste aparelho e entre na conta da equipe (⚙) — o telão sincroniza sozinho, em tempo real; <em>ou</em></li>
         <li>No app do seu celular, toque em <b>⚙ → Exportar backup</b> e importe o arquivo aqui.</li>
       </ol>
       <button type="button" class="setup__btn" id="btnImportSetup">⬆ Importar backup (JSON)</button>
@@ -80,6 +80,9 @@
 
   <input type="file" id="importFile" accept="application/json,.json" hidden />
 
-  <script src="js/manutencao-tv.js?v=20260703a"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js?v=20260703a"></script>
+  <script src="js/manutencao-cloud.js?v=20260704a"></script>
+  <script src="js/manutencao-tv.js?v=20260704a"></script>
 </body>
 </html>
