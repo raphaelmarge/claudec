@@ -560,3 +560,17 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 #pdfBar.on{display:flex}
 #pdfBar a{color:#fff;font-weight:700;text-decoration:none;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #pdfBar button{background:rgba(255,255,255,.22);border:0;color:#fff;width:30px;height:30px;border-radius:50%;font-size:14px;cursor:pointer;flex:none}
+
+/* ===================== OBRAS ENTREGUES ===================== */
+.obras{max-width:1200px;margin:0 auto;padding:44px 20px 10px}
+.obras__sub{color:var(--txt-mut);margin:6px 0 0}
+.obras__grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px;margin-top:22px}
+.obra{position:relative;margin:0;border:1px solid var(--line);border-radius:16px;overflow:hidden;background:var(--panel);cursor:zoom-in}
+.obra img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block}
+.obra figcaption{position:absolute;left:0;right:0;bottom:0;padding:26px 14px 10px;background:linear-gradient(180deg,transparent,rgba(0,0,0,.82));display:flex;flex-direction:column}
+.obra figcaption b{color:#fff;font-size:.92rem}
+.obra figcaption span{color:rgba(255,255,255,.75);font-size:.78rem}
+.obra-light{position:fixed;inset:0;z-index:130;background:rgba(0,0,0,.93);display:flex;align-items:center;justify-content:center;padding:18px;cursor:zoom-out}
+.obra-light[hidden]{display:none}
+.obra-light img{max-width:100%;max-height:92vh;border-radius:12px}
+.obra-light button{position:absolute;top:14px;right:14px;width:38px;height:38px;border-radius:50%;border:0;background:rgba(255,255,255,.15);color:#fff;font-size:16px;cursor:pointer}

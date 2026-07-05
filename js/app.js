@@ -97,7 +97,7 @@
      fiscais (custo/margem) nunca saem daqui. Degrada para
      localStorage se a tabela não existir.
      ------------------------------------------------------------ */
-  const SHARED_PARAM_KEYS = ['parcelasMax', 'juros', 'validade', 'stages', 'metas', 'linhas', 'linhaBanners', 'contato', 'carousel', 'comissao', 'kits', 'descontoMaxVendedor', 'faq', 'depoimentos', 'blog', 'cupons', 'contrato'];
+  const SHARED_PARAM_KEYS = ['parcelasMax', 'juros', 'validade', 'stages', 'metas', 'linhas', 'linhaBanners', 'contato', 'carousel', 'comissao', 'kits', 'descontoMaxVendedor', 'faq', 'depoimentos', 'obras', 'blog', 'cupons', 'contrato'];
   const slugify = s => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
   const SETTINGS_SQL =
     "create table if not exists public.settings (\n" +
@@ -148,6 +148,8 @@
       gaId: c.gaId || '', metaPixel: c.metaPixel || '',
       faq: (Array.isArray(P().faq) ? P().faq : []).filter(x => x && (x.q || '').trim()).map(x => ({ q: x.q || '', a: x.a || '' })),
       depoimentos: (Array.isArray(P().depoimentos) ? P().depoimentos : []).filter(x => x && (x.texto || '').trim()).map(x => ({ nome: x.nome || '', local: x.local || '', texto: x.texto || '' })),
+      // fotos de instalações entregues (só URLs hospedadas; data: local não vai pro site)
+      obras: (Array.isArray(P().obras) ? P().obras : []).filter(x => x && (x.img || '').trim() && !String(x.img).startsWith('data:')).map(x => ({ img: x.img || '', titulo: x.titulo || '', local: x.local || '' })),
       blog: (Array.isArray(P().blog) ? P().blog : []).filter(x => x && x.publicado && (x.titulo || '').trim()).map(x => ({
         slug: slugify(x.slug || x.titulo), titulo: x.titulo || '', resumo: x.resumo || '',
         capa: (x.capa && !String(x.capa).startsWith('data:')) ? x.capa : '', conteudo: x.conteudo || '',
@@ -416,6 +418,7 @@
     renderContatoEditor();
     renderFaqEditor();
     renderDepoEditor();
+    renderObrasEditor();
     renderBlogEditor();
     renderCuponsEditor();
     renderVendEditor();
@@ -844,6 +847,40 @@
     });
     const add = $('#btnAddDepo');
     if (add) add.addEventListener('click', () => { depoArr().push({ nome: '', local: '', texto: '' }); save(); renderDepoEditor(); });
+  })();
+
+  // ---- editor de OBRAS ENTREGUES (fotos de instalações) ----
+  const obrasArr = () => Array.isArray(P().obras) ? P().obras : (P().obras = []);
+  function renderObrasEditor() {
+    const box = $('#obrasEditor'); if (!box) return;
+    if (box.contains(document.activeElement)) return;
+    const arr = obrasArr();
+    box.innerHTML = arr.length ? arr.map((o, i) => `
+      <div class="qarow" data-i="${i}">
+        <input class="qarow__q" data-obra-img="${i}" type="url" value="${esc(o.img || '')}" placeholder="URL da foto (hospedada — ex.: link do Storage)" />
+        <input class="qarow__q" data-obra-titulo="${i}" type="text" value="${esc(o.titulo || '')}" placeholder="Título (ex.: Academia Alpha)" />
+        <input class="qarow__q" data-obra-local="${i}" type="text" value="${esc(o.local || '')}" placeholder="Cidade/UF" />
+        <button class="qarow__x" type="button" data-obra-rm="${i}" title="Remover">✕</button>
+      </div>`).join('') : '<p class="atv__empty">Nenhuma obra ainda. Adicione fotos de academias montadas — é a prova social mais forte do site.</p>';
+  }
+  (function wireObrasEditor() {
+    const box = $('#obrasEditor'); if (!box) return;
+    box.addEventListener('input', e => {
+      const im = e.target.closest('[data-obra-img]'), t = e.target.closest('[data-obra-titulo]'), l = e.target.closest('[data-obra-local]');
+      const el = im || t || l; if (!el) return;
+      const i = parseInt(el.dataset.obraImg || el.dataset.obraTitulo || el.dataset.obraLocal, 10);
+      if (!obrasArr()[i]) obrasArr()[i] = { img: '', titulo: '', local: '' };
+      if (im) obrasArr()[i].img = im.value.trim();
+      if (t) obrasArr()[i].titulo = t.value;
+      if (l) obrasArr()[i].local = l.value;
+      save(); schedulePushSettings();
+    });
+    box.addEventListener('click', e => {
+      const rm = e.target.closest('[data-obra-rm]'); if (!rm) return;
+      obrasArr().splice(parseInt(rm.dataset.obraRm, 10), 1); save(); schedulePushSettings(); renderObrasEditor();
+    });
+    const add = $('#btnAddObra');
+    if (add) add.addEventListener('click', () => { obrasArr().push({ img: '', titulo: '', local: '' }); save(); renderObrasEditor(); });
   })();
 
   // ---- editor de BLOG (artigos) ----
