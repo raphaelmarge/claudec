@@ -97,7 +97,7 @@
      fiscais (custo/margem) nunca saem daqui. Degrada para
      localStorage se a tabela não existir.
      ------------------------------------------------------------ */
-  const SHARED_PARAM_KEYS = ['parcelasMax', 'juros', 'validade', 'stages', 'metas', 'linhas', 'linhaBanners', 'contato', 'carousel', 'comissao', 'kits', 'descontoMaxVendedor', 'faq', 'depoimentos', 'obras', 'blog', 'cupons', 'contrato'];
+  const SHARED_PARAM_KEYS = ['parcelasMax', 'juros', 'validade', 'stages', 'metas', 'linhas', 'linhaBanners', 'contato', 'carousel', 'comissao', 'kits', 'descontoMaxVendedor', 'faq', 'depoimentos', 'obras', 'ctFotos', 'blog', 'cupons', 'contrato'];
   const slugify = s => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
   const SETTINGS_SQL =
     "create table if not exists public.settings (\n" +
@@ -150,6 +150,8 @@
       depoimentos: (Array.isArray(P().depoimentos) ? P().depoimentos : []).filter(x => x && (x.texto || '').trim()).map(x => ({ nome: x.nome || '', local: x.local || '', texto: x.texto || '' })),
       // fotos de instalações entregues (só URLs hospedadas; data: local não vai pro site)
       obras: (Array.isArray(P().obras) ? P().obras : []).filter(x => x && (x.img || '').trim() && !String(x.img).startsWith('data:')).map(x => ({ img: x.img || '', titulo: x.titulo || '', local: x.local || '' })),
+      // fotos do Centro de Treinamento (página ct.html)
+      ctFotos: (Array.isArray(P().ctFotos) ? P().ctFotos : []).filter(x => x && (x.img || '').trim() && !String(x.img).startsWith('data:')).map(x => ({ img: x.img || '', titulo: x.titulo || '' })),
       blog: (Array.isArray(P().blog) ? P().blog : []).filter(x => x && x.publicado && (x.titulo || '').trim()).map(x => ({
         slug: slugify(x.slug || x.titulo), titulo: x.titulo || '', resumo: x.resumo || '',
         capa: (x.capa && !String(x.capa).startsWith('data:')) ? x.capa : '', conteudo: x.conteudo || '',
@@ -419,6 +421,7 @@
     renderFaqEditor();
     renderDepoEditor();
     renderObrasEditor();
+    renderCtFotosEditor();
     renderBlogEditor();
     renderCuponsEditor();
     renderVendEditor();
@@ -881,6 +884,38 @@
     });
     const add = $('#btnAddObra');
     if (add) add.addEventListener('click', () => { obrasArr().push({ img: '', titulo: '', local: '' }); save(); renderObrasEditor(); });
+  })();
+
+  // ---- editor de FOTOS DO CT (página ct.html) ----
+  const ctFotosArr = () => Array.isArray(P().ctFotos) ? P().ctFotos : (P().ctFotos = []);
+  function renderCtFotosEditor() {
+    const box = $('#ctFotosEditor'); if (!box) return;
+    if (box.contains(document.activeElement)) return;
+    const arr = ctFotosArr();
+    box.innerHTML = arr.length ? arr.map((o, i) => `
+      <div class="qarow" data-i="${i}">
+        <input class="qarow__q" data-ctf-img="${i}" type="url" value="${esc(o.img || '')}" placeholder="URL da foto (hospedada — ex.: link do Storage)" />
+        <input class="qarow__q" data-ctf-titulo="${i}" type="text" value="${esc(o.titulo || '')}" placeholder="Legenda (ex.: Área de força)" />
+        <button class="qarow__x" type="button" data-ctf-rm="${i}" title="Remover">✕</button>
+      </div>`).join('') : '<p class="atv__empty">Nenhuma foto ainda. As fotos aparecem na página do CT (ct.html).</p>';
+  }
+  (function wireCtFotosEditor() {
+    const box = $('#ctFotosEditor'); if (!box) return;
+    box.addEventListener('input', e => {
+      const im = e.target.closest('[data-ctf-img]'), t = e.target.closest('[data-ctf-titulo]');
+      const el = im || t; if (!el) return;
+      const i = parseInt(el.dataset.ctfImg || el.dataset.ctfTitulo, 10);
+      if (!ctFotosArr()[i]) ctFotosArr()[i] = { img: '', titulo: '' };
+      if (im) ctFotosArr()[i].img = im.value.trim();
+      if (t) ctFotosArr()[i].titulo = t.value;
+      save(); schedulePushSettings();
+    });
+    box.addEventListener('click', e => {
+      const rm = e.target.closest('[data-ctf-rm]'); if (!rm) return;
+      ctFotosArr().splice(parseInt(rm.dataset.ctfRm, 10), 1); save(); schedulePushSettings(); renderCtFotosEditor();
+    });
+    const add = $('#btnAddCtFoto');
+    if (add) add.addEventListener('click', () => { ctFotosArr().push({ img: '', titulo: '' }); save(); renderCtFotosEditor(); });
   })();
 
   // ---- editor de BLOG (artigos) ----
