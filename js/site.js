@@ -43,7 +43,7 @@
   let BANNERS = {};         // imagens de banner por categoria (nome → URL), vindas do catalog.json
   const bannerImg = nome => BANNERS[nome] || '';
   // dados de localização/contato (default + ao vivo via catalog.json → data.site)
-  let SITEINFO = Object.assign({ endereco: '', mapsUrl: '', telefone: '', whatsapp: SITE.whatsapp || '', email: '', horario: '', gaId: '', metaPixel: '', faq: [], depoimentos: [], cupons: [] }, window.TORQUE_SITE_INFO || {});
+  let SITEINFO = Object.assign({ endereco: '', mapsUrl: '', telefone: '', whatsapp: SITE.whatsapp || '', email: '', horario: '', gaId: '', metaPixel: '', faq: [], depoimentos: [], obras: [], cupons: [] }, window.TORQUE_SITE_INFO || {});
   let appliedCoupon = null;   // cupom de desconto aplicado ao orçamento
   const normCupom = s => String(s == null ? '' : s).toUpperCase().replace(/[^A-Z0-9]/g, '');
   function activeCupons() { return (Array.isArray(SITEINFO.cupons) ? SITEINFO.cupons : []).filter(c => c && c.codigo && c.ativo !== false && (Number(c.desconto) || 0) > 0); }
@@ -761,13 +761,21 @@
     let s = document.getElementById('ldProd');
     if (!p) { if (s) s.remove(); return; }
     if (!s) { s = document.createElement('script'); s.type = 'application/ld+json'; s.id = 'ldProd'; document.head.appendChild(s); }
+    const trilha = [{ '@type': 'ListItem', position: 1, name: 'Início', item: BASE_URL }];
+    if (p.serie) trilha.push({ '@type': 'ListItem', position: 2, name: p.serie, item: BASE_URL + '?linha=' + encodeURIComponent(p.serie) });
+    trilha.push({ '@type': 'ListItem', position: trilha.length + 1, name: p.nome, item: prodURL(p) });
     s.textContent = JSON.stringify({
-      '@context': 'https://schema.org', '@type': 'Product',
-      name: p.nome, image: prodImageAbs(p), sku: p.codigo || undefined,
-      description: prodDesc(p),
-      category: p.serie || undefined,
-      brand: { '@type': 'Brand', name: 'Torque Fitness' },
-      offers: { '@type': 'Offer', priceCurrency: 'BRL', price: Number(p.preco) || 0, availability: 'https://schema.org/InStock', url: prodURL(p) }
+      '@context': 'https://schema.org',
+      '@graph': [{
+        '@type': 'Product',
+        name: p.nome, image: prodImageAbs(p), sku: p.codigo || undefined,
+        description: prodDesc(p),
+        category: p.serie || undefined,
+        brand: { '@type': 'Brand', name: 'Torque Fitness' },
+        offers: { '@type': 'Offer', priceCurrency: 'BRL', price: Number(p.preco) || 0, availability: 'https://schema.org/InStock', url: prodURL(p) }
+      }, {
+        '@type': 'BreadcrumbList', itemListElement: trilha
+      }]
     });
   }
   function applyProdMeta(p) {
@@ -953,10 +961,44 @@
   function renderDepo() {
     const sec = $('#depoimentos'); if (!sec) return;
     const arr = Array.isArray(SITEINFO.depoimentos) ? SITEINFO.depoimentos : [];
+    // com depoimentos reais cadastrados, os exemplos fictícios da faixa saem de cena
+    const fict = document.querySelector('.proof__quotes');
+    if (fict) fict.hidden = arr.length > 0;
     if (!arr.length) { sec.hidden = true; return; }
     sec.hidden = false;
     $('#depoGrid').innerHTML = arr.map(d => `<figure class="depocard"><blockquote>“${esc(d.texto)}”</blockquote><figcaption><b>${esc(d.nome || 'Cliente')}</b>${d.local ? `<span>${esc(d.local)}</span>` : ''}</figcaption></figure>`).join('');
   }
+  // obras entregues (prova social com fotos reais de instalações)
+  function renderObras() {
+    const sec = $('#obras'); if (!sec) return;
+    const arr = (Array.isArray(SITEINFO.obras) ? SITEINFO.obras : []).filter(o => o && (o.img || '').trim());
+    if (!arr.length) { sec.hidden = true; return; }
+    sec.hidden = false;
+    $('#obrasGrid').innerHTML = arr.map(o => `
+      <figure class="obra">
+        <img src="${esc(o.img)}" alt="${esc(o.titulo || 'Academia montada com equipamentos Torque Fitness')}" loading="lazy" decoding="async" onerror="this.closest('figure').remove()"/>
+        ${(o.titulo || o.local) ? `<figcaption>${o.titulo ? `<b>${esc(o.titulo)}</b>` : ''}${o.local ? `<span>${esc(o.local)}</span>` : ''}</figcaption>` : ''}
+      </figure>`).join('');
+  }
+  // lightbox: toque na foto abre em tela cheia (fecha com toque/Esc)
+  (function wireObras() {
+    const grid = $('#obrasGrid'); if (!grid) return;
+    grid.addEventListener('click', e => {
+      const img = e.target.closest('.obra img'); if (!img) return;
+      let ov = document.getElementById('obraLight');
+      if (!ov) {
+        ov = document.createElement('div');
+        ov.id = 'obraLight'; ov.className = 'obra-light'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-label', 'Foto ampliada');
+        ov.innerHTML = '<img alt="Academia montada com equipamentos Torque Fitness"/><button type="button" aria-label="Fechar">✕</button>';
+        const fecha = () => { ov.hidden = true; document.body.style.overflow = ''; };
+        ov.addEventListener('click', fecha);
+        document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && !ov.hidden) fecha(); });
+        document.body.appendChild(ov);
+      }
+      ov.querySelector('img').src = img.src;
+      ov.hidden = false; document.body.style.overflow = 'hidden';
+    });
+  })();
   // FAQ + dados estruturados (FAQPage no Google)
   // Perguntas frequentes padrão (baseadas nas dúvidas mais comuns em sites de
   // equipamentos de academia). Usadas quando o admin ainda não publicou as suas.
@@ -1534,7 +1576,7 @@
   $('#ano').textContent = new Date().getFullYear();
   buildSearchIndex(); renderSeries(); renderChips(); renderGrupos(); renderGrid(); refreshCounts(); renderRecent(); renderFavBar();
   renderLinhasMenu(); renderLinhaHead();
-  renderCarousel(); startCar(); renderContato(); renderDepo(); renderFaq();
+  renderCarousel(); startCar(); renderContato(); renderDepo(); renderObras(); renderFaq();
   // pré-carrega as libs do PDF em ocioso: o compartilhar precisa estar pronto já no 1º toque
   setTimeout(() => {
     loadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js').catch(() => {});
@@ -1577,7 +1619,7 @@
       buildSearchIndex(); renderSeries(); renderChips(); renderGrupos(); renderGrid(); refreshCounts(); renderRecent(); renderLinhasMenu();
       const tp = currentTipo(), dl = currentLinha();                    // re-aplica a vista com o catálogo ao vivo
       if (tp) goToTipo(tp, false, false); else if (dl) goToLinha(dl, false, false);
-      renderLinhaHead(); renderCarousel(); renderContato(); renderDepo(); renderFaq(); applyWpp(); injectAnalytics();
+      renderLinhaHead(); renderCarousel(); renderContato(); renderDepo(); renderObras(); renderFaq(); applyWpp(); injectAnalytics();
       setTimeout(maybeShowPromo, 700);   // pop-up de cupom de boas-vindas
 
     } catch (e) { /* offline ou bucket vazio → mantém o catálogo embutido */ }
