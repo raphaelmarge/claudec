@@ -1185,6 +1185,36 @@
     const s = Math.min(desejada, Math.sqrt(12e6 / (w * h)));
     return Math.max(0.75, Math.round(s * 100) / 100);
   }
+  // Paginação consciente: o corte de página acontece só em fronteiras seguras
+  // (entre linhas da tabela e blocos) — nunca no meio de uma foto ou de um texto.
+  function adicionarPaginado(pdf, canvas, el, seletor) {
+    const pw = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight();
+    const rect = el.getBoundingClientRect();
+    const razao = canvas.height / Math.max(1, rect.height);   // px do canvas por px do documento
+    const cortes = new Set([canvas.height]);
+    el.querySelectorAll(seletor).forEach(n => {
+      const y = Math.round((n.getBoundingClientRect().top - rect.top) * razao);
+      if (y > 0 && y < canvas.height) cortes.add(y);
+    });
+    const pontos = Array.from(cortes).sort((a, b) => a - b);
+    const paginaPx = canvas.width * ph / pw;                  // altura de uma página A4 em px do canvas
+    let inicio = 0, primeira = true;
+    while (inicio < canvas.height - 2) {
+      const alvo = inicio + paginaPx;
+      let fim = -1;
+      for (const p of pontos) { if (p > inicio + paginaPx * 0.25 && p <= alvo) fim = p; }
+      if (fim < 0) fim = Math.min(alvo, canvas.height);       // bloco maior que a página: corte duro
+      const fatia = document.createElement('canvas');
+      fatia.width = canvas.width; fatia.height = Math.max(1, Math.round(fim - inicio));
+      const cx = fatia.getContext('2d');
+      cx.fillStyle = '#ffffff'; cx.fillRect(0, 0, fatia.width, fatia.height);
+      cx.drawImage(canvas, 0, inicio, canvas.width, fatia.height, 0, 0, canvas.width, fatia.height);
+      if (!primeira) pdf.addPage();
+      primeira = false;
+      pdf.addImage(fatia.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, pw, fatia.height * pw / canvas.width);
+      inicio = fim;
+    }
+  }
   async function baixarCatalogoPDF() {
     const btn = $('#btnCatalogoPdf');
     const list = filtered();
@@ -1332,13 +1362,8 @@
     if (!Ctor) throw new Error('jsPDF indisponível');
     if (!canvas || !canvas.width || !canvas.height) throw new Error('captura vazia');
     const doc = new Ctor({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    const pw = doc.internal.pageSize.getWidth(), ph = doc.internal.pageSize.getHeight();
-    const imgH = canvas.height * pw / canvas.width;
-    const data = canvas.toDataURL('image/jpeg', 0.92);
-    let restante = imgH, pos = 0;
-    doc.addImage(data, 'JPEG', 0, pos, pw, imgH);
-    restante -= ph;
-    while (restante > 0) { pos -= ph; doc.addPage(); doc.addImage(data, 'JPEG', 0, pos, pw, imgH); restante -= ph; }
+    // quebra de página só entre linhas/blocos — nunca no meio de uma foto
+    adicionarPaginado(doc, canvas, built.el, '.qd__table tbody tr, .qd__parties, .qd__table, .qd__totals, .qd__install, .qd__cond, .qd__foot');
     return { doc, tot: built.tot };
   }
   // resumo do orçamento em texto puro (corpo do e-mail / mensagem do WhatsApp)

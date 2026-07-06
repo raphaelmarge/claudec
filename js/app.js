@@ -1978,6 +1978,37 @@
     if (!data || data.indexOf('data:image') !== 0 || data.length < 1000) throw new Error('captura vazia');
     return data;
   }
+  // Paginação consciente: o corte de página acontece só em fronteiras seguras
+  // (entre linhas da tabela e blocos) — nunca no meio de uma foto ou de um texto.
+  function adicionarPaginado(pdf, canvas, el, seletor) {
+    const pw = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight();
+    const rect = el.getBoundingClientRect();
+    const razao = canvas.height / Math.max(1, rect.height);   // px do canvas por px do documento
+    const cortes = new Set([canvas.height]);
+    el.querySelectorAll(seletor).forEach(n => {
+      const y = Math.round((n.getBoundingClientRect().top - rect.top) * razao);
+      if (y > 0 && y < canvas.height) cortes.add(y);
+    });
+    const pontos = Array.from(cortes).sort((a, b) => a - b);
+    const paginaPx = canvas.width * ph / pw;                  // altura de uma página A4 em px do canvas
+    let inicio = 0, primeira = true;
+    while (inicio < canvas.height - 2) {
+      const alvo = inicio + paginaPx;
+      let fim = -1;
+      for (const p of pontos) { if (p > inicio + paginaPx * 0.25 && p <= alvo) fim = p; }
+      if (fim < 0) fim = Math.min(alvo, canvas.height);       // bloco maior que a página: corte duro
+      const fatia = document.createElement('canvas');
+      fatia.width = canvas.width; fatia.height = Math.max(1, Math.round(fim - inicio));
+      const cx = fatia.getContext('2d');
+      cx.fillStyle = '#ffffff'; cx.fillRect(0, 0, fatia.width, fatia.height);
+      cx.drawImage(canvas, 0, inicio, canvas.width, fatia.height, 0, 0, canvas.width, fatia.height);
+      if (!primeira) pdf.addPage();
+      primeira = false;
+      pdf.addImage(fatia.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, pw, fatia.height * pw / canvas.width);
+      inicio = fim;
+    }
+  }
+  const SELETOR_QUOTE = '.qd__table tbody tr, .qd__parties, .qd__table, .qd__totals, .qd__install, .qd__cond, .qd__foot';
   // Monta o PDF A4 paginado a partir do documento (#quoteDoc).
   // Usado pelo botão PDF (salvar) e pelo Compartilhar (arquivo).
   async function montarPdfQuote(avisar = () => {}) {
@@ -1995,20 +2026,9 @@
       html2canvas(el, { scale: escalaSegura(el, 2), backgroundColor: '#ffffff', useCORS: true, imageTimeout: 6000 }),
       25000, 'a captura do documento');
     avisar('Montando o PDF…');
+    conferirCaptura(canvas);                            // detecta captura em branco
     const pdf = new jsPDFCtor({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    const pw = pdf.internal.pageSize.getWidth();
-    const ph = pdf.internal.pageSize.getHeight();
-    const imgH = canvas.height * pw / canvas.width;   // altura proporcional à largura A4
-    const data = conferirCaptura(canvas);
-    let heightLeft = imgH, position = 0;
-    pdf.addImage(data, 'JPEG', 0, position, pw, imgH);
-    heightLeft -= ph;
-    while (heightLeft > 0) {                            // fatia em páginas A4
-      position -= ph;
-      pdf.addPage();
-      pdf.addImage(data, 'JPEG', 0, position, pw, imgH);
-      heightLeft -= ph;
-    }
+    adicionarPaginado(pdf, canvas, el, SELETOR_QUOTE);  // quebra só entre linhas/blocos
     return pdf;
   }
   async function gerarPDF() {
@@ -2261,13 +2281,9 @@
         html2canvas(el, { scale: escalaSegura(el, 2), backgroundColor: '#ffffff', imageTimeout: 6000 }),
         25000, 'a captura do documento');
       avisar('Montando o PDF…');
-      const data = conferirCaptura(canvas);
+      conferirCaptura(canvas);
       const pdf = new jsPDFCtor({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-      const pw = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight();
-      const imgH = canvas.height * pw / canvas.width;
-      let restante = imgH, pos = 0;
-      pdf.addImage(data, 'JPEG', 0, pos, pw, imgH); restante -= ph;
-      while (restante > 0) { pos -= ph; pdf.addPage(); pdf.addImage(data, 'JPEG', 0, pos, pw, imgH); restante -= ph; }
+      adicionarPaginado(pdf, canvas, el, 'h3, h4, p, .ct__ass > div');   // quebra só entre parágrafos
       return pdf;
     } catch (e) {
       console.error('captura do contrato falhou — gerando em texto puro', e);
