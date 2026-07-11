@@ -68,7 +68,7 @@
   <link rel="preconnect" href="https://uqwbywzuqooqzmiklqct.supabase.co" />
   <link rel="preconnect" href="https://uqwbywzuqooqzmiklqct.supabase.co" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/site.css?v=20260706a" />
+  <link rel="stylesheet" href="css/site.css?v=20260707a" />
   <link rel="manifest" href="site.webmanifest" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
   <meta name="mobile-web-app-capable" content="yes" />
@@ -156,25 +156,27 @@
   <!-- ===================== MONTE SUA ACADEMIA ===================== -->
   <section class="montar reveal" id="montar">
     <div class="montar__card">
-      <h2 class="sec-title">Monte sua academia</h2>
-      <p class="sec-sub">Escolha o foco e o porte — a gente monta uma sugestão de equipamentos pra você pedir o orçamento.</p>
+      <h2 class="sec-title">Quanto custa montar sua academia?</h2>
+      <p class="sec-sub">Diga o tamanho do espaço e o foco — calculamos o investimento estimado e montamos a sugestão de equipamentos na hora.</p>
+      <div class="montar__group">
+        <span class="montar__lab">Tamanho do espaço</span>
+        <div class="montar__opts" id="montarPorte">
+          <button class="montar__chip" data-porte="p" data-m2="80" type="button">Até 100 m²</button>
+          <button class="montar__chip on" data-porte="m" data-m2="200" type="button">~200 m²</button>
+          <button class="montar__chip" data-porte="g" data-m2="400" type="button">400 m²+</button>
+          <span class="montar__m2wrap"><input id="montarM2" type="number" inputmode="numeric" min="20" max="5000" placeholder="ou digite" aria-label="Metragem em metros quadrados" /><b>m²</b></span>
+        </div>
+      </div>
       <div class="montar__group">
         <span class="montar__lab">Foco</span>
         <div class="montar__opts" id="montarFoco">
           <button class="montar__chip on" data-foco="mus" type="button">🏋️ Musculação</button>
-          <button class="montar__chip" data-foco="car" type="button">🏃 Cardio</button>
+          <button class="montar__chip on" data-foco="car" type="button">🏃 Cardio</button>
           <button class="montar__chip" data-foco="fun" type="button">🤸 Funcional &amp; Acessórios</button>
         </div>
       </div>
-      <div class="montar__group">
-        <span class="montar__lab">Porte</span>
-        <div class="montar__opts" id="montarPorte">
-          <button class="montar__chip" data-porte="p" type="button">Pequeno</button>
-          <button class="montar__chip on" data-porte="m" type="button">Médio</button>
-          <button class="montar__chip" data-porte="g" type="button">Grande</button>
-        </div>
-      </div>
-      <button class="btn btn--primary montar__go" id="btnMontar" type="button">Montar minha academia →</button>
+      <button class="btn btn--primary montar__go" id="btnMontar" type="button">Calcular meu investimento →</button>
+      <div class="montar__result" id="montarResult" hidden></div>
     </div>
   </section>
 
@@ -258,6 +260,23 @@
       <figure class="qcard"><blockquote>“Montamos toda a sala de musculação com a Torque. Equipamento robusto e atendimento direto no WhatsApp.”</blockquote><figcaption>— Studio fictício, São Paulo/SP</figcaption></figure>
       <figure class="qcard"><blockquote>“Pedi o orçamento pelo site de madrugada e no dia seguinte um consultor já tinha me chamado.”</blockquote><figcaption>— Box de CrossFit, Campinas/SP</figcaption></figure>
       <figure class="qcard"><blockquote>“Linha completa, do rack ao cardio. Facilitou muito montar a academia do zero.”</blockquote><figcaption>— Academia, Rio de Janeiro/RJ</figcaption></figure>
+    </div>
+  </section>
+
+  <!-- ===================== CT NA HOME ===================== -->
+  <section class="cthome reveal" id="cthome">
+    <div class="cthome__card">
+      <div class="cthome__txt">
+        <span class="cthome__kicker">CT Torque · Rio de Janeiro</span>
+        <h2>Teste antes de comprar</h2>
+        <p>Nosso Centro de Treinamento tem mais de 1.200 m² onde os equipamentos rodam todos os dias em treinos reais — nada de máquina parada de showroom. Venha treinar neles antes de fechar o pedido.</p>
+        <a class="btn btn--primary" href="ct.html">Conhecer o CT →</a>
+      </div>
+      <div class="cthome__stats">
+        <div><b>+1.200</b><span>m² de treino</span></div>
+        <div><b>100%</b><span>uso real</span></div>
+        <div><b>Visita</b><span>com hora marcada</span></div>
+      </div>
     </div>
   </section>
 
@@ -439,10 +458,10 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
-  <script src="js/config.js?v=20260706a"></script>
-  <script src="js/products.js?v=20260706a"></script>
-  <script src="js/nomes.js?v=20260706a"></script>
-  <script src="js/descricoes.js?v=20260706a"></script>
-  <script src="js/site.js?v=20260706a"></script>
+  <script src="js/config.js?v=20260707a"></script>
+  <script src="js/products.js?v=20260707a"></script>
+  <script src="js/nomes.js?v=20260707a"></script>
+  <script src="js/descricoes.js?v=20260707a"></script>
+  <script src="js/site.js?v=20260707a"></script>
 </body>
 </html>

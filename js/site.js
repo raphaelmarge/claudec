@@ -1516,34 +1516,76 @@
     });
   })();
 
-  /* ---------- "Monte sua academia" (montador) ---------- */
+  /* ---------- Simulador "Quanto custa montar sua academia?" (por m²) ---------- */
   (function montador() {
     const sec = $('#montar'); if (!sec) return;
     const foco = $('#montarFoco'), porte = $('#montarPorte'), go = $('#btnMontar');
-    if (foco) foco.addEventListener('click', e => { const b = e.target.closest('[data-foco]'); if (b) b.classList.toggle('on'); });
-    if (porte) porte.addEventListener('click', e => { const b = e.target.closest('[data-porte]'); if (!b) return; $$('[data-porte]', porte).forEach(x => x.classList.toggle('on', x === b)); });
-    const PORTE = { p: { mus: 4, car: 2, fun: 3 }, m: { mus: 10, car: 4, fun: 6 }, g: { mus: 18, car: 8, fun: 10 } };
+    const m2Input = $('#montarM2'), result = $('#montarResult');
+    if (foco) foco.addEventListener('click', e => { const b = e.target.closest('[data-foco]'); if (b) { b.classList.toggle('on'); if (result) result.hidden = true; } });
+    if (porte) porte.addEventListener('click', e => {
+      const b = e.target.closest('[data-porte]'); if (!b) return;
+      $$('[data-porte]', porte).forEach(x => x.classList.toggle('on', x === b));
+      if (m2Input) m2Input.value = b.dataset.m2 || '';        // o atalho preenche a metragem
+      if (result) result.hidden = true;
+    });
+    if (m2Input) m2Input.addEventListener('input', () => {
+      $$('[data-porte]', porte).forEach(x => x.classList.remove('on'));
+      if (result) result.hidden = true;
+    });
     const isCardio = p => /cardio|esteira|bike|el[ií]ptic|escada|spinning|remo/i.test((p.serie || '') + ' ' + (p.nome || ''));
     const isAcessorio = p => (p.tipo || 'maquina') === 'acessorio';
     function pick(pool, n) { if (n <= 0 || !pool.length) return []; const step = Math.max(1, Math.floor(pool.length / n)); const out = []; for (let i = 0; i < pool.length && out.length < n; i += step) out.push(pool[i]); return out; }
-    if (go) go.addEventListener('click', () => {
+    function metragem() {
+      const v = m2Input ? parseInt(m2Input.value, 10) : 0;
+      if (v && v >= 20) return Math.min(5000, v);
+      const ptEl = $('[data-porte].on', porte);
+      return ptEl ? (parseInt(ptEl.dataset.m2, 10) || 200) : 200;
+    }
+    let simulado = null;   // último mix calculado (aplicado ao tocar em "Montar orçamento")
+    function calcular() {
       const focos = $$('[data-foco].on', foco).map(b => b.dataset.foco);
       if (!focos.length) { toast('Escolha pelo menos um foco.'); return; }
-      const ptEl = $('[data-porte].on', porte); const pt = (ptEl && ptEl.dataset.porte) || 'm';
-      const cfg = PORTE[pt] || PORTE.m;
+      const m2 = metragem();
+      // ~6,5 m² por estação (equipamento + circulação); acessórios entram por cima
+      const nTotal = Math.max(4, Math.min(80, Math.round(m2 / 6.5)));
+      const peso = { mus: 0.62, car: 0.22, fun: 0.16 };
+      const somaPeso = focos.reduce((s, f) => s + peso[f], 0);
+      const qt = f => focos.includes(f) ? Math.max(1, Math.round(nTotal * peso[f] / somaPeso)) : 0;
       const all = PRODUCTS.filter(p => p.preco > 0);
       let chosen = [];
-      if (focos.includes('mus')) chosen = chosen.concat(pick(all.filter(p => !isAcessorio(p) && !isCardio(p)), cfg.mus));
-      if (focos.includes('car')) chosen = chosen.concat(pick(all.filter(isCardio), cfg.car));
-      if (focos.includes('fun')) chosen = chosen.concat(pick(all.filter(isAcessorio), cfg.fun));
+      chosen = chosen.concat(pick(all.filter(p => !isAcessorio(p) && !isCardio(p)), qt('mus')));
+      chosen = chosen.concat(pick(all.filter(isCardio), qt('car')));
+      chosen = chosen.concat(pick(all.filter(isAcessorio), qt('fun')));
       if (!chosen.length) { toast('Não encontrei itens para essa combinação.'); return; }
-      chosen.forEach(p => { if (p.codigo) cart[p.codigo] = (cart[p.codigo] || 0) + 1; });
+      const total = chosen.reduce((s, p) => s + p.preco, 0);
+      const faixaMin = Math.round(total * 0.95 / 1000) * 1000;
+      const faixaMax = Math.round(total * 1.15 / 1000) * 1000;
+      const maxN = Math.max(1, Math.floor(PARAMS.parcelasMax || 48));
+      simulado = { chosen, m2, total };
+      const wpp = String(SITEINFO.whatsapp || SITE.whatsapp || '').replace(/\D/g, '');
+      const msg = encodeURIComponent(`Olá! Simulei uma academia de ${m2} m² no site — estimativa de ${money(faixaMin)} a ${money(faixaMax)} (${chosen.length} equipamentos). Quero fechar um orçamento.`);
+      result.innerHTML = `
+        <div class="montar__faixa"><small>Investimento estimado para <b>${m2} m²</b></small><b>${money(faixaMin)} – ${money(faixaMax)}</b>
+        <span>${chosen.length} equipamentos · ou até ${maxN}× de ${money(total / maxN)}</span></div>
+        <div class="montar__acts">
+          <button class="btn btn--primary" id="btnSimMontar" type="button">🛒 Montar esse orçamento</button>
+          <a class="btn btn--ghost" href="${wpp ? `https://wa.me/${wpp}?text=${msg}` : '#contato'}" ${wpp ? 'target="_blank" rel="noopener"' : ''}>📱 Falar com consultor</a>
+        </div>
+        <small class="montar__aviso">Estimativa com base no mix sugerido — os valores finais dependem dos modelos escolhidos, frete e condições.</small>`;
+      result.hidden = false;
+      if (window.gtag) try { gtag('event', 'simulador_m2', { value: total, currency: 'BRL', m2: m2 }); } catch (e) {}
+    }
+    function aplicar() {
+      if (!simulado) return;
+      simulado.chosen.forEach(p => { if (p.codigo) cart[p.codigo] = (cart[p.codigo] || 0) + 1; });
       save(); syncAll();
-      if (window.gtag) try { gtag('event', 'montar_academia', { items: chosen.length }); } catch (e) {}
-      if (window.fbq) try { fbq('track', 'AddToCart', { num_items: chosen.length }); } catch (e) {}
+      if (window.gtag) try { gtag('event', 'montar_academia', { items: simulado.chosen.length }); } catch (e) {}
+      if (window.fbq) try { fbq('track', 'AddToCart', { num_items: simulado.chosen.length }); } catch (e) {}
       openDrawer();
-      toast(`Montamos ${chosen.length} equipamento(s) — revise e peça o orçamento!`);
-    });
+      toast(`Montamos ${simulado.chosen.length} equipamento(s) — revise e peça o orçamento!`);
+    }
+    if (go) go.addEventListener('click', calcular);
+    if (result) result.addEventListener('click', e => { if (e.target.closest('#btnSimMontar')) aplicar(); });
   })();
 
   /* ---------- pop-up de boas-vindas (cupom) ---------- */
