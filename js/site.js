@@ -19,10 +19,23 @@
   // nomes em PT dos aparelhos consagrados no Brasil (o resto fica em inglês);
   // o nome original segue em p.nomeEn para descrições, grupos e busca
   const NOMES_PT = window.TORQUE_NOMES_PT || {};
+  // Fotos locais em WebP (87% mais leve que o PNG); se o navegador ou o
+  // arquivo falhar, o fallback abaixo devolve o PNG original.
+  const fotoWebp = src => /^assets\/products\/.+\.png$/i.test(src || '') ? src.replace(/\.png$/i, '.webp') : (src || '');
+  document.addEventListener('error', e => {
+    const img = e.target;
+    if (img && img.tagName === 'IMG' && !img.dataset.pngFb && /assets\/products\/.+\.webp/i.test(img.src)) {
+      img.dataset.pngFb = '1';
+      e.stopPropagation();                                   // segura o onerror inline: ainda temos o PNG
+      img.src = img.src.replace(/\.webp(\?.*)?$/i, '.png');
+    }
+  }, true);
   function aplicaNomesPt(list) {
     list.forEach(p => {
       const t = NOMES_PT[normName(p.nome)];
       if (t && t !== p.nome) { p.nomeEn = p.nome; p.nome = t; }
+      p.imagem = fotoWebp(p.imagem);
+      if (Array.isArray(p.imagens)) p.imagens = p.imagens.map(fotoWebp);
     });
     return list;
   }
