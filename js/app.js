@@ -178,6 +178,18 @@
         margem: null, travado: !!p.travado, oculto: !!p.oculto
       };
     });
+    // produtos novos do app (ex.: série recém-lançada) que ainda não estão no
+    // catálogo publicado entram por cima — o próximo publicar os leva pro site
+    const codigos = new Set(state.products.map(p => p.codigo).filter(Boolean));
+    const seed = (window.TORQUE_PUBLIC && window.TORQUE_PUBLIC.products) || [];
+    seed.forEach(p => {
+      if (!p.codigo || codigos.has(p.codigo)) return;
+      state.products.push({
+        id: uid(), codigo: p.codigo, nome: p.nome || '', serie: p.serie || 'Geral', tipo: p.tipo || 'maquina',
+        imagem: p.imagem || '', imagens: [], video: '', dims: p.dims || '', disp: '', selo: p.selo || '', grupo: '',
+        preco: Number(p.preco) || 0, margem: null, travado: false, oculto: false
+      });
+    });
     save();
   }
   async function pullSettings() {

@@ -1692,6 +1692,13 @@
         .filter(p => p && p.preco > 0 && !p.oculto)
         .map(p => ({ id: p.id, codigo: p.codigo || '', nome: p.nome || '', serie: p.serie || 'Geral', tipo: p.tipo || 'maquina', grupo: p.grupo || '', imagem: p.imagem || '', imagens: Array.isArray(p.imagens) ? p.imagens : [], video: p.video || '', dims: p.dims || '', disp: p.disp || '', selo: p.selo || '', preco: Number(p.preco) || 0 }));
       if (!live.length) return;
+      // produtos novos embutidos no app (ex.: série recém-lançada) que o
+      // catálogo publicado ainda não tem continuam visíveis no site
+      const codigosLive = new Set(live.map(p => p.codigo).filter(Boolean));
+      ((DATA && DATA.products) || []).forEach(p => {
+        if (!p.codigo || codigosLive.has(p.codigo)) return;
+        live.push({ id: 'seed-' + p.codigo, codigo: p.codigo, nome: p.nomeEn || p.nome || '', serie: p.serie || 'Geral', tipo: p.tipo || 'maquina', grupo: p.grupo || '', imagem: p.imagem || '', imagens: [], video: '', dims: p.dims || '', disp: '', selo: p.selo || '', preco: Number(p.preco) || 0 });
+      });
       PRODUCTS = aplicaNomesPt(live);
       if (data && data.banners && typeof data.banners === 'object') BANNERS = data.banners;   // banners por categoria
       if (data && data.carousel && typeof data.carousel === 'object') CAROUSEL = data.carousel;   // imagens do carrossel
