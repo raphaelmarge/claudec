@@ -198,5 +198,20 @@ window.TORQUE_NOMES_PT = {
   'kayak ergometer': 'Simulador de Caiaque',
   'water rowing machine': 'Remo Ergométrico (Água)',
   'air rowing machine': 'Remo Ergométrico (Ar)',
-  'stretching': 'Alongamento'
+  'stretching': 'Alongamento',
+  /* ---- A5 Series (lançamento) ---- */
+  'seated high row': 'Remada Alta Sentada',
+  'decline chest press': 'Supino Declinado Máquina',
+  'rowing trainer': 'Remada Articulada',
+  'abdominal trainer': 'Abdominal Máquina',
+  'upright chest press': 'Supino Vertical',
+  'high row': 'Remada Alta',
+  'biceps curl plate loaded': 'Rosca Bíceps (Plate Loaded)',
+  'shrug deadlift trainer': 'Encolhimento e Terra',
+  'hip abductor': 'Cadeira Abdutora',
+  'glute trainer': 'Glúteo Máquina',
+  'seated biceps curl': 'Rosca Bíceps Sentada',
+  'seated abdominal crunch': 'Abdominal Sentado',
+  'triceps extension': 'Extensão de Tríceps',
+  'arm curl': 'Rosca Máquina',
 };
