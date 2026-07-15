@@ -935,3 +935,7 @@ body.tv .dash__alerts { font-size: 1rem; }
 #pdfBar.on{display:flex}
 #pdfBar a{color:#fff;font-weight:700;text-decoration:none;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #pdfBar button{background:rgba(255,255,255,.22);border:0;color:#fff;width:30px;height:30px;border-radius:50%;font-size:14px;cursor:pointer;flex:none}
+
+/* colar custos FOB em lote (Config, destravado) */
+.fob-lote { width: 100%; background: var(--panel); border: 1px solid var(--line-2); border-radius: 10px; color: var(--txt); padding: 10px 12px; font-family: var(--font-mono); font-size: .85rem; resize: vertical; }
+.fob-lote:focus { outline: none; border-color: var(--violet); }

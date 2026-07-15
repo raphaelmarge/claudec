@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/styles.css?v=20260715a" />
+  <link rel="stylesheet" href="css/styles.css?v=20260716a" />
   <link rel="manifest" href="app.webmanifest" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -195,6 +195,9 @@
         <input type="number" step="0.5" min="0" id="cfgComissao" inputmode="decimal" />
       </label>
     </div>
+    <h3 class="config__sub">📥 Custos FOB em lote <small>cole uma linha por produto no formato CÓDIGO FOB (ex.: A501 450) — aplica o custo, destrava e recalcula pelo câmbio × margem atuais</small></h3>
+    <textarea class="fob-lote" id="fobLote" rows="5" placeholder="A501 450&#10;A502 450&#10;A507 560"></textarea>
+    <button class="btn btn--ghost" id="btnFobLote" type="button" style="margin-top:8px">📥 Aplicar FOBs e recalcular</button>
     <h3 class="config__sub">🏢 Empresa vendedora <small>cadastro fixo usado nos contratos de compra e venda</small></h3>
     <div class="config__grid" id="empresaGrid">
       <label class="field" style="grid-column:1/-1"><span>Razão social</span><input type="text" id="empRazao" autocomplete="off" /></label>
@@ -758,12 +761,12 @@
   <!-- Toast -->
   <div id="toast" class="toast" hidden></div>
 
-  <script src="js/config.js?v=20260715a"></script>
+  <script src="js/config.js?v=20260716a"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/cloud.js?v=20260715a"></script>
-  <script src="js/products.js?v=20260715a"></script>
-  <script src="js/secure.js?v=20260715a"></script>
-  <script src="js/app.js?v=20260715a"></script>
+  <script src="js/cloud.js?v=20260716a"></script>
+  <script src="js/products.js?v=20260716a"></script>
+  <script src="js/secure.js?v=20260716a"></script>
+  <script src="js/app.js?v=20260716a"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));

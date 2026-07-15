@@ -1646,6 +1646,27 @@
     if (!editingId) state.products.push(p);
     save(); schedulePushSettings(); closeModal('#editModal'); render(); toast('Produto salvo.');
   });
+  // Custos FOB em lote: cola "CÓDIGO FOB" por linha, aplica, destrava e recalcula.
+  $('#btnFobLote') && $('#btnFobLote').addEventListener('click', () => {
+    if (!unlocked) { toast('Destrave com a senha para carregar custos.'); openPasswordModal(); return; }
+    const byCode = {};
+    state.products.forEach(p => { if (p.codigo) byCode[String(p.codigo).toUpperCase()] = p; });
+    let ok = 0; const naoAchei = [];
+    ($('#fobLote').value || '').split(/\n+/).forEach(l => {
+      const m = l.trim().match(/^([A-Za-z0-9._-]+)[\s;,:\t]+\$?\s*(\d+(?:[.,]\d+)?)$/);
+      if (!m) return;
+      const p = byCode[m[1].toUpperCase()];
+      const fob = parseFloat(m[2].replace(',', '.'));
+      if (!p) { naoAchei.push(m[1].toUpperCase()); return; }
+      if (isFinite(fob) && fob > 0) { p.fob = fob; p.travado = false; ok++; }
+    });
+    if (!ok && !naoAchei.length) { toast('Nada para aplicar — use uma linha por produto: CÓDIGO FOB (ex.: A501 450).'); return; }
+    const r = recalcAll();
+    save(); schedulePushSettings(); render();
+    if (ok) $('#fobLote').value = '';
+    toast(`FOB aplicado em ${ok} produto(s) · ${r.updated} preço(s) recalculado(s)` +
+      (naoAchei.length ? ` · não encontrei: ${naoAchei.slice(0, 4).join(', ')}${naoAchei.length > 4 ? '…' : ''}` : ''));
+  });
   // Recalcular preços pelo custo: destrava os itens COM custo e aplica câmbio × margem atuais.
   $('#btnRecalcPrices') && $('#btnRecalcPrices').addEventListener('click', () => {
     if (!unlocked) { toast('Destrave com a senha para carregar os custos.'); openPasswordModal(); return; }
