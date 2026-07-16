@@ -2371,9 +2371,10 @@
   window.__contrato = abrirContrato;    // gancho para testes automatizados
   /* ============== DADOS PARA A NOTA FISCAL (preparador) ============== */
   // Monta tudo que o emissor pede (SEFAZ, Bling, contador…) a partir da
-  // venda. REGRA DO VALOR DA NOTA: cada item sai por (custo FOB + adicional
-  // em US$, padrão 200) × câmbio — não pelo preço de venda. Exige o painel
-  // destravado (FOB e câmbio ficam atrás da senha).
+  // venda. REGRA DO VALOR DA NOTA: cada item sai pelo custo nacionalizado
+  // (CIF × impostos × câmbio + frete nacional — o mesmo custoBRL do painel)
+  // + adicional em US$ (padrão 200) convertido — não pelo preço de venda.
+  // Exige o painel destravado (FOB, câmbio e impostos ficam atrás da senha).
   let nfAtual = null;   // { texto, csv, numero }
   function abrirNF(r) {
     const emp = P().contrato || {};
@@ -2392,9 +2393,8 @@
       const q = Number(i.qtd) || 1, unVenda = Number(i.unitario) || 0;
       totalVenda += Number(i.total) || q * unVenda;
       const p = byCode[String(i.codigo || '').toUpperCase()];
-      const fob = p && p.fob != null && p.fob !== '' ? Number(p.fob) : null;
       let unNota = null;
-      if (podeNF && fob != null && isFinite(fob)) unNota = r2((fob + addUSD) * cambio);
+      if (podeNF && p && temCusto(p) && isFinite(Number(p.fob))) unNota = r2(custoBRL(p) + addUSD * cambio);
       else if (podeNF) semFob.push(i.codigo || i.nome || '?');
       if (unNota != null) totalNota += unNota * q;
       return { i, q, unNota };
@@ -2405,7 +2405,7 @@
     linhas.push('');
     if (!podeNF) {
       linhas.push('⚠️ PAINEL TRAVADO — destrave com a senha para calcular o valor da');
-      linhas.push('nota (custo FOB + US$ ' + addUSD + ' × câmbio). Abaixo, só os dados cadastrais.');
+      linhas.push('nota (custo após impostos + US$ ' + addUSD + '). Abaixo, só os dados cadastrais.');
       linhas.push('');
     }
     linhas.push('EMITENTE');
@@ -2420,7 +2420,7 @@
     linhas.push('Contato: ' + ([r.contato_telefone || (cli && cli.telefone), r.contato_email || (cli && cli.email)].filter(Boolean).join(' · ') || '—'));
     linhas.push('');
     if (podeNF) {
-      linhas.push(`ITENS — VALOR PARA A NOTA (FOB + US$ ${addUSD}) × câmbio ${cambio.toLocaleString('pt-BR')} · NCM ${ncm} · CFOP ${cfop}`);
+      linhas.push(`ITENS — VALOR PARA A NOTA (custo após impostos e fretes + US$ ${addUSD} × câmbio ${cambio.toLocaleString('pt-BR')}) · NCM ${ncm} · CFOP ${cfop}`);
       calc.forEach((c, ix) => {
         const vTxt = c.unNota != null ? `${c.q} un × ${money(c.unNota)} = ${money(c.unNota * c.q)}` : `${c.q} un × (SEM FOB CADASTRADO)`;
         linhas.push(`${ix + 1}. [${c.i.codigo || '—'}] ${c.i.nome || ''} — ${vTxt}`);
