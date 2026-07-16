@@ -939,3 +939,8 @@ body.tv .dash__alerts { font-size: 1rem; }
 /* colar custos FOB em lote (Config, destravado) */
 .fob-lote { width: 100%; background: var(--panel); border: 1px solid var(--line-2); border-radius: 10px; color: var(--txt); padding: 10px 12px; font-family: var(--font-mono); font-size: .85rem; resize: vertical; }
 .fob-lote:focus { outline: none; border-color: var(--violet); }
+
+/* dados para a nota fiscal */
+.nf-hint { color: var(--txt-dim); font-size: .85rem; margin: 0 0 12px; }
+.nf-pre { background: var(--panel); border: 1px solid var(--line-2); border-radius: 12px; padding: 14px 16px; color: var(--txt); font-family: var(--font-mono); font-size: .8rem; line-height: 1.55; white-space: pre-wrap; overflow-x: auto; }
+.dcard__actions .dc-nf { border-color: var(--line-2); color: var(--txt-dim); }
