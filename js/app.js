@@ -1188,7 +1188,7 @@
   $('#cfgParcelas').addEventListener('input', () => { P().parcelasMax = Math.max(1, parseInt($('#cfgParcelas').value, 10) || 1); save(); renderSummary(); schedulePushSettings(); });
   $('#cfgValidade').addEventListener('input', () => { P().validade = Math.max(1, parseInt($('#cfgValidade').value, 10) || 1); save(); schedulePushSettings(); });
   // cadastro fixo da empresa vendedora (usado no contrato de compra e venda)
-  const EMP_FIELDS = { empRazao: 'razao', empCnpj: 'cnpj', empEndereco: 'endereco', empRep: 'rep', empCargo: 'cargo', empCpf: 'cpf', empCidade: 'cidade', empNcm: 'ncm', empCfop: 'cfop' };
+  const EMP_FIELDS = { empRazao: 'razao', empCnpj: 'cnpj', empEndereco: 'endereco', empRep: 'rep', empCargo: 'cargo', empCpf: 'cpf', empCidade: 'cidade', empNcm: 'ncm', empCfop: 'cfop', empNfAdd: 'nfAddUsd' };
   Object.keys(EMP_FIELDS).forEach(id => {
     const el = $('#' + id); if (!el) return;
     el.addEventListener('input', () => {
@@ -2371,21 +2371,43 @@
   window.__contrato = abrirContrato;    // gancho para testes automatizados
   /* ============== DADOS PARA A NOTA FISCAL (preparador) ============== */
   // Monta tudo que o emissor pede (SEFAZ, Bling, contador…) a partir da
-  // venda: emitente, destinatário, itens com NCM/CFOP e totais.
+  // venda. REGRA DO VALOR DA NOTA: cada item sai por (custo FOB + adicional
+  // em US$, padrão 200) × câmbio — não pelo preço de venda. Exige o painel
+  // destravado (FOB e câmbio ficam atrás da senha).
   let nfAtual = null;   // { texto, csv, numero }
   function abrirNF(r) {
     const emp = P().contrato || {};
     const cli = (typeof clienteById === 'function' && r.cliente_id) ? clienteById(r.cliente_id) : null;
     const ncm = (emp.ncm || '9506.91.00').trim();
     const cfop = (emp.cfop || '5102').trim();
+    const addUSD = Number(emp.nfAddUsd) > 0 ? Number(emp.nfAddUsd) : 200;
+    const cambio = Number(P().cambio) || 0;
+    const podeNF = unlocked && cambio > 0;
+    const byCode = {};
+    state.products.forEach(p => { if (p.codigo) byCode[String(p.codigo).toUpperCase()] = p; });
     const itens = Array.isArray(r.itens) ? r.itens : [];
-    const subtotal = itens.reduce((s, i) => s + (Number(i.total) || 0), 0);
-    const total = Number(r.total) || subtotal;
-    const desconto = Math.max(0, subtotal - total);
+    const semFob = [];
+    let totalNota = 0, totalVenda = 0;
+    const calc = itens.map(i => {
+      const q = Number(i.qtd) || 1, unVenda = Number(i.unitario) || 0;
+      totalVenda += Number(i.total) || q * unVenda;
+      const p = byCode[String(i.codigo || '').toUpperCase()];
+      const fob = p && p.fob != null && p.fob !== '' ? Number(p.fob) : null;
+      let unNota = null;
+      if (podeNF && fob != null && isFinite(fob)) unNota = r2((fob + addUSD) * cambio);
+      else if (podeNF) semFob.push(i.codigo || i.nome || '?');
+      if (unNota != null) totalNota += unNota * q;
+      return { i, q, unNota };
+    });
     const linhas = [];
     linhas.push('NOTA FISCAL — DADOS PARA EMISSÃO');
     linhas.push('Orçamento ' + (r.numero || '—') + ' · ' + new Date().toLocaleDateString('pt-BR'));
     linhas.push('');
+    if (!podeNF) {
+      linhas.push('⚠️ PAINEL TRAVADO — destrave com a senha para calcular o valor da');
+      linhas.push('nota (custo FOB + US$ ' + addUSD + ' × câmbio). Abaixo, só os dados cadastrais.');
+      linhas.push('');
+    }
     linhas.push('EMITENTE');
     linhas.push('Razão social: ' + (emp.razao || '—'));
     linhas.push('CNPJ: ' + (emp.cnpj || '—'));
@@ -2397,24 +2419,27 @@
     linhas.push('Endereço: ' + ((cli && [cli.endereco, cli.cidade].filter(Boolean).join(', ')) || '—'));
     linhas.push('Contato: ' + ([r.contato_telefone || (cli && cli.telefone), r.contato_email || (cli && cli.email)].filter(Boolean).join(' · ') || '—'));
     linhas.push('');
-    linhas.push(`ITENS (NCM ${ncm} · CFOP ${cfop})`);
-    itens.forEach((i, ix) => {
-      const q = Number(i.qtd) || 1, un = Number(i.unitario) || 0, tt = Number(i.total) || q * un;
-      linhas.push(`${ix + 1}. [${i.codigo || '—'}] ${i.nome || ''} — ${q} un × ${money(un)} = ${money(tt)}`);
-    });
-    linhas.push('');
-    linhas.push('TOTAIS');
-    linhas.push('Produtos: ' + money(subtotal));
-    if (desconto > 0) linhas.push('Desconto: ' + money(desconto));
-    linhas.push('TOTAL DA NOTA: ' + money(total));
-    const sinal = Number(r.sinal) || 0, parcelas = Number(r.parcelas) || 1, vparc = Number(r.valor_parcela) || 0;
-    linhas.push('Pagamento: ' + (sinal > 0 ? `entrada de ${money(sinal)} + ` : '') + (parcelas > 1 ? `${parcelas}× de ${money(vparc || (total - sinal) / parcelas)}` : 'à vista'));
+    if (podeNF) {
+      linhas.push(`ITENS — VALOR PARA A NOTA (FOB + US$ ${addUSD}) × câmbio ${cambio.toLocaleString('pt-BR')} · NCM ${ncm} · CFOP ${cfop}`);
+      calc.forEach((c, ix) => {
+        const vTxt = c.unNota != null ? `${c.q} un × ${money(c.unNota)} = ${money(c.unNota * c.q)}` : `${c.q} un × (SEM FOB CADASTRADO)`;
+        linhas.push(`${ix + 1}. [${c.i.codigo || '—'}] ${c.i.nome || ''} — ${vTxt}`);
+      });
+      linhas.push('');
+      linhas.push('TOTAL DA NOTA: ' + money(totalNota));
+      if (semFob.length) linhas.push('⚠️ Sem custo FOB (fora do total): ' + semFob.join(', ') + ' — cadastre o FOB e gere de novo.');
+      linhas.push('(Valor de venda da operação, para controle interno: ' + money(Number(r.total) || totalVenda) + ')');
+    } else {
+      linhas.push(`ITENS (NCM ${ncm} · CFOP ${cfop})`);
+      calc.forEach((c, ix) => linhas.push(`${ix + 1}. [${c.i.codigo || '—'}] ${c.i.nome || ''} — ${c.q} un`));
+    }
     linhas.push('Natureza da operação: Venda de mercadoria');
+    linhas.push('Confirme com o seu contador o destaque correto da operação.');
     const csv = ['codigo;descricao;ncm;cfop;quantidade;valor_unitario;valor_total']
-      .concat(itens.map(i => {
-        const q = Number(i.qtd) || 1, un = Number(i.unitario) || 0, tt = Number(i.total) || q * un;
-        const nome = String(i.nome || '').replace(/;/g, ',');
-        return `${i.codigo || ''};${nome};${ncm};${cfop};${q};${un.toFixed(2).replace('.', ',')};${tt.toFixed(2).replace('.', ',')}`;
+      .concat(calc.map(c => {
+        const nome = String(c.i.nome || '').replace(/;/g, ',');
+        const un = c.unNota != null ? c.unNota : 0;
+        return `${c.i.codigo || ''};${nome};${ncm};${cfop};${c.q};${un.toFixed(2).replace('.', ',')};${(un * c.q).toFixed(2).replace('.', ',')}`;
       })).join('\n');
     nfAtual = { texto: linhas.join('\n'), csv, numero: r.numero || 'nf' };
     $('#nfTexto').textContent = nfAtual.texto;
