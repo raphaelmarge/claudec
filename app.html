@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/styles.css?v=20260716a" />
+  <link rel="stylesheet" href="css/styles.css?v=20260717a" />
   <link rel="manifest" href="app.webmanifest" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -207,6 +207,8 @@
       <label class="field"><span>CPF do representante</span><input type="text" id="empCpf" inputmode="numeric" autocomplete="off" /></label>
       <label class="field" style="grid-column:1/-1"><span>Endereço completo da sede</span><input type="text" id="empEndereco" placeholder="Rua, nº, bairro, Cidade/UF, CEP" autocomplete="off" /></label>
       <label class="field"><span>Cidade do foro / assinatura</span><input type="text" id="empCidade" placeholder="Rio de Janeiro" autocomplete="off" /></label>
+      <label class="field"><span>NCM padrão (nota fiscal) <small>equip. de ginástica = 9506.91.00</small></span><input type="text" id="empNcm" placeholder="9506.91.00" autocomplete="off" /></label>
+      <label class="field"><span>CFOP padrão (nota fiscal) <small>5102 dentro do estado · 6102 fora</small></span><input type="text" id="empCfop" placeholder="5102" autocomplete="off" /></label>
     </div>
     <h3 class="config__sub">Linhas de produtos <small>renomeie uma linha, defina a imagem de banner (🖼) que aparece no site, ou crie uma nova</small></h3>
     <div class="stages-cfg" id="linhasEditor"></div>
@@ -713,6 +715,24 @@
   </div>
 
   <!-- ===================== CONTRATO DE COMPRA E VENDA ===================== -->
+  <div class="modal modal--quote" id="nfModal" hidden>
+    <div class="modal__backdrop" data-close></div>
+    <div class="modal__card modal__card--quote">
+      <header class="modal__head">
+        <h3>🧾 Dados para a nota fiscal</h3>
+        <button class="modal__x" data-close type="button" aria-label="Fechar">✕</button>
+      </header>
+      <div class="modal__body modal__body--quote">
+        <p class="nf-hint">Tudo pronto para colar no seu emissor (SEFAZ, Bling, contador…). Confira o NCM/CFOP — os padrões ficam em Config → Empresa vendedora.</p>
+        <pre class="nf-pre" id="nfTexto"></pre>
+        <div class="quote-actions2">
+          <button class="btn btn--primary" id="btnNfCopiar" type="button">📋 Copiar tudo</button>
+          <button class="btn btn--ghost" id="btnNfCsv" type="button">⬇️ Baixar itens (CSV)</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="modal modal--quote" id="contractModal" hidden>
     <div class="modal__backdrop" data-close></div>
     <div class="modal__card modal__card--quote">
@@ -761,12 +781,12 @@
   <!-- Toast -->
   <div id="toast" class="toast" hidden></div>
 
-  <script src="js/config.js?v=20260716a"></script>
+  <script src="js/config.js?v=20260717a"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/cloud.js?v=20260716a"></script>
-  <script src="js/products.js?v=20260716a"></script>
-  <script src="js/secure.js?v=20260716a"></script>
-  <script src="js/app.js?v=20260716a"></script>
+  <script src="js/cloud.js?v=20260717a"></script>
+  <script src="js/products.js?v=20260717a"></script>
+  <script src="js/secure.js?v=20260717a"></script>
+  <script src="js/app.js?v=20260717a"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
