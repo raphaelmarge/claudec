@@ -1,0 +1,18 @@
+name: Diag catálogo A5
+on: workflow_dispatch
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Preços A5 no catalog.json publicado
+        run: |
+          curl -sf "https://uqwbywzuqooqzmiklqct.supabase.co/storage/v1/object/public/produtos/catalog.json?t=$(date +%s)" -o cat.json
+          python3 - <<'EOF'
+          import json
+          d = json.load(open('cat.json'))
+          prods = d.get('products', d if isinstance(d, list) else [])
+          a5 = [p for p in prods if str(p.get('codigo','')).startswith('A5')]
+          print('A5 no catálogo publicado:', len(a5))
+          for p in sorted(a5, key=lambda x: x.get('codigo','')):
+              print(p.get('codigo'), p.get('preco'), 'fob' if 'fob' in p else '')
+          EOF
