@@ -1692,6 +1692,14 @@
         .filter(p => p && p.preco > 0 && !p.oculto)
         .map(p => ({ id: p.id, codigo: p.codigo || '', nome: p.nome || '', serie: p.serie || 'Geral', tipo: p.tipo || 'maquina', grupo: p.grupo || '', imagem: p.imagem || '', imagens: Array.isArray(p.imagens) ? p.imagens : [], video: p.video || '', dims: p.dims || '', disp: p.disp || '', selo: p.selo || '', preco: Number(p.preco) || 0 }));
       if (!live.length) return;
+      // Correção pontual (jul/2026): a 1ª leva da A5 foi publicada com preço
+      // estimado; enquanto o catálogo remoto não for republicado corrigido, o
+      // site troca pelo preço da fórmula oficial (mesmo mapa do app).
+      const A5_PRECO_FIX = { 'A501': [6975, 15761.35], 'A502': [6975, 15761.35], 'A503': [6975, 15761.35], 'A504': [6975, 15761.35], 'A505': [6975, 15761.35], 'A506': [6975, 15761.35], 'A507': [8680, 19103.40], 'A508': [6975, 15761.35], 'A509': [6975, 15761.35], 'A510': [6975, 15761.35], 'A511': [6975, 15761.35], 'A512': [5425, 12723.12], 'A513': [12710, 27002.79], 'A514': [10075, 21837.80], 'A515': [12865, 27306.61], 'A516': [12865, 27306.61], 'A517': [12865, 27306.61], 'A518': [10230, 22141.62], 'A519': [12865, 27306.61], 'A520': [12865, 27306.61], 'A521': [12865, 27306.61], 'A522': [12865, 27306.61], 'A523': [12865, 27306.61], 'A524': [12865, 27306.61], 'A525': [15470, 32410.83], 'A526': [10075, 21837.80], 'A527': [12865, 27306.61], 'A528': [12865, 27306.61], 'A529': [12865, 27306.61] };
+      live.forEach(p => {
+        const f = A5_PRECO_FIX[p.codigo];
+        if (f && Math.abs(p.preco - f[0]) < 1) p.preco = f[1];
+      });
       // produtos novos embutidos no app (ex.: série recém-lançada) que o
       // catálogo publicado ainda não tem continuam visíveis no site
       const codigosLive = new Set(live.map(p => p.codigo).filter(Boolean));

@@ -168,10 +168,12 @@
   // houver FOB cadastrado (ajustes manuais do usuário ficam intocados).
   const A5_PRECO_FIX = { 'A501': [6975, 15761.35], 'A502': [6975, 15761.35], 'A503': [6975, 15761.35], 'A504': [6975, 15761.35], 'A505': [6975, 15761.35], 'A506': [6975, 15761.35], 'A507': [8680, 19103.40], 'A508': [6975, 15761.35], 'A509': [6975, 15761.35], 'A510': [6975, 15761.35], 'A511': [6975, 15761.35], 'A512': [5425, 12723.12], 'A513': [12710, 27002.79], 'A514': [10075, 21837.80], 'A515': [12865, 27306.61], 'A516': [12865, 27306.61], 'A517': [12865, 27306.61], 'A518': [10230, 22141.62], 'A519': [12865, 27306.61], 'A520': [12865, 27306.61], 'A521': [12865, 27306.61], 'A522': [12865, 27306.61], 'A523': [12865, 27306.61], 'A524': [12865, 27306.61], 'A525': [15470, 32410.83], 'A526': [10075, 21837.80], 'A527': [12865, 27306.61], 'A528': [12865, 27306.61], 'A529': [12865, 27306.61] };
   function fixPrecosA5(s) {
+    let n = 0;
     ((s && s.products) || []).forEach(p => {
       const f = A5_PRECO_FIX[p.codigo];
-      if (f && (p.fob == null || p.fob === '') && Math.abs((Number(p.preco) || 0) - f[0]) < 1) { p.preco = f[1]; p.travado = false; }
+      if (f && (p.fob == null || p.fob === '') && Math.abs((Number(p.preco) || 0) - f[0]) < 1) { p.preco = f[1]; p.travado = false; n++; }
     });
+    return n;
   }
   fixPrecosA5(state); save();
   function applyCatalog(remote) {
@@ -201,7 +203,9 @@
         preco: Number(p.preco) || 0, margem: null, travado: false, oculto: false
       });
     });
-    fixPrecosA5(state);   // catálogo publicado com o preço estimado antigo também é corrigido
+    // catálogo publicado com o preço estimado antigo também é corrigido — e,
+    // se corrigiu algo, republica para o site parar de servir o preço velho
+    if (fixPrecosA5(state) > 0) schedulePushSettings();
     save();
   }
   async function pullSettings() {
