@@ -1,5 +1,8 @@
 name: Diag catálogo A5
-on: workflow_dispatch
+on:
+  push:
+    branches: [claude/torque-fitness-budget-tool-qjes5f]
+    paths: ['.github/workflows/diag-catalog.yml']
 jobs:
   diag:
     runs-on: ubuntu-latest
