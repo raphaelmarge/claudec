@@ -498,6 +498,7 @@
   // então abre/baixa sempre — imune a folha de compartilhar que não aparece,
   // popup bloqueado e regra de gesto do iOS.
   let pdfBarUrl = null;
+  let pdfBarFile = null;
   function mostrarLinkPdf(file) {
     let bar = document.getElementById('pdfBar');
     if (!bar) {
@@ -506,12 +507,26 @@
       bar.innerHTML = '<a id="pdfBarLink" target="_blank" rel="noopener"></a><button id="pdfBarClose" type="button" aria-label="Fechar">✕</button>';
       document.body.appendChild(bar);
       bar.querySelector('#pdfBarClose').addEventListener('click', ocultarLinkPdf);
+      // No celular o toque na barra é um gesto NOVO: chama a folha de enviar
+      // direto (WhatsApp, e-mail…). Se a folha falhar, cai no link e abre o PDF.
+      bar.querySelector('#pdfBarLink').addEventListener('click', e => {
+        if (!ehMovel || !pdfBarFile) return;
+        if (!(navigator.canShare && navigator.canShare({ files: [pdfBarFile] }))) return;
+        e.preventDefault();
+        navigator.share({ files: [pdfBarFile], title: pdfBarFile.name })
+          .then(ocultarLinkPdf)
+          .catch(err => {
+            if (err && err.name === 'AbortError') return;         // usuário fechou a folha
+            try { window.open(pdfBarUrl, '_blank', 'noopener'); } catch (e2) {}
+          });
+      });
     }
     if (pdfBarUrl) URL.revokeObjectURL(pdfBarUrl);
     pdfBarUrl = URL.createObjectURL(file);
+    pdfBarFile = file;
     const a = bar.querySelector('#pdfBarLink');
     a.href = pdfBarUrl; a.download = file.name;
-    a.textContent = '📄 PDF pronto — toque para abrir';
+    a.textContent = ehMovel ? '📄 PDF pronto — toque para enviar' : '📄 PDF pronto — toque para abrir';
     bar.classList.add('on');
   }
   function ocultarLinkPdf() {
