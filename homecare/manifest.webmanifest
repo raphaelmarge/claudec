@@ -1,0 +1,17 @@
+{
+  "name": "CuidarJá · Cuidado em casa",
+  "short_name": "CuidarJá",
+  "description": "Conecta famílias a cuidadores, técnicos e enfermeiros verificados para atendimento em casa — na hora ou agendado.",
+  "lang": "pt-BR",
+  "start_url": "index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#F4F8F7",
+  "theme_color": "#0E9F8E",
+  "categories": ["health", "medical", "lifestyle"],
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}

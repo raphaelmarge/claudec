@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#12B3A0"/>
+      <stop offset="1" stop-color="#0A7367"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#g)"/>
+  <!-- coração (área segura ~68% central p/ maskable) -->
+  <path d="M256 404C256 404 116 322 116 220C116 168 152 138 192 138C222 138 244 154 256 178C268 154 290 138 320 138C360 138 396 168 396 220C396 322 256 404 256 404Z" fill="#ffffff"/>
+  <!-- pulso / batimento -->
+  <path d="M158 262H206L224 214L256 316L282 262H354" fill="none" stroke="#0E9F8E" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

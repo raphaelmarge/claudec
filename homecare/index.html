@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1" />
+  <meta name="theme-color" content="#0E9F8E" />
+  <title>CuidarJá · Cuidado em casa, quando você precisar</title>
+  <meta name="description" content="CuidarJá conecta famílias a cuidadores de idosos, técnicos e enfermeiros verificados para atendimento em casa — na hora ou agendado. Como um Uber, mas para home care." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="app.css?v=1" />
+
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="CuidarJá" />
+  <link rel="apple-touch-icon" href="icon.svg" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http://www.w3.org/2000/svg%27%20viewBox%3D%270%200%20100%20100%27%3E%3Crect%20width%3D%27100%27%20height%3D%27100%27%20rx%3D%2724%27%20fill%3D%27%230E9F8E%27/%3E%3Cpath%20d%3D%27M50%2078C50%2078%2022%2062%2022%2042C22%2032%2029%2026%2037%2026C43%2026%2047%2029%2050%2034C53%2029%2057%2026%2063%2026C71%2026%2078%2032%2078%2042C78%2062%2050%2078%2050%2078Z%27%20fill%3D%27white%27/%3E%3Cpath%20d%3D%27M30%2050H42L46%2042L52%2058L57%2050H70%27%20stroke%3D%27%230E9F8E%27%20stroke-width%3D%274.5%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%20fill%3D%27none%27/%3E%3C/svg%3E" />
+</head>
+<body data-role="familia">
+
+  <!-- ===================== HEADER ===================== -->
+  <header class="topbar">
+    <div class="topbar__row">
+      <div class="brand" id="brandHome" role="button" tabindex="0" aria-label="Início">
+        <span class="brand__mark" aria-hidden="true">
+          <svg viewBox="0 0 100 100"><rect width="100" height="100" rx="24" fill="url(#bg)"/><defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#12B3A0"/><stop offset="1" stop-color="#0A7367"/></linearGradient></defs><path d="M50 78C50 78 22 62 22 42C22 32 29 26 37 26C43 26 47 29 50 34C53 29 57 26 63 26C71 26 78 32 78 42C78 62 50 78 50 78Z" fill="white"/><path d="M30 50H42L46 42L52 58L57 50H70" stroke="#0E9F8E" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+        </span>
+        <span class="brand__text"><strong>CuidarJá</strong><em>CUIDADO EM CASA</em></span>
+      </div>
+      <span class="header-tag">Protótipo</span>
+    </div>
+
+    <div class="role-switch role-switch--full" role="tablist" aria-label="Modo de uso">
+      <button class="role-switch__btn is-on" data-role="familia" role="tab">🏠 Preciso de cuidado</button>
+      <button class="role-switch__btn" data-role="pro" role="tab">🩺 Sou profissional</button>
+    </div>
+  </header>
+
+  <!-- ===================== MAIN ===================== -->
+  <main class="app">
+
+    <!-- ============ FAMÍLIA · SOLICITAR ============ -->
+    <section class="screen is-active" data-screen="solicitar">
+      <div class="hero">
+        <h1>Cuidado em casa, <b>quando você precisar</b></h1>
+        <p>Cuidadores de idosos, técnicos de enfermagem e enfermeiros verificados, prontos para atender perto de você — agora ou agendado.</p>
+        <div class="trust">
+          <span class="trust__item">✓ Profissionais verificados</span>
+          <span class="trust__item">★ Avaliados por famílias</span>
+          <span class="trust__item">✓ Sem mensalidade</span>
+        </div>
+      </div>
+
+      <form id="requestForm" class="card form" novalidate>
+        <div class="form__step">
+          <span class="step-label">1 · De que cuidado você precisa?</span>
+          <div class="care-grid" id="careGrid"><!-- preenchido por JS --></div>
+        </div>
+
+        <div class="form__step">
+          <span class="step-label">2 · Para quem é o atendimento?</span>
+          <div class="grid-2">
+            <label class="field">
+              <span>Nome do paciente</span>
+              <input type="text" name="pacienteNome" placeholder="Ex.: Dona Marta" autocomplete="off" />
+            </label>
+            <label class="field">
+              <span>Idade</span>
+              <input type="number" name="pacienteIdade" inputmode="numeric" min="0" max="120" placeholder="Ex.: 78" />
+            </label>
+          </div>
+          <label class="field">
+            <span>Condição ou necessidade <small>(opcional)</small></span>
+            <input type="text" name="condicao" placeholder="Ex.: pós-cirúrgico, mobilidade reduzida, Alzheimer…" autocomplete="off" />
+          </label>
+        </div>
+
+        <div class="form__step">
+          <span class="step-label">3 · Onde?</span>
+          <div class="grid-2">
+            <label class="field">
+              <span>Bairro</span>
+              <input type="text" name="bairro" placeholder="Ex.: Vila Mariana" value="Vila Mariana" autocomplete="off" />
+            </label>
+            <label class="field">
+              <span>Cidade</span>
+              <input type="text" name="cidade" placeholder="Ex.: São Paulo" value="São Paulo" autocomplete="off" />
+            </label>
+          </div>
+        </div>
+
+        <div class="form__step">
+          <span class="step-label">4 · Quando?</span>
+          <div class="chips" role="radiogroup" id="whenChips">
+            <input type="radio" name="quando" id="q-agora" value="agora" checked /><label for="q-agora">Agora / o quanto antes</label>
+            <input type="radio" name="quando" id="q-agendar" value="agendar" /><label for="q-agendar">Agendar</label>
+          </div>
+          <div class="grid-2" id="scheduleFields" hidden>
+            <label class="field">
+              <span>Data</span>
+              <input type="date" name="data" />
+            </label>
+            <label class="field">
+              <span>Horário</span>
+              <input type="time" name="hora" value="08:00" />
+            </label>
+          </div>
+        </div>
+
+        <div class="form__step">
+          <span class="step-label">5 · Por quanto tempo?</span>
+          <div class="chips" role="radiogroup" id="durChips">
+            <input type="radio" name="duracao" id="d-hora" value="hora" checked /><label for="d-hora">Por hora</label>
+            <input type="radio" name="duracao" id="d-diaria" value="diaria" /><label for="d-diaria">Diária (8h)</label>
+            <input type="radio" name="duracao" id="d-plantao" value="plantao12" /><label for="d-plantao">Plantão 12h</label>
+            <input type="radio" name="duracao" id="d-noite" value="noite" /><label for="d-noite">Pernoite</label>
+          </div>
+          <label class="field" id="horasField">
+            <span>Quantas horas?</span>
+            <select name="horas">
+              <option value="4" selected>4 horas (mínimo)</option>
+              <option value="6">6 horas</option>
+              <option value="8">8 horas</option>
+            </select>
+          </label>
+        </div>
+
+        <label class="field">
+          <span>Observações para o profissional <small>(opcional)</small></span>
+          <textarea name="obs" placeholder="Ex.: paciente usa andador, tem cachorro dócil, portão azul…"></textarea>
+        </label>
+
+        <button type="submit" class="btn btn--primary btn--lg">Buscar profissionais →</button>
+        <p class="fineprint">É gratuito buscar e comparar. Você só confirma se encontrar quem procura.</p>
+      </form>
+    </section>
+
+    <!-- ============ FAMÍLIA · BUSCAR / MATCH ============ -->
+    <section class="screen" data-screen="buscar">
+      <div class="search-head">
+        <button class="iconbtn" id="backToForm" aria-label="Voltar">←</button>
+        <div class="search-head__info" id="searchSummary"></div>
+      </div>
+      <div class="sortbar">
+        <span class="sortbar__label">Ordenar por</span>
+        <div class="chips chips--sm" role="radiogroup" id="sortChips">
+          <input type="radio" name="sort" id="s-dist" value="dist" checked /><label for="s-dist">Mais perto</label>
+          <input type="radio" name="sort" id="s-rate" value="rate" /><label for="s-rate">Melhor avaliado</label>
+          <input type="radio" name="sort" id="s-price" value="price" /><label for="s-price">Menor preço</label>
+        </div>
+      </div>
+      <div id="matchList" class="list"><!-- cards de profissionais --></div>
+    </section>
+
+    <!-- ============ FAMÍLIA · MEUS AGENDAMENTOS ============ -->
+    <section class="screen" data-screen="agendamentos">
+      <div class="screen-head">
+        <h2>Meus atendimentos</h2>
+        <p class="screen-head__sub">Acompanhe suas solicitações em tempo real.</p>
+      </div>
+      <div id="bookingList" class="list"></div>
+    </section>
+
+    <!-- ============ FAMÍLIA · COMO FUNCIONA ============ -->
+    <section class="screen" data-screen="ajuda">
+      <div class="screen-head">
+        <h2>Como funciona</h2>
+        <p class="screen-head__sub">Cuidado de confiança em 3 passos.</p>
+      </div>
+      <ol class="steps">
+        <li><span class="steps__n">1</span><div><strong>Diga o que precisa</strong><p>Escolha o tipo de cuidado, o endereço e se é para agora ou agendado.</p></div></li>
+        <li><span class="steps__n">2</span><div><strong>Compare e escolha</strong><p>Veja profissionais verificados perto de você, com avaliações, especialidades e preço por hora.</p></div></li>
+        <li><span class="steps__n">3</span><div><strong>Confirme e acompanhe</strong><p>O profissional confirma, você acompanha o atendimento e avalia ao final.</p></div></li>
+      </ol>
+      <div class="card info-card">
+        <h3>Segurança em primeiro lugar</h3>
+        <ul class="checklist">
+          <li>Identidade e antecedentes conferidos</li>
+          <li>Registro profissional (COREN/CREFITO) validado para técnicos, enfermeiros e fisioterapeutas</li>
+          <li>Avaliações reais de outras famílias</li>
+          <li>Pagamento combinado e histórico de cada atendimento</li>
+        </ul>
+      </div>
+      <p class="disclaimer">Protótipo demonstrativo. Os profissionais e avaliações exibidos são fictícios, apenas para ilustrar o funcionamento do app.</p>
+    </section>
+
+    <!-- ============ PROFISSIONAL · SOLICITAÇÕES ============ -->
+    <section class="screen" data-screen="solicitacoes">
+      <div class="screen-head">
+        <h2>Solicitações</h2>
+        <p class="screen-head__sub">Chamados de famílias perto de você. Aceite para atender.</p>
+      </div>
+      <div id="proInbox" class="list"></div>
+    </section>
+
+    <!-- ============ PROFISSIONAL · MINHA AGENDA ============ -->
+    <section class="screen" data-screen="agenda">
+      <div class="screen-head">
+        <h2>Minha agenda</h2>
+        <p class="screen-head__sub">Atendimentos que você aceitou.</p>
+      </div>
+      <div id="proAgenda" class="list"></div>
+    </section>
+
+    <!-- ============ PROFISSIONAL · PERFIL ============ -->
+    <section class="screen" data-screen="perfil">
+      <div class="screen-head">
+        <h2>Meu perfil profissional</h2>
+        <p class="screen-head__sub">É o que as famílias veem quando você aparece na busca.</p>
+      </div>
+      <form id="proForm" class="card form">
+        <div class="pro-preview" id="proPreview"></div>
+        <label class="field">
+          <span>Nome completo</span>
+          <input type="text" name="nome" placeholder="Seu nome" autocomplete="off" />
+        </label>
+        <label class="field">
+          <span>Atuação</span>
+          <select name="role">
+            <option value="cuidador">Cuidador(a) de idosos</option>
+            <option value="tecnico">Técnico(a) de enfermagem</option>
+            <option value="enfermeiro">Enfermeiro(a)</option>
+            <option value="fisio">Fisioterapeuta</option>
+            <option value="acompanhante">Acompanhante hospitalar</option>
+          </select>
+        </label>
+        <div class="grid-2">
+          <label class="field">
+            <span>Preço por hora (R$)</span>
+            <input type="number" name="precoHora" inputmode="numeric" min="0" placeholder="Ex.: 45" />
+          </label>
+          <label class="field">
+            <span>Anos de experiência</span>
+            <input type="number" name="experienciaAnos" inputmode="numeric" min="0" placeholder="Ex.: 6" />
+          </label>
+        </div>
+        <label class="field" id="corenField">
+          <span>Registro profissional (COREN/CREFITO) <small>(quando aplicável)</small></span>
+          <input type="text" name="coren" placeholder="Ex.: COREN-SP 1.234.567" autocomplete="off" />
+        </label>
+        <label class="field">
+          <span>Especialidades <small>(separe por vírgula)</small></span>
+          <input type="text" name="especialidades" placeholder="Ex.: Alzheimer, curativos, mobilidade reduzida" autocomplete="off" />
+        </label>
+        <label class="field">
+          <span>Sobre você</span>
+          <textarea name="bio" placeholder="Conte sua experiência e como você cuida…"></textarea>
+        </label>
+        <label class="switch">
+          <input type="checkbox" name="disponivel" checked />
+          <span class="switch__track"><span class="switch__thumb"></span></span>
+          <span class="switch__label">Disponível para novos atendimentos</span>
+        </label>
+        <button type="submit" class="btn btn--primary btn--lg">Salvar perfil</button>
+      </form>
+    </section>
+
+  </main>
+
+  <!-- ===================== TABBAR ===================== -->
+  <nav class="tabbar" id="tabbar" aria-label="Navegação"></nav>
+
+  <!-- ===================== MODAL / SHEET ===================== -->
+  <div class="sheet-root" id="sheetRoot" hidden>
+    <div class="sheet-backdrop" data-close></div>
+    <div class="sheet" role="dialog" aria-modal="true">
+      <button class="sheet__grab" data-close aria-label="Fechar"></button>
+      <div class="sheet__body" id="sheetBody"></div>
+    </div>
+  </div>
+
+  <!-- ===================== TOAST ===================== -->
+  <div class="toast" id="toast" hidden></div>
+
+  <script src="app.js?v=1"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+    }
+  </script>
+</body>
+</html>
