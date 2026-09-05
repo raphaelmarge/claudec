@@ -1,0 +1,33 @@
+name: Apply reviewed compact navigation fix
+on:
+  push:
+    branches: ['work/torque-fitness-premium-20260905']
+    paths: ['.github/workflows/torque-mobile-fix.yml']
+permissions:
+  contents: write
+jobs:
+  fix:
+    if: github.ref == 'refs/heads/work/torque-fitness-premium-20260905'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Apply exact reviewed CSS correction
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib
+          p = Path('css/premium.css')
+          assert hashlib.sha256(p.read_bytes()).hexdigest() == '103affb73215cdb2b28d384c3943c6215f0946a6849538146c8411123397883b', 'Storefront changed; review before modifying'
+          fix = '\n/* Fit brand and both navigation controls at 320px, including wider fallback fonts. */\n@media(max-width:380px){.nav{padding-inline:12px;gap:7px}.nav__brand{gap:6px;min-width:0}.nav__brand strong{font-size:.66rem;letter-spacing:.02em}.nav__brand em{font-size:.42rem;letter-spacing:.14em}.nav__actions{gap:5px;flex-shrink:0}.nav__mark{width:22px;flex-shrink:0}}\n'
+          p.write_text(p.read_text() + fix)
+          assert hashlib.sha256(p.read_bytes()).hexdigest() == '20123514daa16873b55c757a32519aab6f34a73fd6c3552f007c955650bf34f1'
+          PY
+          python3 tests/storefront/check_static.py
+      - name: Commit correction to redesign branch only
+        run: |
+          git add css/premium.css
+          git config user.name 'Torque storefront review'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'fix: fit mobile navigation at 320px with wider fallback fonts'
+          git push origin HEAD:work/torque-fitness-premium-20260905
