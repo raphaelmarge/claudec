@@ -1,4 +1,5 @@
 /* Torque Fitness — public storefront visual system. No changes to pricing or auth. */
+/* Shared storefront and customer proposal use the same presentation tokens. */
 :root{
   --black:#09090e;--panel:#13131c;--panel-2:#1a1924;--line:#2b2938;--line-2:#454050;
   --violet:#a78bfa;--violet-600:#8958ee;--violet-700:#6930d6;--violet-glow:rgba(139,92,246,.22);
@@ -87,3 +88,8 @@ html.tf-motion-paused [data-tf-reveal]{opacity:1;transform:none}html.tf-motion-p
 
 /* Fit brand and both navigation controls at 320px, including wider fallback fonts. */
 @media(max-width:380px){.nav{padding-inline:12px;gap:7px}.nav__brand{gap:6px;min-width:0}.nav__brand strong{font-size:.66rem;letter-spacing:.02em}.nav__brand em{font-size:.42rem;letter-spacing:.14em}.nav__actions{gap:5px;flex-shrink:0}.nav__mark{width:22px;flex-shrink:0}}
+.catalog__status{color:var(--txt-dim);font-size:.82rem;line-height:1.65;padding:16px;border:1px solid var(--line);border-radius:8px;background:var(--panel)}
+.tf-proposal{background:radial-gradient(ellipse at 80% 0,#6d28d933,transparent 50rem),#0b0b0f;--font-title:'Archivo',system-ui,sans-serif;--font-body:'Inter',system-ui,sans-serif;--font-mono:'JetBrains Mono',monospace}
+.tf-proposal .wrap{max-width:720px}.tf-proposal .card{background:linear-gradient(145deg,#221a30,#141019);border-color:#8b5cf63d;box-shadow:0 25px 60px #0004;padding:28px}.tf-proposal h1{font-size:1.9rem;letter-spacing:-.04em;line-height:1.2}.tf-proposal .row--grand{padding-top:22px}.tf-proposal .brand{margin:18px 0 32px}.tf-proposal .foot{border-color:#8b5cf650}.tf-proposal .foot__in{max-width:720px}.tf-proposal .it{padding:16px 0}.tf-proposal .btn{min-height:48px}.tf-proposal .note{line-height:1.7}
+@media(max-width:600px){.tf-proposal .card{padding:22px}.tf-proposal h1{font-size:1.6rem}.tf-proposal .it{flex-wrap:wrap}.tf-proposal .foot__in{gap:8px}.tf-proposal .foot .btn{font-size:.8rem;padding:14px 10px}}
+@media print{.tf-proposal{background:white;color:black}.tf-proposal .card{box-shadow:none;background:white;color:black}}

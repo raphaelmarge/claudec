@@ -5,3 +5,6 @@ assets/products/_backup/
 # Python
 __pycache__/
 *.pyc
+
+# Local storefront test output
+test-results/

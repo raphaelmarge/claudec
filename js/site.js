@@ -1727,6 +1727,7 @@
   // catálogo ao vivo: lê o catalog.json publicado pelo app (bucket público) e
   // substitui a vitrine pelas edições do admin (nomes, preços e fotos atuais).
   async function loadLiveCatalog() {
+    let updated = false;
     try {
       const cfg = window.TORQUE_SUPABASE;
       if (!cfg || !cfg.url) return;
@@ -1764,8 +1765,16 @@
       if (tp) goToTipo(tp, false, false); else if (dl) goToLinha(dl, false, false);
       renderLinhaHead(); renderCarousel(); renderContato(); renderDepo(); renderObras(); renderFaq(); applyWpp(); injectAnalytics();
       setTimeout(maybeShowPromo, 700);   // pop-up de cupom de boas-vindas
+      updated = true;
 
     } catch (e) { /* offline ou bucket vazio → mantém o catálogo embutido */ }
+    finally {
+      const status = $('#catalogStatus');
+      if (status) {
+        status.hidden = updated;
+        status.textContent = updated ? '' : 'Exibindo o catálogo salvo. Confirme valores e disponibilidade ao solicitar seu orçamento.';
+      }
+    }
   }
   loadLiveCatalog();
 

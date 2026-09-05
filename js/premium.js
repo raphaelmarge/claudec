@@ -114,7 +114,7 @@
   document.addEventListener('visibilitychange', () => { if (document.hidden) resetTilt(); });
 
   // Focus containment and restoration for the existing quote and product dialogs.
-  const dialogRoots = ['drawer','prodModal','leadModal','promoModal'].map(id => document.getElementById(id)).filter(Boolean);
+  const dialogRoots = ['drawer','prodModal','leadModal','promoModal','cmpModal'].map(id => document.getElementById(id)).filter(Boolean);
   const opened = [];
   const returnFocus = new WeakMap();
   const focusables = dialog => Array.from(dialog.querySelectorAll('a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])')).filter(el => el.getClientRects().length && !el.closest('[hidden],[inert]'));
@@ -147,7 +147,7 @@
     if (event.key === 'Escape') {
       if (opened.length) {
         const top = opened[opened.length - 1];
-        const close = top.querySelector('[data-lclose],[data-pclose],[data-dclose],[data-promo-close]');
+        const close = top.querySelector('[data-lclose],[data-pclose],[data-dclose],[data-promo-close],[data-cmpclose]');
         if (close) { event.preventDefault(); close.click(); }
       } else {
         const menu = document.getElementById('mmenu'), burger = document.getElementById('navBurger');
