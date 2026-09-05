@@ -1,49 +1,61 @@
-name: Torque storefront import
+name: Torque storefront review
 
 on:
   push:
-    branches: ['work/torque-fitness-premium-20260905']
-    paths: ['.github/torque-redesign/ready']
+    branches: ['work/torque-fitness-premium-*']
+  pull_request:
+    paths:
+      - '*.html'
+      - 'css/**'
+      - 'js/site.js'
+      - 'js/premium.js'
+      - 'tests/storefront/**'
+      - '.github/workflows/torque-visual-review.yml'
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: torque-review-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  import:
-    if: github.ref == 'refs/heads/work/torque-fitness-premium-20260905'
+  review:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 12
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Check out storefront
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          fetch-depth: 0
-      - name: Verify original storefront has not changed
+          persist-credentials: false
+      - name: Check structure and JavaScript
+        run: python3 tests/storefront/check_static.py
+      - name: Install pinned browser test runner
         run: |
-          git diff --exit-code 6e021a652480ddff34c7a088a780b81874bb70f6 HEAD -- index.html sobre.html solucoes.html ct.html blog.html faq.html guia-linhas.html projeto.html 404.html js/site.js
-      - name: Decode and verify locally reviewed patch
+          python3 -m pip install playwright==1.57.0
+          python3 -m playwright install --with-deps chromium
+      - name: Test storefront without external services or customer writes
+        run: python3 tests/storefront/check_browser.py
+      - name: Package public storefront
+        if: always()
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          import base64, hashlib, lzma, subprocess
-          parts = sorted(Path('.github/torque-redesign').glob('part-*.b64'))
-          assert len(parts) == 6, 'Incomplete transfer'
-          encoded = ''.join(p.read_text().strip() for p in parts)
-          compressed = base64.b64decode(encoded, validate=True)
-          assert hashlib.sha256(compressed).hexdigest() == '4799427cf1dfaf67b2905929b2f43eedef30ddcf729206ccade89fb3437f9af9', 'Transfer checksum failed'
-          patch = lzma.decompress(compressed)
-          assert hashlib.sha256(patch).hexdigest() == '63f7233fd34a0f95b50e5fc536e2ad6ea195a77cc25095ec2eb3a871568e1408', 'Patch checksum failed'
-          target = Path('/tmp/torque-reviewed.patch')
-          target.write_bytes(patch)
-          subprocess.run(['git', 'apply', '--check', '--index', '--unidiff-zero', str(target)], check=True)
-          subprocess.run(['git', 'apply', '--index', '--unidiff-zero', str(target)], check=True)
+          from zipfile import ZipFile, ZIP_DEFLATED
+          files = list(Path('.').glob('*.html')) + list(Path('.').glob('*.webmanifest'))
+          files += [p for p in (Path('sw.js'), Path('blog-posts.json')) if p.is_file()]
+          for directory in ('css', 'js', 'assets', 'icons'):
+              files += [p for p in Path(directory).rglob('*') if p.is_file() and not p.is_symlink()]
+          Path('test-results').mkdir(exist_ok=True)
+          with ZipFile('test-results/storefront.zip', 'w', ZIP_DEFLATED) as archive:
+              for path in sorted(set(files)):
+                  archive.write(path, str(path))
           PY
-      - name: Validate before committing
-        run: python3 tests/storefront/check_static.py
-      - name: Commit only to the isolated redesign branch
-        run: |
-          rm -r .github/torque-redesign
-          git add -u .github/torque-redesign
-          git config user.name 'Torque storefront review'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git commit -m 'feat: redesign Torque Fitness public storefront with responsive depth and accessible motion'
-          git push origin HEAD:work/torque-fitness-premium-20260905
+      - name: Upload screenshots, report and review bundle
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: torque-storefront-review
+          path: test-results/
+          retention-days: 7
+          if-no-files-found: error
