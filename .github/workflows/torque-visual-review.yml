@@ -36,6 +36,8 @@ jobs:
           python3 -m playwright install --with-deps chromium
       - name: Test storefront without external services or customer writes
         run: python3 tests/storefront/check_browser.py
+      - name: Verify product photos and capture the visible catalog
+        run: python3 tests/storefront/check_catalog_images.py
       - name: Package public storefront
         if: always()
         run: |
