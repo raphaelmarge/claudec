@@ -79,3 +79,8 @@ html.tf-motion-paused [data-tf-reveal]{opacity:1;transform:none}html.tf-motion-p
 
 /* Keep the floating note clear of the product link on every screen. */
 .tf-float-label{position:relative;bottom:auto;right:auto;max-width:270px;width:fit-content;margin:16px 0 -15px auto;pointer-events:none}.tf-showcase-wrap{padding-bottom:20px}
+
+/* Allow the CT statistics to shrink and wrap on narrow phones. */
+.cthome__txt{min-width:0}
+@media(max-width:720px){.cthome__card{grid-template-columns:minmax(0,1fr)}.cthome__stats{grid-template-columns:repeat(3,minmax(0,1fr))}.cthome__stats>div{min-width:0;overflow-wrap:anywhere}}
+@media(max-width:380px){.cthome__stats{grid-template-columns:1fr;gap:8px}.cthome__stats>div{padding:12px}}
