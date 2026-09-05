@@ -1,0 +1,65 @@
+name: Torque storefront review
+
+on:
+  push:
+    branches: ['work/torque-fitness-premium-*']
+  pull_request:
+    paths:
+      - '*.html'
+      - 'css/**'
+      - 'js/site.js'
+      - 'js/premium.js'
+      - 'tests/storefront/**'
+      - '.github/workflows/torque-visual-review.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: torque-review-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Check out storefront
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Check structure and JavaScript
+        run: |
+          python3 tests/storefront/check_static.py
+          node tests/storefront/check_sw.cjs
+      - name: Install pinned browser test runner
+        run: |
+          python3 -m pip install playwright==1.57.0
+          python3 -m playwright install --with-deps chromium
+      - name: Test storefront without external services or customer writes
+        run: python3 tests/storefront/check_browser.py
+      - name: Verify product photos and capture the visible catalog
+        run: python3 tests/storefront/check_catalog_images.py
+      - name: Package public storefront
+        if: always()
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile, ZIP_DEFLATED
+          files = list(Path('.').glob('*.html')) + list(Path('.').glob('*.webmanifest'))
+          files += [p for p in (Path('sw.js'), Path('blog-posts.json')) if p.is_file()]
+          for directory in ('css', 'js', 'assets', 'icons'):
+              files += [p for p in Path(directory).rglob('*') if p.is_file() and not p.is_symlink()]
+          Path('test-results').mkdir(exist_ok=True)
+          with ZipFile('test-results/storefront.zip', 'w', ZIP_DEFLATED) as archive:
+              for path in sorted(set(files)):
+                  archive.write(path, str(path))
+          PY
+      - name: Upload screenshots, report and review bundle
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: torque-storefront-review
+          path: test-results/
+          retention-days: 7
+          if-no-files-found: error

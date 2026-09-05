@@ -50,30 +50,29 @@
       .sobre__grid{grid-template-columns:1fr}
     }
   </style>
+  <link rel="stylesheet" href="css/premium.css?v=20260905" />
 </head>
-<body>
-  <header class="nav" id="nav">
-    <a class="nav__brand" href="./">
+<body class="tf-page">
+  <a class="skip" href="#conteudo">Pular para o conteúdo</a>
+  <header class="nav" id="nav"><a class="nav__brand" href="./">
       <svg viewBox="0 0 227 271" class="nav__mark"><g transform="translate(0,271) scale(0.1,-0.1)"><path d="M130 2617 c-50 -26 -50 -19 -50 -685 0 -686 -2 -669 61 -691 34 -12 367 -14 406 -3 12 4 105 84 205 178 533 498 494 463 524 455 38 -10 70 -54 58 -81 -5 -11 -268 -262 -584 -558 -586 -547 -620 -584 -652 -682 -6 -19 -13 -125 -15 -236 -6 -224 -3 -234 62 -234 30 0 96 59 706 630 601 563 677 630 703 628 18 -2 37 -14 50 -31 19 -26 19 -30 5 -55 -8 -15 -289 -283 -624 -597 l-609 -570 887 -3 c609 -1 894 1 908 8 19 11 20 24 17 973 -3 944 -4 963 -24 1023 -88 255 -268 427 -539 511 l-90 27 -690 3 c-546 3 -695 1 -715 -10z"/></g></svg>
       <span><strong>TORQUE FITNESS</strong><em>EQUIPAMENTOS</em></span>
     </a>
-    <div class="nav__actions">
-      <a class="nav__vendor" href="./">← Voltar ao site</a>
-    </div>
+    <nav class="tf-subnav" aria-label="Navegação principal"><a href="./#produtos">Equipamentos</a><a href="solucoes.html">Soluções</a><a href="sobre.html">Sobre</a><a href="ct.html">CT</a><a href="faq.html">FAQ</a></nav>
+    <details class="tf-nav-menu"><summary>Menu</summary><nav aria-label="Navegação móvel"><a href="./#produtos">Equipamentos</a><a href="solucoes.html">Soluções</a><a href="sobre.html">Sobre</a><a href="ct.html">CT</a><a href="faq.html">FAQ</a><a href="guia-linhas.html">Guia de linhas</a><a href="blog.html">Blog</a><a href="app.html">Área do vendedor</a></nav></details>
   </header>
 
-  <main class="sobre">
+  <main class="sobre" id="conteudo">
     <a class="sobre__back" href="./">← Voltar ao site</a>
 
-    <section class="sobre__hero">
-      <h1>Equipamentos que aguentam o ritmo da sua academia</h1>
-      <p>A Torque Fitness é especializada em equipamentos de musculação e fitness de uso profissional. Ajudamos academias, studios, boxes de CrossFit, hotéis, condomínios e personal trainers em todo o Brasil a montar e equipar os seus espaços — do projeto à instalação.</p>
+    <section class="sobre__hero tf-about-hero">
+      <div><p class="tf-kicker">A marca / Torque Fitness</p><h1>Seu projeto merece<br>uma base forte.</h1><p>Equipamentos profissionais para academias, studios, boxes, hotéis e condomínios. Da escolha da linha à composição do seu espaço, a Torque Fitness aproxima você do equipamento certo.</p><a class="btn btn--primary" href="./#produtos">Explore nossa coleção ↗</a></div>
+      <figure class="tf-about-visual"><picture><source srcset="assets/products/6a3b414eb19a.webp" type="image/webp"><img src="assets/products/6a3b414eb19a.png" width="2560" height="1920" alt="Puxada articulada A702 da linha A7 Torque Fitness" fetchpriority="high"></picture><figcaption>A702 / A7 SERIES</figcaption></figure>
     </section>
-
-    <div class="sobre__stats">
-      <div class="sobre__stat"><b>+10</b><span>anos de mercado</span></div>
-      <div class="sobre__stat"><b>+500</b><span>academias atendidas</span></div>
-      <div class="sobre__stat"><b>926</b><span>produtos no catálogo</span></div>
+    <div class="sobre__stats" aria-label="Soluções Torque Fitness">
+      <div class="sobre__stat"><b>Força</b><span>musculação profissional</span></div>
+      <div class="sobre__stat"><b>Cardio</b><span>linhas para seu espaço</span></div>
+      <div class="sobre__stat"><b>Projetos</b><span>orçamento personalizado</span></div>
       <div class="sobre__stat"><b>Brasil</b><span>atendimento nacional</span></div>
     </div>
 
@@ -86,12 +85,12 @@
     <section class="sobre__sec">
       <h2>Por que a Torque Fitness</h2>
       <div class="sobre__grid">
-        <div class="sobre__item"><span>🏋️</span><h3>Linha completa</h3><p>Força, funcional, cardio, pesos livres e acessórios — tudo para montar a sua academia em um só fornecedor.</p></div>
-        <div class="sobre__item"><span>🛠️</span><h3>Uso profissional</h3><p>Equipamentos reforçados, desenvolvidos para o uso intenso e a alta rotatividade de uma academia comercial.</p></div>
-        <div class="sobre__item"><span>🛡️</span><h3>Garantia</h3><p>Todos os equipamentos têm 1 ano de garantia contra defeitos de fabricação, com assistência técnica e reposição de peças.</p></div>
-        <div class="sobre__item"><span>💳</span><h3>Pagamento facilitado</h3><p>Diversas formas de pagamento e parcelamento, conforme a análise de crédito. Falamos com você para encontrar a melhor condição.</p></div>
-        <div class="sobre__item"><span>📐</span><h3>Projeto e montagem</h3><p>Parcerias com arquitetura e empreiteiras para apoiar o layout, a obra e a instalação dos equipamentos.</p></div>
-        <div class="sobre__item"><span>🤝</span><h3>Atendimento direto</h3><p>Você monta o orçamento no site e um consultor entra em contato pelo WhatsApp, sem burocracia.</p></div>
+        <div class="sobre__item"><span aria-hidden="true">01</span><h3>Linha completa</h3><p>Força, funcional, cardio, pesos livres e acessórios — tudo para montar a sua academia em um só fornecedor.</p></div>
+        <div class="sobre__item"><span aria-hidden="true">02</span><h3>Uso profissional</h3><p>Equipamentos reforçados, desenvolvidos para o uso intenso e a alta rotatividade de uma academia comercial.</p></div>
+        <div class="sobre__item"><span aria-hidden="true">03</span><h3>Garantia</h3><p>Todos os equipamentos têm 1 ano de garantia contra defeitos de fabricação, com assistência técnica e reposição de peças.</p></div>
+        <div class="sobre__item"><span aria-hidden="true">04</span><h3>Pagamento facilitado</h3><p>Diversas formas de pagamento e parcelamento, conforme a análise de crédito. Falamos com você para encontrar a melhor condição.</p></div>
+        <div class="sobre__item"><span aria-hidden="true">05</span><h3>Projeto e montagem</h3><p>Parcerias com arquitetura e empreiteiras para apoiar o layout, a obra e a instalação dos equipamentos.</p></div>
+        <div class="sobre__item"><span aria-hidden="true">06</span><h3>Atendimento direto</h3><p>Você monta o orçamento no site e um consultor entra em contato pelo WhatsApp, sem burocracia.</p></div>
       </div>
     </section>
 
@@ -118,6 +117,24 @@
       </div>
     </section>
   </main>
+
+  <footer class="tf-footer">
+    <div class="tf-footer__top">
+      <div class="tf-footer__brand">
+        <a class="nav__brand" href="./">
+      <svg viewBox="0 0 227 271" class="nav__mark"><g transform="translate(0,271) scale(0.1,-0.1)"><path d="M130 2617 c-50 -26 -50 -19 -50 -685 0 -686 -2 -669 61 -691 34 -12 367 -14 406 -3 12 4 105 84 205 178 533 498 494 463 524 455 38 -10 70 -54 58 -81 -5 -11 -268 -262 -584 -558 -586 -547 -620 -584 -652 -682 -6 -19 -13 -125 -15 -236 -6 -224 -3 -234 62 -234 30 0 96 59 706 630 601 563 677 630 703 628 18 -2 37 -14 50 -31 19 -26 19 -30 5 -55 -8 -15 -289 -283 -624 -597 l-609 -570 887 -3 c609 -1 894 1 908 8 19 11 20 24 17 973 -3 944 -4 963 -24 1023 -88 255 -268 427 -539 511 l-90 27 -690 3 c-546 3 -695 1 -715 -10z"/></g></svg>
+      <span><strong>TORQUE FITNESS</strong><em>EQUIPAMENTOS</em></span>
+    </a>
+        <p>Equipamentos profissionais.<br>Um novo nível para o seu espaço.</p>
+      </div>
+      <nav class="tf-footer__nav" aria-label="Navegação do rodapé">
+        <div><b>Explore</b><a href="./#produtos" >Equipamentos</a><a href="guia-linhas.html">Guia de linhas</a><a href="solucoes.html">Soluções por segmento</a><a href="projeto.html">Planeje seu espaço</a></div>
+        <div><b>Torque Fitness</b><a href="sobre.html">Sobre a marca</a><a href="ct.html">Conheça o CT</a><a href="blog.html">Conteúdos</a><a href="faq.html">Perguntas frequentes</a><a href="app.html">Área do vendedor</a></div>
+      </nav>
+    </div>
+    <div class="tf-footer__word" aria-hidden="true">TORQUE</div>
+    <div class="tf-footer__bottom"><small>© <span data-tf-year >2026</span> Torque Fitness. Imagens e valores sujeitos a confirmação no orçamento.</small><button class="tf-motion-button" type="button" data-tf-motion aria-pressed="false">Pausar animações</button></div>
+  </footer>
 
   <script src="js/config.js?v=20260718d"></script>
   <script>
@@ -150,5 +167,6 @@
       }).catch(function () {});
     })();
   </script>
+  <script src="js/premium.js?v=20260905" defer></script>
 </body>
 </html>

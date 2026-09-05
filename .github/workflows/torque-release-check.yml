@@ -1,0 +1,89 @@
+name: Torque release verification
+
+on:
+  push:
+    branches: ['main', 'work/torque-fitness-premium-20260905', 'claude/torque-fitness-budget-tool-qjes5f']
+    paths:
+      - '*.html'
+      - 'css/**'
+      - 'js/**'
+      - '.github/workflows/torque-release-check.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: torque-release-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out approved source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Verify public dependencies using GET only
+        run: |
+          python3 - <<'PY'
+          import json
+          from urllib.request import Request, urlopen
+          from urllib.parse import urlencode
+          from pathlib import Path
+          import re
+
+          def get(url):
+              req = Request(url, headers={'User-Agent': 'Torque-release-check/1.0', 'Cache-Control': 'no-cache'}, method='GET')
+              with urlopen(req, timeout=25) as response:
+                  assert response.status == 200, f'Unexpected HTTP status: {response.status}'
+                  return response.read(20000000)
+
+          config = Path('js/config.js').read_text()
+          match = re.search(r"url:\s*['\"](https://[a-z0-9]+\.supabase\.co)['\"]", config)
+          assert match, 'Expected configured public Supabase URL'
+          assert match.group(1) == 'https://uqwbywzuqooqzmiklqct.supabase.co', 'Unexpected project'
+          url = match.group(1) + '/storage/v1/object/public/produtos/catalog.json'
+          data = json.loads(get(url))
+          products = data.get('products') if isinstance(data, dict) else data
+          assert isinstance(products, list) and products, 'Public catalog is empty or invalid'
+          print(f'PASS public Supabase catalog: {len(products)} records received; no customer data requested.')
+          for label, url in [
+              ('jsPDF', 'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js'),
+              ('html2canvas', 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js'),
+              ('Google Fonts CSS', 'https://fonts.googleapis.com/css2?' + urlencode({'family':'Archivo:wght@600;700;800;900', 'display':'swap'})),
+          ]:
+              assert len(get(url)) > 100, f'{label}: empty response'
+              print(f'PASS {label}: HTTP 200 with content.')
+          print('All requests were GET. No authentication, form submission, database write or message was performed.')
+          PY
+      - name: Confirm the deployed version matches the approved source
+        if: github.ref == 'refs/heads/claude/torque-fitness-budget-tool-qjes5f'
+        run: |
+          python3 - <<'PY'
+          from urllib.request import Request, urlopen
+          from pathlib import Path
+          import hashlib, time
+          base = 'https://raphaelmarge.github.io/claudec/'
+          targets = ['index.html', 'css/premium.css', 'js/premium.js', 'js/site.js', 'sobre.html']
+          def fetch(path):
+              req = Request(base + path + '?release-check=' + str(time.time_ns()), headers={'Cache-Control':'no-cache', 'User-Agent':'Torque-release-check/1.0'}, method='GET')
+              with urlopen(req, timeout=20) as response:
+                  assert response.status == 200
+                  return response.read(2000000)
+          for attempt in range(1, 7):
+              try:
+                  for path in targets:
+                      live = fetch(path)
+                      local = Path(path).read_bytes()
+                      assert hashlib.sha256(live).digest() == hashlib.sha256(local).digest(), f'Published file not updated yet: {path}'
+                  print('PASS deployed site: all 5 release files match approved source byte-for-byte.')
+                  print('Public URL: ' + base)
+                  break
+              except Exception as exc:
+                  print(f'Release probe {attempt}: {type(exc).__name__}: {exc}', flush=True)
+                  if attempt == 6:
+                      raise
+                  time.sleep(15)
+          PY
