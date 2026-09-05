@@ -42,19 +42,37 @@
     .segcard h2{font-size:1.15rem;margin:10px 0 6px}
     .segcard p{color:var(--txt-dim);font-size:.9rem;margin:0;line-height:1.5}
   </style>
+  <link rel="stylesheet" href="css/premium.css?v=20260905" />
 </head>
-<body>
-  <header class="nav" id="nav">
-    <a class="nav__brand" href="./">
+<body class="tf-page">
+  <a class="skip" href="#seg">Pular para o conteúdo</a>
+  <header class="nav" id="nav"><a class="nav__brand" href="./">
       <svg viewBox="0 0 227 271" class="nav__mark"><g transform="translate(0,271) scale(0.1,-0.1)"><path d="M130 2617 c-50 -26 -50 -19 -50 -685 0 -686 -2 -669 61 -691 34 -12 367 -14 406 -3 12 4 105 84 205 178 533 498 494 463 524 455 38 -10 70 -54 58 -81 -5 -11 -268 -262 -584 -558 -586 -547 -620 -584 -652 -682 -6 -19 -13 -125 -15 -236 -6 -224 -3 -234 62 -234 30 0 96 59 706 630 601 563 677 630 703 628 18 -2 37 -14 50 -31 19 -26 19 -30 5 -55 -8 -15 -289 -283 -624 -597 l-609 -570 887 -3 c609 -1 894 1 908 8 19 11 20 24 17 973 -3 944 -4 963 -24 1023 -88 255 -268 427 -539 511 l-90 27 -690 3 c-546 3 -695 1 -715 -10z"/></g></svg>
       <span><strong>TORQUE FITNESS</strong><em>EQUIPAMENTOS</em></span>
     </a>
-    <div class="nav__actions">
-      <a class="nav__vendor" href="./">← Voltar ao site</a>
-    </div>
+    <nav class="tf-subnav" aria-label="Navegação principal"><a href="./#produtos">Equipamentos</a><a href="solucoes.html">Soluções</a><a href="sobre.html">Sobre</a><a href="ct.html">CT</a><a href="faq.html">FAQ</a></nav>
+    <details class="tf-nav-menu"><summary>Menu</summary><nav aria-label="Navegação móvel"><a href="./#produtos">Equipamentos</a><a href="solucoes.html">Soluções</a><a href="sobre.html">Sobre</a><a href="ct.html">CT</a><a href="faq.html">FAQ</a><a href="guia-linhas.html">Guia de linhas</a><a href="blog.html">Blog</a><a href="app.html">Área do vendedor</a></nav></details>
   </header>
 
   <main class="seg" id="seg"><p style="color:var(--txt-dim);padding:40px 0">Carregando…</p></main>
+
+  <footer class="tf-footer">
+    <div class="tf-footer__top">
+      <div class="tf-footer__brand">
+        <a class="nav__brand" href="./">
+      <svg viewBox="0 0 227 271" class="nav__mark"><g transform="translate(0,271) scale(0.1,-0.1)"><path d="M130 2617 c-50 -26 -50 -19 -50 -685 0 -686 -2 -669 61 -691 34 -12 367 -14 406 -3 12 4 105 84 205 178 533 498 494 463 524 455 38 -10 70 -54 58 -81 -5 -11 -268 -262 -584 -558 -586 -547 -620 -584 -652 -682 -6 -19 -13 -125 -15 -236 -6 -224 -3 -234 62 -234 30 0 96 59 706 630 601 563 677 630 703 628 18 -2 37 -14 50 -31 19 -26 19 -30 5 -55 -8 -15 -289 -283 -624 -597 l-609 -570 887 -3 c609 -1 894 1 908 8 19 11 20 24 17 973 -3 944 -4 963 -24 1023 -88 255 -268 427 -539 511 l-90 27 -690 3 c-546 3 -695 1 -715 -10z"/></g></svg>
+      <span><strong>TORQUE FITNESS</strong><em>EQUIPAMENTOS</em></span>
+    </a>
+        <p>Equipamentos profissionais.<br>Um novo nível para o seu espaço.</p>
+      </div>
+      <nav class="tf-footer__nav" aria-label="Navegação do rodapé">
+        <div><b>Explore</b><a href="./#produtos" >Equipamentos</a><a href="guia-linhas.html">Guia de linhas</a><a href="solucoes.html">Soluções por segmento</a><a href="projeto.html">Planeje seu espaço</a></div>
+        <div><b>Torque Fitness</b><a href="sobre.html">Sobre a marca</a><a href="ct.html">Conheça o CT</a><a href="blog.html">Conteúdos</a><a href="faq.html">Perguntas frequentes</a><a href="app.html">Área do vendedor</a></div>
+      </nav>
+    </div>
+    <div class="tf-footer__word" aria-hidden="true">TORQUE</div>
+    <div class="tf-footer__bottom"><small>© <span data-tf-year >2026</span> Torque Fitness. Imagens e valores sujeitos a confirmação no orçamento.</small><button class="tf-motion-button" type="button" data-tf-motion aria-pressed="false">Pausar animações</button></div>
+  </footer>
 
   <script src="js/config.js?v=20260718d"></script>
   <script>
@@ -129,5 +147,6 @@
       })();
     })();
   </script>
+  <script src="js/premium.js?v=20260905" defer></script>
 </body>
 </html>

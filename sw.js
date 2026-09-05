@@ -6,8 +6,17 @@
    Chamadas externas (Supabase, CDN, fontes) passam direto pela rede.
    Suba o número da versão ao mudar a estratégia.
    ============================================================ */
-const CACHE = 'torque-app-v3';
+const CACHE = 'torque-app-v4-premium';
 const SHELL = [
+  './index.html',
+  './css/site.css?v=20260718d',
+  './css/premium.css?v=20260905',
+  './js/premium.js?v=20260905',
+  './js/site.js?v=20260905',
+  './js/config.js?v=20260718d',
+  './js/products.js?v=20260718d',
+  './js/nomes.js?v=20260718d',
+  './js/descricoes.js?v=20260718d',
   './app.html',
   './css/styles.css',
   './js/config.js',
@@ -32,7 +41,7 @@ self.addEventListener('install', e => {
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+      .then(keys => Promise.all(keys.filter(k => k.startsWith('torque-app-') && k !== CACHE).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
@@ -55,6 +64,6 @@ self.addEventListener('fetch', e => {
         }
         return res;
       })
-      .catch(() => caches.match(req).then(c => c || (req.mode === 'navigate' ? caches.match('./app.html') : Response.error())))
+      .catch(() => caches.match(req).then(c => c || (req.mode === 'navigate' ? caches.match(url.pathname.endsWith('/app.html') ? './app.html' : './index.html') : Response.error())))
   );
 });
