@@ -2,7 +2,7 @@ name: Torque release verification
 
 on:
   push:
-    branches: ['main', 'work/torque-fitness-premium-20260905']
+    branches: ['main', 'work/torque-fitness-premium-20260905', 'claude/torque-fitness-budget-tool-qjes5f']
     paths:
       - '*.html'
       - 'css/**'
@@ -59,7 +59,7 @@ jobs:
           print('All requests were GET. No authentication, form submission, database write or message was performed.')
           PY
       - name: Confirm the deployed version matches the approved source
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/claude/torque-fitness-budget-tool-qjes5f'
         run: |
           python3 - <<'PY'
           from urllib.request import Request, urlopen
