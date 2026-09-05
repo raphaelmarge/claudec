@@ -42,6 +42,9 @@ de CT/garantia/pagamento não foi revalidado comercialmente nesta tarefa.
 - Aviso discreto quando o catálogo ao vivo não está disponível, mantendo o
   catálogo salvo utilizável.
 - Comparador incluído no gerenciamento de foco e Escape dos diálogos.
+- A ação existente de instalar o site passa para o menu móvel quando disponível,
+  preservando seu elemento, eventos e estado. Testada com `beforeinstallprompt`
+  simulado, sem instalar aplicativo real.
 - Cache `torque-app-v4-premium`, incluindo a vitrine e seus arquivos com as
   mesmas versões referenciadas no HTML. Limpeza restrita ao namespace Torque.
   Navegação pública offline não cai mais na tela do vendedor; requisições

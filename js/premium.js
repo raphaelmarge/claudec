@@ -48,6 +48,16 @@
   applyMotion();
 
   const nav = document.getElementById('nav');
+  // Keep the existing PWA install action reachable without crowding the mobile header.
+  const install = document.getElementById('installBtn');
+  const mobileMenu = document.getElementById('mmenu');
+  if (install && mobileMenu) {
+    const desktopSlot = install.parentElement;
+    const mobile = window.matchMedia('(max-width: 950px)');
+    const placeInstall = () => (mobile.matches ? mobileMenu : desktopSlot).prepend(install);
+    placeInstall();
+    if (mobile.addEventListener) mobile.addEventListener('change', placeInstall);
+  }
   function updateScroll() {
     scrollFrame = 0;
     const span = Math.max(1, root.scrollHeight - window.innerHeight);
