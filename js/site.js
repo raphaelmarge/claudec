@@ -9,6 +9,7 @@
   const money = n => BRL.format(Number.isFinite(n) ? n : 0);
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const CART_KEY = 'torque_site_cart';
+  const motionReduced = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.classList.contains('tf-motion-paused');
 
   const DATA = window.TORQUE_PUBLIC || { products: [], params: {} };
   const PARAMS = DATA.params || {};
@@ -228,7 +229,7 @@
 
   function renderSeries() {
     $('#seriesGrid').innerHTML = series().map(s =>
-      `<div class="scard ${filterSerie === s ? 'active' : ''}" data-serie="${esc(s)}"><b>${esc(s)}</b><span>${countSerie(s)} itens</span></div>`
+      `<button type="button" class="scard ${filterSerie === s ? 'active' : ''}" data-serie="${esc(s)}" aria-pressed="${filterSerie === s}"><b>${esc(s)}</b><span>${countSerie(s)} itens</span></button>`
     ).join('');
     $('#statProdutos').textContent = PRODUCTS.length;
     $('#statSeries').textContent = series().length;
@@ -281,13 +282,13 @@
       ? `<img src="${esc(p.imagem)}" alt="${esc(p.nome)}" loading="lazy" decoding="async" onerror="this.replaceWith(document.createRange().createContextualFragment(window.__plate))"/>`
       : plate;
     const ctrl = q > 0
-      ? `<div class="pcard__stepper" data-code="${esc(p.codigo)}"><button data-act="dec">−</button><input data-act="qty" inputmode="numeric" value="${q}"/><button data-act="inc">+</button></div>`
-      : `<button class="pcard__add" data-act="add" data-code="${esc(p.codigo)}">+ Adicionar</button>`;
+      ? `<div class="pcard__stepper" data-code="${esc(p.codigo)}"><button type="button" data-act="dec" aria-label="Diminuir quantidade de ${esc(p.nome)}">−</button><input data-act="qty" inputmode="numeric" aria-label="Quantidade de ${esc(p.nome)}" value="${q}"/><button type="button" data-act="inc" aria-label="Aumentar quantidade de ${esc(p.nome)}">+</button></div>`
+      : `<button class="pcard__add" type="button" data-act="add" data-code="${esc(p.codigo)}">+ Adicionar</button>`;
     return `<article class="pcard ${q > 0 ? 'in' : ''}" data-code="${esc(p.codigo)}">
       <div class="pcard__media">${p.selo ? `<span class="pcard__selo">${esc(p.selo)}</span>` : ''}<button class="pcard__fav ${favs.has(p.codigo) ? 'on' : ''}" data-act="fav" data-code="${esc(p.codigo)}" type="button" title="Favoritar" aria-label="Favoritar ${esc(p.nome)}" aria-pressed="${favs.has(p.codigo)}">♥</button><button class="pcard__cmp ${compare.has(p.codigo) ? 'on' : ''}" data-act="cmp" data-code="${esc(p.codigo)}" type="button" title="Comparar" aria-label="Comparar ${esc(p.nome)}" aria-pressed="${compare.has(p.codigo)}">⇄</button>${media}</div>
       <div class="pcard__b">
         <span class="pcard__serie">${esc(p.serie || '')}</span>
-        <span class="pcard__name">${esc(p.nome)}</span>
+        <button class="pcard__name" type="button" data-act="detail" data-code="${esc(p.codigo)}">${esc(p.nome)}</button>
         ${p.disp ? `<span class="pcard__disp">📦 ${esc(p.disp)}</span>` : ''}
         <div class="pcard__sp"></div>
         <div class="pcard__price"><small>a partir de</small><b>${money(p.preco)}</b></div>
@@ -363,8 +364,9 @@
     const codeEl = e.target.closest('[data-code]');
     const code = codeEl && codeEl.dataset.code;
     const catLink = e.target.closest('[data-catalog]');
-    if (catLink) { e.preventDefault(); openCatalog(); closeMenu(); const el = document.getElementById('produtos'); if (el) el.scrollIntoView({ behavior: 'smooth' }); return; }
+    if (catLink) { e.preventDefault(); openCatalog(); closeMenu(); const el = document.getElementById('produtos'); if (el) el.scrollIntoView({ behavior: motionReduced() ? 'auto' : 'smooth' }); return; }
     if (e.target.closest('[data-cact="orc"]')) { e.preventDefault(); askOrc(); return; }
+    if (act === 'detail' && code) { openProd(code); return; }
     if (act === 'cmp' && code) { toggleCompare(code); return; }
     if (act === 'fav' && code) { toggleFav(code); return; }
     if (act === 'add' && code) { setQty(code, 1); syncAll(); toast('Adicionado ao orçamento'); return; }
@@ -411,7 +413,7 @@
 
   /* ---------- lead ---------- */
   $('#btnSolicitar').addEventListener('click', openLead);
-  function askOrc() { if (cartCount()) openLead(); else { openCatalog(); document.getElementById('produtos').scrollIntoView({ behavior: 'smooth' }); toast('Escolha alguns equipamentos primeiro'); } }
+  function askOrc() { if (cartCount()) openLead(); else { openCatalog(); document.getElementById('produtos').scrollIntoView({ behavior: motionReduced() ? 'auto' : 'smooth' }); toast('Escolha alguns equipamentos primeiro'); } }
   const ctaOrcBtn = $('#ctaOrc'); if (ctaOrcBtn) ctaOrcBtn.addEventListener('click', askOrc);
   const heroOrcBtn = $('#heroOrc'); if (heroOrcBtn) heroOrcBtn.addEventListener('click', askOrc);
 
@@ -762,7 +764,7 @@
     if (push !== false) history[push === 'replace' ? 'replaceState' : 'pushState']({}, '', urlParam ? (BASE_URL + urlParam) : BASE_URL);
     renderSeries(); renderChips(); renderGrid(); renderLinhaHead();
     closeLinhasDrop(); closeMenu();
-    if (scroll) { const el = document.getElementById('produtos'); if (el) el.scrollIntoView({ behavior: 'smooth' }); }
+    if (scroll) { const el = document.getElementById('produtos'); if (el) el.scrollIntoView({ behavior: motionReduced() ? 'auto' : 'smooth' }); }
   }
   function goToLinha(serie, push, scroll) {
     filterSerie = serie || 'all'; filterTipo = 'all'; resetFiltros();
@@ -844,7 +846,7 @@
   function prodCtrlHTML(p) {
     const q = qtyOf(p.codigo);
     return q > 0
-      ? `<div class="pmodal__stepper" data-code="${esc(p.codigo)}"><button data-act="dec">−</button><input data-act="qty" inputmode="numeric" value="${q}"/><button data-act="inc">+</button></div>`
+      ? `<div class="pmodal__stepper" data-code="${esc(p.codigo)}"><button type="button" data-act="dec" aria-label="Diminuir quantidade de ${esc(p.nome)}">−</button><input data-act="qty" inputmode="numeric" aria-label="Quantidade de ${esc(p.nome)}" value="${q}"/><button type="button" data-act="inc" aria-label="Aumentar quantidade de ${esc(p.nome)}">+</button></div>`
       : `<button class="pmodal__add" data-act="add" data-code="${esc(p.codigo)}">+ Adicionar ao orçamento</button>`;
   }
   // extrai o ID de um vídeo do YouTube (vários formatos de link)
@@ -862,8 +864,8 @@
       ? `<img src="${esc(cover)}" alt="${esc(p.nome)}" decoding="async" onerror="this.replaceWith(document.createRange().createContextualFragment(window.__plate))"/>`
       : plate;
     if (imgs.length <= 1 && !vid) return mainHTML;   // só uma imagem → sem miniaturas
-    const thumbs = imgs.map((u, i) => `<button class="pmthumb ${i === 0 ? 'on' : ''}" type="button" data-img="${esc(u)}"><img src="${esc(u)}" alt="" loading="lazy" /></button>`).join('')
-      + (vid ? `<button class="pmthumb pmthumb--vid" type="button" data-vid="${esc(vid)}"><img src="https://img.youtube.com/vi/${vid}/mqdefault.jpg" alt="vídeo" loading="lazy" /><span class="pmthumb__play">▶</span></button>` : '');
+    const thumbs = imgs.map((u, i) => `<button class="pmthumb ${i === 0 ? 'on' : ''}" type="button" aria-label="Ver imagem ${i + 1} de ${esc(p.nome)}" data-img="${esc(u)}"><img src="${esc(u)}" alt="" loading="lazy" /></button>`).join('')
+      + (vid ? `<button class="pmthumb pmthumb--vid" type="button" aria-label="Assistir vídeo do equipamento" data-vid="${esc(vid)}"><img src="https://img.youtube.com/vi/${vid}/mqdefault.jpg" alt="vídeo" loading="lazy" /><span class="pmthumb__play">▶</span></button>` : '');
     return `<div class="pmgal"><div class="pmgal__main" id="pmgalMain">${mainHTML}</div><div class="pmgal__thumbs">${thumbs}</div></div>`;
   }
   (function wireGallery() {
@@ -989,9 +991,7 @@
   function renderDepo() {
     const sec = $('#depoimentos'); if (!sec) return;
     const arr = Array.isArray(SITEINFO.depoimentos) ? SITEINFO.depoimentos : [];
-    // com depoimentos reais cadastrados, os exemplos fictícios da faixa saem de cena
-    const fict = document.querySelector('.proof__quotes');
-    if (fict) fict.hidden = arr.length > 0;
+    // Exibe somente depoimentos cadastrados no catálogo publicado.
     if (!arr.length) { sec.hidden = true; return; }
     sec.hidden = false;
     $('#depoGrid').innerHTML = arr.map(d => `<figure class="depocard"><blockquote>“${esc(d.texto)}”</blockquote><figcaption><b>${esc(d.nome || 'Cliente')}</b>${d.local ? `<span>${esc(d.local)}</span>` : ''}</figcaption></figure>`).join('');
@@ -1091,10 +1091,10 @@
       title: 'Equipamentos de <span>alta performance</span>',
       sub: 'Racks, máquinas de força, funcionais, cardio e acessórios para academias, studios e CrossFit.',
       cta: [{ label: 'Ver produtos', act: 'scroll' }, { label: 'Solicitar orçamento', act: 'orc', ghost: true }] },
-    { id: 'hm', kind: 'linha', linha: 'HM', grad: 'linear-gradient(135deg,#161226,#241a3d)',
+    { id: 'hm', kind: 'linha', linha: 'HM Series', grad: 'linear-gradient(135deg,#161226,#241a3d)',
       tag: 'Musculação', title: 'Linha HM',
       sub: 'Força e durabilidade para alta performance — máquinas robustas para uso intenso.',
-      cta: [{ label: 'Conhecer a linha', act: 'linha', linha: 'HM' }] },
+      cta: [{ label: 'Conhecer a linha', act: 'linha', linha: 'HM Series' }] },
     { id: 'cardio', kind: 'linha', linha: 'Cardio', grad: 'linear-gradient(135deg,#101a26,#16263d)',
       tag: 'Cardio', title: 'Linha Cardio',
       sub: 'Esteiras, bikes e elípticos de padrão academia, prontos para alta rotatividade.',
@@ -1105,6 +1105,7 @@
       cta: [{ label: 'Falar no WhatsApp', act: 'wpp' }, { label: 'Montar orçamento', act: 'orc', ghost: true }] }
   ];
   let carIdx = 0, carTimer = null;
+  let carPaused = false, carVisible = false, carHovered = false, carFocused = false;
   // imagem do slide: a definida no carrossel tem prioridade; senão, o banner da linha (HM/Cardio)
   function slideImg(s) { return CAROUSEL[s.id] || (s.kind === 'linha' ? bannerImg(s.linha) : ''); }
   function slideBg(s) {
@@ -1116,7 +1117,7 @@
   }
   function ctaBtnHTML(c) {
     const cls = 'btn ' + (c.ghost ? 'btn--ghost' : 'btn--primary');
-    if (c.act === 'scroll') return `<a class="${cls}" href="#produtos">${esc(c.label)}</a>`;
+    if (c.act === 'scroll') return `<a class="${cls}" href="#produtos" data-catalog>${esc(c.label)}</a>`;
     if (c.act === 'linha') return `<a class="${cls}" href="?linha=${encodeURIComponent(c.linha)}" data-serie="${esc(c.linha)}">${esc(c.label)}</a>`;
     if (c.act === 'wpp') return `<a class="${cls}" href="${wppHref()}" target="_blank" rel="noopener">${esc(c.label)}</a>`;
     if (c.act === 'orc') return `<button class="${cls}" type="button" data-cact="orc">${esc(c.label)}</button>`;
@@ -1125,36 +1126,68 @@
   function renderCarousel() {
     const track = $('#carTrack'); if (!track) return;
     track.innerHTML = SLIDES.map((s, i) => {
-      const hasImg = !!slideImg(s);
-      return `<div class="slide ${i === carIdx ? 'slide--active' : ''}" style="background-image:${slideBg(s)}">
+      const hasImg = !!slideImg(s), active = i === carIdx;
+      return `<div class="slide ${active ? 'slide--active' : ''}" role="group" aria-roledescription="slide" aria-label="${i + 1} de ${SLIDES.length}" aria-hidden="${!active}" ${active ? '' : 'inert'} style="background-image:${slideBg(s)}">
         ${hasImg ? '' : `<div class="slide__deco" aria-hidden="true">${plate}</div>`}
         <div class="slide__inner">
           ${s.tag ? `<span class="slide__tag">${esc(s.tag)}</span>` : ''}
-          <h1 class="slide__title">${s.title}</h1>
+          <h2 class="slide__title">${s.title}</h2>
           <p class="slide__sub">${esc(s.sub)}</p>
           <div class="slide__cta">${s.cta.map(ctaBtnHTML).join('')}</div>
         </div>
       </div>`;
     }).join('');
     const dots = $('#carDots');
-    if (dots) dots.innerHTML = SLIDES.map((s, i) => `<button type="button" class="${i === carIdx ? 'on' : ''}" data-cdot="${i}" aria-label="Slide ${i + 1}"></button>`).join('');
+    if (dots) dots.innerHTML = SLIDES.map((s, i) => `<button type="button" class="${i === carIdx ? 'on' : ''}" data-cdot="${i}" aria-label="Mostrar destaque ${i + 1}" aria-current="${i === carIdx}"></button>`).join('');
+    updateCarControl();
   }
   function goSlide(i) {
     carIdx = (i + SLIDES.length) % SLIDES.length;
-    $$('.slide', $('#carTrack')).forEach((el, idx) => el.classList.toggle('slide--active', idx === carIdx));
-    $$('#carDots button').forEach((el, idx) => el.classList.toggle('on', idx === carIdx));
+    $$('.slide', $('#carTrack')).forEach((el, idx) => {
+      const active = idx === carIdx;
+      el.classList.toggle('slide--active', active);
+      el.setAttribute('aria-hidden', String(!active));
+      el.toggleAttribute('inert', !active);
+    });
+    $$('#carDots button').forEach((el, idx) => {
+      el.classList.toggle('on', idx === carIdx);
+      el.setAttribute('aria-current', String(idx === carIdx));
+    });
   }
-  function startCar() { stopCar(); if (SLIDES.length > 1) carTimer = setInterval(() => goSlide(carIdx + 1), 6000); }
+  function updateCarControl() {
+    const button = $('#carPause'); if (!button) return;
+    const reduced = motionReduced();
+    button.disabled = reduced;
+    button.setAttribute('aria-pressed', String(carPaused || reduced));
+    button.textContent = reduced ? 'Animação pausada' : (carPaused ? 'Reproduzir destaques' : 'Pausar destaques');
+  }
   function stopCar() { if (carTimer) { clearInterval(carTimer); carTimer = null; } }
+  function startCar() {
+    stopCar(); updateCarControl();
+    if (SLIDES.length > 1 && !carPaused && carVisible && !carHovered && !carFocused && !motionReduced() && !document.hidden) {
+      carTimer = setInterval(() => goSlide(carIdx + 1), 7000);
+    }
+  }
   (function wireCarousel() {
-    const prev = $('#carPrev'), next = $('#carNext'), wrap = $('#carousel');
+    const prev = $('#carPrev'), next = $('#carNext'), wrap = $('#carousel'), pause = $('#carPause');
     if (prev) prev.addEventListener('click', () => { goSlide(carIdx - 1); startCar(); });
     if (next) next.addEventListener('click', () => { goSlide(carIdx + 1); startCar(); });
+    if (pause) pause.addEventListener('click', () => { carPaused = !carPaused; startCar(); });
     if (wrap) {
-      wrap.addEventListener('click', e => { const d = e.target.closest('[data-cdot]'); if (d) { goSlide(+d.dataset.cdot); startCar(); } });
-      wrap.addEventListener('mouseenter', stopCar);
-      wrap.addEventListener('mouseleave', startCar);
+      wrap.addEventListener('click', e => { const dot = e.target.closest('[data-cdot]'); if (dot) { goSlide(Number(dot.dataset.cdot)); startCar(); } });
+      wrap.addEventListener('mouseenter', () => { carHovered = true; stopCar(); });
+      wrap.addEventListener('mouseleave', () => { carHovered = false; startCar(); });
+      wrap.addEventListener('focusin', () => { carFocused = true; stopCar(); });
+      wrap.addEventListener('focusout', e => { if (!wrap.contains(e.relatedTarget)) { carFocused = false; startCar(); } });
+      if ('IntersectionObserver' in window) {
+        new IntersectionObserver(entries => { carVisible = entries.some(entry => entry.isIntersecting); startCar(); }, { threshold: .1 }).observe(wrap);
+      }
+      // With no observer support the controls work manually; never run an unseen carousel.
     }
+    document.addEventListener('visibilitychange', startCar);
+    document.addEventListener('torque:motionchange', startCar);
+    const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
+    if (preference.addEventListener) preference.addEventListener('change', startCar);
   })();
 
   /* ---------- localização / contato ---------- */
@@ -1647,7 +1680,7 @@
         closePromo();
         toast(`Cupom ${c ? c.codigo : ''} aplicado — escolha seus equipamentos!`);
         openCatalog();
-        const el = document.getElementById('produtos'); if (el) el.scrollIntoView({ behavior: 'smooth' });
+        const el = document.getElementById('produtos'); if (el) el.scrollIntoView({ behavior: motionReduced() ? 'auto' : 'smooth' });
         return;
       }
     });
@@ -1658,7 +1691,7 @@
     const btn = $('#toTop'); if (!btn) return;
     const upd = () => { btn.hidden = window.scrollY < 600; };
     window.addEventListener('scroll', upd, { passive: true });
-    btn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+    btn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: motionReduced() ? 'auto' : 'smooth' }));
     upd();
   })();
 
@@ -1688,7 +1721,7 @@
     // chegada com #produtos (links de outras páginas): revela o catálogo antes de rolar
     const hashProd = location.hash === '#produtos';
     if (hashProd) openCatalog();
-    if (tp || dl || hashProd || fv) setTimeout(() => { const el = document.getElementById('produtos'); if (el) el.scrollIntoView({ behavior: 'smooth' }); }, 250);
+    if (tp || dl || hashProd || fv) setTimeout(() => { const el = document.getElementById('produtos'); if (el) el.scrollIntoView({ behavior: motionReduced() ? 'auto' : 'smooth' }); }, 250);
   })();
 
   // catálogo ao vivo: lê o catalog.json publicado pelo app (bucket público) e

@@ -75,6 +75,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="Torque Fitness" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20100%20100%27%3E%3Crect%20width%3D%27100%27%20height%3D%27100%27%20rx%3D%2722%27%20fill%3D%27%230B0B0F%27%2F%3E%3Cg%20transform%3D%27translate%2824.0%2C19.0%29%20scale%280.2288%29%27%20fill%3D%27%238B5CF6%27%3E%3Cg%20transform%3D%27translate%280%2C271%29%20scale%280.1%2C-0.1%29%27%3E%3Cpath%20d%3D%22M130%202617%20c-50%20-26%20-50%20-19%20-50%20-685%200%20-686%20-2%20-669%2061%20-691%2034%20-12%20367%20-14%20406%20-3%2012%204%20105%2084%20205%20178%20533%20498%20494%20463%20524%20455%2038%20-10%2070%20-54%2058%20-81%20-5%20-11%20-268%20-262%20-584%20-558%20-586%20-547%20-620%20-584%20-652%20-682%20-6%20-19%20-13%20-125%20-15%20-236%20-6%20-224%20-3%20-234%2062%20-234%2030%200%2096%2059%20706%20630%20601%20563%20677%20630%20703%20628%2018%20-2%2037%20-14%2050%20-31%2019%20-26%2019%20-30%205%20-55%20-8%20-15%20-289%20-283%20-624%20-597%20l-609%20-570%20887%20-3%20c609%20-1%20894%201%20908%208%2019%2011%2020%2024%2017%20973%20-3%20944%20-4%20963%20-24%201023%20-88%20255%20-268%20427%20-539%20511%20l-90%2027%20-690%203%20c-546%203%20-695%201%20-715%20-10z%22%2F%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E" />
+  <link rel="stylesheet" href="css/premium.css?v=20260905" />
 </head>
 <body class="catalog-hidden">
   <a class="skip" href="#produtos" data-catalog>Pular para o catálogo</a>
@@ -85,18 +86,13 @@
       <svg viewBox="0 0 227 271" class="nav__mark"><g transform="translate(0,271) scale(0.1,-0.1)"><path d="M130 2617 c-50 -26 -50 -19 -50 -685 0 -686 -2 -669 61 -691 34 -12 367 -14 406 -3 12 4 105 84 205 178 533 498 494 463 524 455 38 -10 70 -54 58 -81 -5 -11 -268 -262 -584 -558 -586 -547 -620 -584 -652 -682 -6 -19 -13 -125 -15 -236 -6 -224 -3 -234 62 -234 30 0 96 59 706 630 601 563 677 630 703 628 18 -2 37 -14 50 -31 19 -26 19 -30 5 -55 -8 -15 -289 -283 -624 -597 l-609 -570 887 -3 c609 -1 894 1 908 8 19 11 20 24 17 973 -3 944 -4 963 -24 1023 -88 255 -268 427 -539 511 l-90 27 -690 3 c-546 3 -695 1 -715 -10z"/></g></svg>
       <span><strong>TORQUE FITNESS</strong><em>EQUIPAMENTOS</em></span>
     </a>
-    <nav class="nav__links">
+    <nav class="nav__links" aria-label="Navegação principal">
       <a href="#produtos" data-catalog>Equipamentos</a>
       <div class="nav__drop">
         <button class="nav__droptrig" id="linhasTrig" type="button" aria-expanded="false" aria-haspopup="true">Linhas ▾</button>
         <div class="nav__menu" id="linhasMenu" hidden></div>
       </div>
-      <a href="?tipo=maquina" data-tipo="maquina">Máquinas</a>
-      <a href="?tipo=acessorio" data-tipo="acessorio">Acessórios</a>
       <a href="solucoes.html">Soluções</a>
-      <a href="ct.html">CT</a>
-      <a href="blog.html">Blog</a>
-      <a href="faq.html">FAQ</a>
       <a href="sobre.html">Sobre</a>
       <a href="#contato">Contato</a>
     </nav>
@@ -107,7 +103,7 @@
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18a2 2 0 100 4 2 2 0 000-4zm10 0a2 2 0 100 4 2 2 0 000-4zM2 2v2h2l3.6 7.6-1.35 2.45A2 2 0 008 17h11v-2H8.42a.25.25 0 01-.22-.37L9 13h7a2 2 0 001.8-1.1l3.58-6.49A1 1 0 0020.5 4H6.21l-.94-2z"/></svg>
         Orçamento <b id="cartCount">0</b>
       </button>
-      <button class="nav__burger" id="navBurger" type="button" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
+      <button class="nav__burger" id="navBurger" type="button" aria-controls="mmenu" aria-label="Abrir menu" aria-expanded="false"><span></span><span></span><span></span></button>
     </div>
   </header>
 
@@ -127,30 +123,59 @@
     <div class="nav__menu nav__menu--m" id="mLinhas"></div>
   </div>
 
-  <!-- ===================== HERO (carrossel) ===================== -->
-  <section class="hero" id="topo">
-    <div class="carousel" id="carousel" aria-label="Destaques">
+  <main id="conteudo">
+  <!-- Real catalog photography; product geometry and original colors are preserved. -->
+  <section class="hero hero--premium" id="topo" aria-labelledby="tfHeroTitle">
+    <div class="tf-ambient" aria-hidden="true"></div>
+    <div class="tf-hero-grid">
+      <div class="tf-hero-copy">
+        <p class="tf-kicker">Torque Fitness · Linha profissional</p>
+        <h1 id="tfHeroTitle">Força no<br>estado<br><span>da arte.</span></h1>
+        <p class="tf-hero-description">Equipamentos que definem o seu espaço. Explore nossas linhas de musculação, cardio e acessórios e dê forma ao seu próximo projeto.</p>
+        <div class="tf-hero-actions">
+          <a class="btn btn--primary" href="#produtos" data-catalog>Explorar equipamentos <span aria-hidden="true">↗</span></a>
+          <button class="btn btn--ghost" type="button" data-cact="orc">Montar meu orçamento</button>
+        </div>
+        <div class="tf-hero-facts" aria-label="Catálogo Torque Fitness">
+          <div><b id="statProdutos">—</b><span>produtos no catálogo</span></div>
+          <div><b id="statSeries">—</b><span>linhas de equipamentos</span></div>
+          <div><b>Seu projeto</b><span>orçamento personalizado</span></div>
+        </div>
+      </div>
+      <div class="tf-showcase-wrap">
+        <div class="tf-orbit" aria-hidden="true"></div><div class="tf-orbit tf-orbit--two" aria-hidden="true"></div>
+        <figure class="tf-showcase" data-tf-tilt>
+          <div class="tf-showcase__top"><span>Coleção profissional</span><span>A7 Series / 01</span></div>
+          <picture><source srcset="assets/products/f11570308235.webp" type="image/webp"><img src="assets/products/f11570308235.png" width="2560" height="1920" alt="Remada alta articulada A701 da Torque Fitness, em preto com detalhes verdes" fetchpriority="high" decoding="async"></picture>
+          <figcaption class="tf-showcase__bottom"><div><b>Remada alta articulada</b><small>A701 · A7 Series</small></div><a href="?p=A701" aria-label="Ver detalhes da remada alta A701">↗</a></figcaption>
+        </figure>
+        <div class="tf-float-label"><b>ESCOLHA CADA DETALHE</b>O equipamento certo para o seu espaço.</div>
+      </div>
+    </div>
+    <div class="tf-hero-bottom"><a href="#series"><span aria-hidden="true">↓</span> Explore a coleção</a><button class="tf-motion-button" type="button" data-tf-motion aria-pressed="false">Pausar animações</button></div>
+  </section>
+  <div class="tf-ribbon" aria-label="Musculação, cardio, funcional e acessórios">
+    <div class="tf-ribbon__track" aria-hidden="true">
+      <div><span>MUSCULAÇÃO</span><i>✦</i><span>CARDIO</span><i>✦</i><span>FUNCIONAL</span><i>✦</i><span>ACESSÓRIOS</span><i>✦</i><span>TORQUE FITNESS</span><i>✦</i></div>
+      <div><span>MUSCULAÇÃO</span><i>✦</i><span>CARDIO</span><i>✦</i><span>FUNCIONAL</span><i>✦</i><span>ACESSÓRIOS</span><i>✦</i><span>TORQUE FITNESS</span><i>✦</i></div>
+    </div>
+  </div>
+
+  <!-- ===================== SÉRIES ===================== -->
+  <section class="series reveal" id="series">
+    <div class="tf-section-heading"><div><p class="tf-kicker">01 / A coleção</p><h2 class="sec-title">Encontre a sua linha.</h2></div><a href="guia-linhas.html">Qual linha escolher? ↗</a></div>
+    <p class="sec-sub">Diferentes propostas. O mesmo foco no seu projeto. Selecione uma linha e explore os equipamentos.</p>
+    <div class="series__grid" id="seriesGrid"></div>
+  </section>
+
+  <section class="tf-campaign" aria-label="Destaques da coleção">
+    <div class="carousel" id="carousel" role="region" aria-roledescription="carrossel" aria-label="Destaques Torque Fitness">
       <div class="carousel__track" id="carTrack"></div>
       <button class="carousel__arrow carousel__arrow--prev" id="carPrev" type="button" aria-label="Slide anterior">‹</button>
       <button class="carousel__arrow carousel__arrow--next" id="carNext" type="button" aria-label="Próximo slide">›</button>
       <div class="carousel__dots" id="carDots"></div>
+      <button class="tf-car-pause" id="carPause" type="button" aria-pressed="false">Pausar destaques</button>
     </div>
-    <div class="hero__stats hero__stats--bar">
-      <div><b id="statProdutos">—</b><span>produtos</span></div>
-      <div><b id="statSeries">—</b><span>linhas</span></div>
-      <div><b>48×</b><span>parcelamento</span></div>
-    </div>
-    <div class="hero__cta hero__cta--center">
-      <a class="btn btn--primary" href="#produtos" data-catalog>Ver equipamentos →</a>
-      <button class="btn btn--ghost" type="button" data-cact="orc">Montar orçamento</button>
-    </div>
-  </section>
-
-  <!-- ===================== SÉRIES ===================== -->
-  <section class="series reveal" id="series">
-    <h2 class="sec-title">Nossas linhas</h2>
-    <p class="sec-sub">Selecione uma linha para filtrar os equipamentos. Em dúvida? <a href="guia-linhas.html" style="color:var(--violet)">Veja o guia "Qual linha escolher?"</a></p>
-    <div class="series__grid" id="seriesGrid"></div>
   </section>
 
   <!-- ===================== MONTE SUA ACADEMIA ===================== -->
@@ -195,7 +220,7 @@
       <div class="catalog__tools">
         <div class="search">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4a6 6 0 104.47 10.03l4.25 4.25 1.41-1.41-4.25-4.25A6 6 0 0010 4zm0 2a4 4 0 110 8 4 4 0 010-8z"/></svg>
-          <input type="search" id="search" placeholder="Buscar equipamento…" />
+          <input type="search" id="search" aria-label="Buscar equipamento por nome ou código" placeholder="Buscar equipamento…" />
         </div>
         <label class="selfield">
           <span class="selfield__lab">Músculo</span>
@@ -227,7 +252,7 @@
     </div>
     <div class="chips" id="chips"></div>
     <div class="catalog__meta">
-      <span class="catalog__count" id="resultCount"></span>
+      <span class="catalog__count" id="resultCount" role="status" aria-live="polite"></span>
       <button class="catalog__clear" id="clearFilters" type="button" hidden>✕ Limpar filtros</button>
       <button class="catalog__pdf" id="favToggle" type="button" hidden>♥ Favoritos <b id="favCount">0</b></button>
       <button class="catalog__pdf" id="favShare" type="button" hidden>🔗 Compartilhar lista</button>
@@ -241,26 +266,16 @@
   <!-- ===================== SOBRE ===================== -->
   <section class="about reveal" id="sobre">
     <div class="about__grid">
-      <div class="about__item"><span>🏋️</span><h3>Linha completa</h3><p>Força, funcional, cardio, pesos livres e acessórios — tudo para montar sua academia.</p></div>
-      <div class="about__item"><span>🛠️</span><h3>Padrão comercial</h3><p>Equipamentos robustos, pensados para uso intenso em academias e studios.</p></div>
-      <div class="about__item"><span>💳</span><h3>Parcelamento</h3><p>Condições facilitadas em até 48×. Fale com um consultor e simule.</p></div>
-      <div class="about__item"><span>🤝</span><h3>Atendimento direto</h3><p>Monte o orçamento e um consultor entra em contato pelo WhatsApp.</p></div>
+      <div class="about__item"><span aria-hidden="true">01</span><h3>Linha completa</h3><p>Força, funcional, cardio, pesos livres e acessórios — tudo para montar sua academia.</p></div>
+      <div class="about__item"><span aria-hidden="true">02</span><h3>Padrão comercial</h3><p>Equipamentos robustos, pensados para uso intenso em academias e studios.</p></div>
+      <div class="about__item"><span aria-hidden="true">03</span><h3>Parcelamento</h3><p>Condições facilitadas em até 48×. Fale com um consultor e simule.</p></div>
+      <div class="about__item"><span aria-hidden="true">04</span><h3>Atendimento direto</h3><p>Monte o orçamento e um consultor entra em contato pelo WhatsApp.</p></div>
     </div>
   </section>
 
-  <!-- ===================== PROVA SOCIAL ===================== -->
-  <section class="proof reveal">
-    <div class="proof__strip">
-      <div class="proof__item"><b>+10</b><span>anos de mercado</span></div>
-      <div class="proof__item"><b>+500</b><span>academias atendidas</span></div>
-      <div class="proof__item"><b>926</b><span>produtos no catálogo</span></div>
-      <div class="proof__item"><b>48×</b><span>parcelamento</span></div>
-    </div>
-    <div class="proof__quotes">
-      <figure class="qcard"><blockquote>“Montamos toda a sala de musculação com a Torque. Equipamento robusto e atendimento direto no WhatsApp.”</blockquote><figcaption>— Studio fictício, São Paulo/SP</figcaption></figure>
-      <figure class="qcard"><blockquote>“Pedi o orçamento pelo site de madrugada e no dia seguinte um consultor já tinha me chamado.”</blockquote><figcaption>— Box de CrossFit, Campinas/SP</figcaption></figure>
-      <figure class="qcard"><blockquote>“Linha completa, do rack ao cardio. Facilitou muito montar a academia do zero.”</blockquote><figcaption>— Academia, Rio de Janeiro/RJ</figcaption></figure>
-    </div>
+  <section class="tf-story" aria-labelledby="tfStoryTitle">
+    <figure class="tf-story__visual"><picture><source srcset="assets/products/c8c9b2c0726b.webp" type="image/webp"><img src="assets/products/c8c9b2c0726b.png" width="2560" height="1920" alt="Equipamento de remada baixa A704 do catálogo Torque Fitness" loading="lazy" decoding="async"></picture><figcaption>A704 / A7 SERIES — IMAGEM DO CATÁLOGO</figcaption></figure>
+    <div><p class="tf-kicker">02 / Além do equipamento</p><h2 id="tfStoryTitle">O seu espaço.<br>Em outro nível.</h2><p>Uma academia começa com uma visão. A Torque Fitness reúne linhas profissionais para ajudar você a escolher os equipamentos que fazem sentido para o seu projeto.</p><div class="tf-story__notes"><span>Escolha sua linha</span><span>Planeje seu espaço</span><span>Monte seu orçamento</span></div><a class="btn btn--ghost" href="sobre.html">Conheça a Torque Fitness ↗</a></div>
   </section>
 
   <!-- ===================== CT NA HOME ===================== -->
@@ -321,15 +336,24 @@
     <button class="btn btn--primary" id="ctaOrc" type="button">Montar meu orçamento</button>
   </section>
 
-  <!-- ===================== FOOTER ===================== -->
-  <footer class="foot">
-    <div class="foot__brand">
-      <svg viewBox="0 0 227 271" class="foot__mark"><g transform="translate(0,271) scale(0.1,-0.1)"><path d="M130 2617 c-50 -26 -50 -19 -50 -685 0 -686 -2 -669 61 -691 34 -12 367 -14 406 -3 12 4 105 84 205 178 533 498 494 463 524 455 38 -10 70 -54 58 -81 -5 -11 -268 -262 -584 -558 -586 -547 -620 -584 -652 -682 -6 -19 -13 -125 -15 -236 -6 -224 -3 -234 62 -234 30 0 96 59 706 630 601 563 677 630 703 628 18 -2 37 -14 50 -31 19 -26 19 -30 5 -55 -8 -15 -289 -283 -624 -597 l-609 -570 887 -3 c609 -1 894 1 908 8 19 11 20 24 17 973 -3 944 -4 963 -24 1023 -88 255 -268 427 -539 511 l-90 27 -690 3 c-546 3 -695 1 -715 -10z"/></g></svg>
-      <strong>TORQUE FITNESS</strong>
+  </main>
+
+  <footer class="tf-footer">
+    <div class="tf-footer__top">
+      <div class="tf-footer__brand">
+        <a class="nav__brand" href="./">
+      <svg viewBox="0 0 227 271" class="nav__mark"><g transform="translate(0,271) scale(0.1,-0.1)"><path d="M130 2617 c-50 -26 -50 -19 -50 -685 0 -686 -2 -669 61 -691 34 -12 367 -14 406 -3 12 4 105 84 205 178 533 498 494 463 524 455 38 -10 70 -54 58 -81 -5 -11 -268 -262 -584 -558 -586 -547 -620 -584 -652 -682 -6 -19 -13 -125 -15 -236 -6 -224 -3 -234 62 -234 30 0 96 59 706 630 601 563 677 630 703 628 18 -2 37 -14 50 -31 19 -26 19 -30 5 -55 -8 -15 -289 -283 -624 -597 l-609 -570 887 -3 c609 -1 894 1 908 8 19 11 20 24 17 973 -3 944 -4 963 -24 1023 -88 255 -268 427 -539 511 l-90 27 -690 3 c-546 3 -695 1 -715 -10z"/></g></svg>
+      <span><strong>TORQUE FITNESS</strong><em>EQUIPAMENTOS</em></span>
+    </a>
+        <p>Equipamentos profissionais.<br>Um novo nível para o seu espaço.</p>
+      </div>
+      <nav class="tf-footer__nav" aria-label="Navegação do rodapé">
+        <div><b>Explore</b><a href="./#produtos" data-catalog>Equipamentos</a><a href="guia-linhas.html">Guia de linhas</a><a href="solucoes.html">Soluções por segmento</a><a href="projeto.html">Planeje seu espaço</a></div>
+        <div><b>Torque Fitness</b><a href="sobre.html">Sobre a marca</a><a href="ct.html">Conheça o CT</a><a href="blog.html">Conteúdos</a><a href="faq.html">Perguntas frequentes</a><a href="app.html">Área do vendedor</a></div>
+      </nav>
     </div>
-    <p>Equipamentos de musculação e fitness · Orçamentos online</p>
-    <p class="foot__links"><a href="sobre.html">Sobre</a> · <a href="ct.html">CT</a> · <a href="solucoes.html">Soluções</a> · <a href="guia-linhas.html">Guia de linhas</a> · <a href="blog.html">Blog</a> · <a href="faq.html">FAQ</a> · <a href="app.html">Área do vendedor</a> · <a href="#produtos" data-catalog>Equipamentos</a> · <a href="#topo">Topo</a></p>
-    <small>© <span id="ano"></span> Torque Fitness. Imagens e valores meramente ilustrativos, sujeitos a alteração.</small>
+    <div class="tf-footer__word" aria-hidden="true">TORQUE</div>
+    <div class="tf-footer__bottom"><small>© <span data-tf-year id="ano">2026</span> Torque Fitness. Imagens e valores sujeitos a confirmação no orçamento.</small><button class="tf-motion-button" type="button" data-tf-motion aria-pressed="false">Pausar animações</button></div>
   </footer>
 
   <!-- ===================== QUOTE DRAWER ===================== -->
@@ -462,6 +486,8 @@
   <script src="js/products.js?v=20260718d"></script>
   <script src="js/nomes.js?v=20260718d"></script>
   <script src="js/descricoes.js?v=20260718d"></script>
-  <script src="js/site.js?v=20260718d"></script>
+  <script src="js/site.js?v=20260905"></script>
+  <script src="js/premium.js?v=20260905" defer></script>
+  <noscript><p class="tf-noscript">Ative o JavaScript para buscar equipamentos e montar seu orçamento. As informações da marca continuam disponíveis na página <a href="sobre.html">Sobre a Torque Fitness</a>.</p></noscript>
 </body>
 </html>
