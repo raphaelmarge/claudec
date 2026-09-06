@@ -10,7 +10,8 @@ vm.runInNewContext(fs.readFileSync(path.join(root,'sw.js'),'utf8'),context);
  let pending;events.install({waitUntil:p=>pending=p});await pending;
  for(const item of installed)assert(fs.existsSync(path.join(root,item.split('?')[0])),`Missing shell asset: ${item}`);
  assert(installed.includes('./index.html'));assert(installed.includes('./js/premium.js?v=20260905'));
- events.activate({waitUntil:p=>pending=p});await pending;assert.deepEqual(deleted,['torque-app-v3']);
+ assert(installed.includes('./css/premium.css?v=20260905b'));assert(installed.includes('./assets/hero-torque-fitness.jpg'));
+ events.activate({waitUntil:p=>pending=p});await pending;assert.deepEqual(deleted,['torque-app-v3','torque-app-v4-premium']);
  async function request(url,method='GET',mode='navigate'){let response;events.fetch({request:{url,method,mode},respondWith:p=>response=p});return response?await (await response).text():null;}
  assert.equal(await request('https://local.test/sobre.html'),'./index.html');
  assert.equal(await request('https://local.test/app.html'),'./app.html');

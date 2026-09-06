@@ -63,11 +63,11 @@ with sync_playwright() as p:
                 if filename == 'index.html':
                     expect(page.locator('#statProdutos')).to_have_text('955')
                     assert page.locator('.proof__quotes').count() == 0
-                    photo = page.locator('.tf-showcase img')
+                    photo = page.locator('.tf-hero-media img')
                     expect(photo).to_be_visible()
                     dimensions = photo.evaluate('(e)=>({w:e.clientWidth,h:e.clientHeight,nw:e.naturalWidth,nh:e.naturalHeight,fit:getComputedStyle(e).objectFit})')
-                    assert dimensions['nw'] == 2560 and dimensions['nh'] == 1920
-                    assert abs(dimensions['w']/dimensions['h']-4/3)<.02 and dimensions['fit']=='contain', dimensions
+                    assert dimensions['nw'] == 1600 and dimensions['nh'] == 533
+                    assert dimensions['w'] > 0 and dimensions['h'] > 0 and dimensions['fit']=='cover', dimensions
                     if width in (390,1440):
                         page.screenshot(path=str(OUT/f'home-{width}.png'),full_page=True)
                         page.screenshot(path=str(OUT/f'home-{width}-viewport.png'))

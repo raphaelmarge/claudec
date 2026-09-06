@@ -75,7 +75,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="Torque Fitness" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20100%20100%27%3E%3Crect%20width%3D%27100%27%20height%3D%27100%27%20rx%3D%2722%27%20fill%3D%27%230B0B0F%27%2F%3E%3Cg%20transform%3D%27translate%2824.0%2C19.0%29%20scale%280.2288%29%27%20fill%3D%27%238B5CF6%27%3E%3Cg%20transform%3D%27translate%280%2C271%29%20scale%280.1%2C-0.1%29%27%3E%3Cpath%20d%3D%22M130%202617%20c-50%20-26%20-50%20-19%20-50%20-685%200%20-686%20-2%20-669%2061%20-691%2034%20-12%20367%20-14%20406%20-3%2012%204%20105%2084%20205%20178%20533%20498%20494%20463%20524%20455%2038%20-10%2070%20-54%2058%20-81%20-5%20-11%20-268%20-262%20-584%20-558%20-586%20-547%20-620%20-584%20-652%20-682%20-6%20-19%20-13%20-125%20-15%20-236%20-6%20-224%20-3%20-234%2062%20-234%2030%200%2096%2059%20706%20630%20601%20563%20677%20630%20703%20628%2018%20-2%2037%20-14%2050%20-31%2019%20-26%2019%20-30%205%20-55%20-8%20-15%20-289%20-283%20-624%20-597%20l-609%20-570%20887%20-3%20c609%20-1%20894%201%20908%208%2019%2011%2020%2024%2017%20973%20-3%20944%20-4%20963%20-24%201023%20-88%20255%20-268%20427%20-539%20511%20l-90%2027%20-690%203%20c-546%203%20-695%201%20-715%20-10z%22%2F%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E" />
-  <link rel="stylesheet" href="css/premium.css?v=20260905" />
+  <link rel="stylesheet" href="css/premium.css?v=20260905b" />
 </head>
 <body class="catalog-hidden">
   <a class="skip" href="#produtos" data-catalog>Pular para o catálogo</a>
@@ -124,14 +124,16 @@
   </div>
 
   <main id="conteudo">
-  <!-- Real catalog photography; product geometry and original colors are preserved. -->
-  <section class="hero hero--premium" id="topo" aria-labelledby="tfHeroTitle">
-    <div class="tf-ambient" aria-hidden="true"></div>
+  <section class="hero hero--premium hero--cinematic" id="topo" aria-labelledby="tfHeroTitle">
+    <picture class="tf-hero-media">
+      <img src="assets/hero-torque-fitness.jpg" width="1600" height="533" alt="Academia com equipamentos profissionais e iluminação violeta" fetchpriority="high" decoding="async">
+    </picture>
+    <div class="tf-hero-shade" aria-hidden="true"></div>
     <div class="tf-hero-grid">
       <div class="tf-hero-copy">
-        <p class="tf-kicker">Torque Fitness · Linha profissional</p>
-        <h1 id="tfHeroTitle">Força no<br>estado<br><span>da arte.</span></h1>
-        <p class="tf-hero-description">Equipamentos que definem o seu espaço. Explore nossas linhas de musculação, cardio e acessórios e dê forma ao seu próximo projeto.</p>
+        <p class="tf-kicker">Torque Fitness · Equipamentos profissionais</p>
+        <h1 id="tfHeroTitle">Força no<br><span>estado da <br class="tf-hero-mobile-break">arte.</span></h1>
+        <p class="tf-hero-description">Equipamentos profissionais para academias, studios e projetos de alta performance. Escolha as linhas, compare modelos e monte seu orçamento.</p>
         <div class="tf-hero-actions">
           <a class="btn btn--primary" href="#produtos" data-catalog>Explorar equipamentos <span aria-hidden="true">↗</span></a>
           <button class="btn btn--ghost" type="button" data-cact="orc">Montar meu orçamento</button>
@@ -142,17 +144,17 @@
           <div><b>Seu projeto</b><span>orçamento personalizado</span></div>
         </div>
       </div>
-      <div class="tf-showcase-wrap">
-        <div class="tf-orbit" aria-hidden="true"></div><div class="tf-orbit tf-orbit--two" aria-hidden="true"></div>
-        <figure class="tf-showcase" data-tf-tilt>
-          <div class="tf-showcase__top"><span>Coleção profissional</span><span>A7 Series / 01</span></div>
-          <picture><source srcset="assets/products/f11570308235.webp" type="image/webp"><img src="assets/products/f11570308235.png" width="2560" height="1920" alt="Remada alta articulada A701 da Torque Fitness, em preto com detalhes verdes" fetchpriority="high" decoding="async"></picture>
-          <figcaption class="tf-showcase__bottom"><div><b>Remada alta articulada</b><small>A701 · A7 Series</small></div><a href="?p=A701" aria-label="Ver detalhes da remada alta A701">↗</a></figcaption>
-        </figure>
-        <div class="tf-float-label"><b>ESCOLHA CADA DETALHE</b>O equipamento certo para o seu espaço.</div>
-      </div>
+      <a class="tf-hero-feature" href="?linha=A7%20Series" data-tf-tilt aria-label="Explorar equipamentos da A7 Series">
+        <span class="tf-hero-feature__index">01 / DESTAQUE</span>
+        <span class="tf-hero-feature__copy"><strong>A7 Series</strong><small>Conheça a coleção profissional</small></span>
+        <span class="tf-hero-feature__arrow" aria-hidden="true">↗</span>
+      </a>
     </div>
-    <div class="tf-hero-bottom"><a href="#series"><span aria-hidden="true">↓</span> Explore a coleção</a><button class="tf-motion-button" type="button" data-tf-motion aria-pressed="false">Pausar animações</button></div>
+    <div class="tf-hero-bottom">
+      <a href="#series"><span aria-hidden="true">↓</span> Explore a coleção</a>
+      <span class="tf-hero-signature">Musculação · Cardio · Funcional · Pilates</span>
+      <button class="tf-motion-button" type="button" data-tf-motion aria-pressed="false">Pausar animações</button>
+    </div>
   </section>
   <div class="tf-ribbon" aria-label="Musculação, cardio, funcional e acessórios">
     <div class="tf-ribbon__track" aria-hidden="true">

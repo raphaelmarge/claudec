@@ -1,12 +1,13 @@
 # Revisão da vitrine Torque Fitness
 
-A reformulação é restrita ao site público do repositório `raphaelmarge/claudec`.
-O painel do vendedor, os preços, os arquivos de catálogo, as credenciais públicas
-existentes e o projeto Supabase `torquefitness` não são modificados.
+A publicação usa o projeto completo do repositório `raphaelmarge/claudec`.
+A reformulação visual atualiza a vitrine pública e preserva o painel do vendedor,
+os preços, os arquivos de catálogo, as credenciais públicas existentes e o projeto
+Supabase `torquefitness`.
 
 ## Alterações
 
-- Abertura editorial com fotografia original de alta resolução do A701.
+- Abertura cinematográfica com ambiente profissional preto e violeta, texto à esquerda e equipamentos à direita.
 - Identidade preta/violeta compartilhada por nove páginas públicas.
 - Imagens de equipamentos em `object-fit: contain`, sem alterar geometria/cor.
 - Cartões com profundidade, resposta ao mouse e revelação na rolagem.
