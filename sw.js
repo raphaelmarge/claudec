@@ -6,11 +6,11 @@
    Chamadas externas (Supabase, CDN, fontes) passam direto pela rede.
    Suba o número da versão ao mudar a estratégia.
    ============================================================ */
-const CACHE = 'torque-app-v4-premium';
+const CACHE = 'torque-app-v5-cinematic';
 const SHELL = [
   './index.html',
   './css/site.css?v=20260718d',
-  './css/premium.css?v=20260905',
+  './css/premium.css?v=20260905b',
   './js/premium.js?v=20260905',
   './js/site.js?v=20260905',
   './js/config.js?v=20260718d',
@@ -25,6 +25,7 @@ const SHELL = [
   './js/secure.js',
   './js/app.js',
   './assets/logo-torque.svg',
+  './assets/hero-torque-fitness.jpg',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './app.webmanifest'
