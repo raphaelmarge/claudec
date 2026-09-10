@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta name="referrer" content="same-origin">
+  <meta name="theme-color" content="#0B0B0F">
+  <title>Custos × venda | Torque Fitness</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=20260910">
+</head>
+<body>
+  <a class="skip" href="#workspace">Ir ao comparativo</a>
+  <header class="topbar">
+    <a class="brand" href="../" aria-label="Torque Fitness — catálogo">
+      <svg viewBox="0 0 227 271" aria-hidden="true"><g transform="translate(0,271) scale(0.1,-0.1)"><path d="M130 2617 c-50 -26 -50 -19 -50 -685 0 -686 -2 -669 61 -691 34 -12 367 -14 406 -3 12 4 105 84 205 178 533 498 494 463 524 455 38 -10 70 -54 58 -81 -5 -11 -268 -262 -584 -558 -586 -547 -620 -584 -652 -682 -6 -19 -13 -125 -15 -236 -6 -224 -3 -234 62 -234 30 0 96 59 706 630 601 563 677 630 703 628 18 -2 37 -14 50 -31 19 -26 19 -30 5 -55 -8 -15 -289 -283 -624 -597 l-609 -570 887 -3 c609 -1 894 1 908 8 19 11 20 24 17 973 -3 944 -4 963 -24 1023 -88 255 -268 427 -539 511 l-90 27 -690 3 c-546 3 -695 1 -715 -10z"/></g></svg>
+      <span>TORQUE FITNESS<small>INTELIGÊNCIA DE CUSTOS</small></span>
+    </a>
+    <nav aria-label="Navegação"><a href="../app.html">Área do vendedor ↗</a><button id="logout" hidden>Sair e bloquear</button></nav>
+  </header>
+  <div id="notice" class="notice" role="status" aria-live="polite">Verificando acesso seguro…</div>
+  <section id="login" class="login" hidden>
+    <p class="eyebrow">ACESSO INTERNO • ADMINISTRAÇÃO</p>
+    <h1>O custo por trás<br>de cada equipamento.</h1>
+    <p>Entre com a conta autorizada da Torque Fitness. Este painel não é visível para clientes nem liberado automaticamente aos vendedores.</p>
+    <form id="loginForm">
+      <label>E-mail<input id="email" type="email" autocomplete="username" required></label>
+      <label>Senha de acesso<input id="password" type="password" autocomplete="current-password" required></label>
+      <button class="primary" type="submit">Entrar no comparativo →</button>
+    </form>
+  </section>
+  <main id="workspace" hidden>
+    <section class="intro">
+      <div><p class="eyebrow">GESTÃO COMERCIAL / EQUIPAMENTOS</p><h1>Custo real.<br><span>Venda com clareza.</span></h1><p>Custo total sem margem de lucro × preço publicado no catálogo.</p></div>
+      <aside class="privacy"><span class="dot"></span> ÁREA RESTRITA<small>Os custos ficam no banco privado.<br>Consultar e editar aqui não muda a vitrine.</small></aside>
+    </section>
+    <section class="metrics" aria-label="Resumo dos filtros">
+      <article><span>Equipamentos</span><strong id="mProducts">—</strong><small>No filtro selecionado</small></article>
+      <article><span>Custos preenchidos</span><strong id="mComplete">—</strong><small>Inclui estimativas identificadas</small></article>
+      <article><span>Dados pendentes</span><strong id="mPending">—</strong><small>Não são tratados como zero</small></article>
+      <article><span>Abaixo do custo</span><strong id="mLoss">—</strong><small>Considerando a venda atual</small></article>
+    </section>
+    <section class="panel">
+      <div class="panel-head"><div><h2>Comparativo do catálogo</h2><p id="source">Carregando fonte de preços…</p></div><div class="actions"><button id="refresh">Atualizar</button><button id="export">Exportar CSV</button><button id="defaults" class="primary">Parâmetros de custo</button></div></div>
+      <div class="filters"><label class="search">Buscar equipamento<input id="search" type="search" placeholder="Nome, código ou linha…"></label><label>Linha<select id="series"><option value="">Todas as linhas</option></select></label><label>Situação<select id="status"><option value="">Todas</option><option value="pending">Dados pendentes</option><option value="loss">Abaixo do custo</option><option value="complete">Custo preenchido</option></select></label><label>Ordenar<select id="sort"><option value="name">Equipamento</option><option value="margin">Menor margem</option><option value="difference">Menor diferença em R$</option><option value="price">Maior preço de venda</option></select></label></div>
+      <div class="callout"><strong>Nenhum lucro é adicionado ao custo.</strong> Campos vazios ficam pendentes. Despesas gerais devem ser informadas <b>por unidade, já rateadas</b>. A fórmula de importação legada é uma estimativa, não apuração fiscal.</div>
+      <div class="table-wrap" tabindex="0" aria-label="Tabela comparativa, deslize para ver todas as colunas"><table><thead><tr><th>Equipamento</th><th>Base de importação</th><th>Custo total¹</th><th>Venda publicada</th><th>Diferença</th><th>Margem / venda</th><th>Situação</th><th><span class="sr-only">Editar</span></th></tr></thead><tbody id="rows"></tbody></table></div>
+      <div class="table-foot"><span id="count"></span><button id="more" hidden>Mostrar mais</button></div>
+      <p class="footnote">¹ Custo total na venda atual: compra/importação + despesas complementares − créditos confirmados + despesas incidentes sobre o preço de venda. A diferença não equivale a lucro líquido contábil. Cupons e descontos negociados não estão incluídos no preço publicado.</p>
+    </section>
+    <section class="import-panel"><div><p class="eyebrow">BASE EXISTENTE</p><h2>Reaproveite os custos já cadastrados.</h2><p>Importe FOB e parâmetros do cofre protegido da área Admin. Novos registros são adicionados sem sobrescrever custos que já foram editados neste painel.</p></div><button id="importOpen">Importar custos existentes →</button></section>
+  </main>
+  <dialog id="editor" aria-labelledby="editorTitle"><form id="costForm"><div class="dialog-head"><div><p class="eyebrow" id="editorCode"></p><h2 id="editorTitle">Parâmetros de custo</h2></div><button type="button" data-close="editor" aria-label="Fechar">✕</button></div><p id="editorHelp"></p><div id="editorFields"></div><div id="preview" class="callout" aria-live="polite"></div><p id="editorError" class="error" role="alert"></p><div class="dialog-foot"><button type="button" id="zeroExtras">Marcar despesas vazias como não aplicáveis</button><button class="primary" type="submit">Salvar no banco privado</button></div></form></dialog>
+  <dialog id="importer" aria-labelledby="importTitle"><form id="importForm"><div class="dialog-head"><h2 id="importTitle">Importar base protegida</h2><button type="button" data-close="importer" aria-label="Fechar">✕</button></div><p>Use a senha do <b>cofre de custos da área Admin</b>, que pode ser diferente da senha de login. A senha não é enviada ao servidor. Os custos descriptografados serão salvos somente neste banco privado, sem alterar preços públicos.</p><label>Senha do cofre<input type="password" id="vaultPassword" autocomplete="off" required></label><p id="importMessage" role="status"></p><button class="primary" type="submit">Desbloquear e importar com segurança</button></form></dialog>
+  <noscript>Ative JavaScript para usar o comparativo protegido.</noscript>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.js"></script>
+  <script src="../js/config.js"></script><script src="../js/cloud.js"></script>
+  <script src="../js/products.js"></script><script src="../js/nomes.js"></script>
+  <script src="model.js?v=20260910"></script><script src="app.js?v=20260910"></script>
+</body>
+</html>
