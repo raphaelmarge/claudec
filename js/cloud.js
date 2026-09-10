@@ -166,3 +166,26 @@ window.Cloud = (function () {
     isAdmin() { return !!profile && profile.role === 'admin'; }
   };
 })();
+
+/* Optional internal shortcut. Authorization is enforced separately by the cost page and RLS. */
+(function () {
+  'use strict';
+  const cloud = window.Cloud;
+  const load = cloud.loadProfile, signOut = cloud.signOut, onAuth = cloud.onAuthChange;
+  let sequence = 0;
+  function clear() { sequence++; const link = document.getElementById('umCostComparison'); if (link) link.remove(); }
+  async function shortcut(uid) {
+    clear(); const token = sequence, menu = document.getElementById('userMenu');
+    if (!menu || !uid) return;
+    try {
+      const { data, error } = await cloud.init().from('equipment_cost_access').select('enabled').eq('user_id', uid).maybeSingle();
+      if (error || !data || data.enabled !== true || token !== sequence || !cloud.profile || cloud.profile.id !== uid) return;
+      const link = document.createElement('a');
+      link.id = 'umCostComparison'; link.className = 'user-menu__item'; link.href = 'custos/'; link.textContent = 'Custos × venda';
+      menu.insertBefore(link, document.getElementById('umLogout'));
+    } catch (_) { /* An unavailable optional workspace must not interrupt the seller app. */ }
+  }
+  cloud.loadProfile = async function (uid) { clear(); const profile = await load(uid); shortcut(profile && profile.id); return profile; };
+  cloud.signOut = async function () { clear(); return signOut(); };
+  cloud.onAuthChange = function (cb) { return onAuth(function (session) { if (!session || (cloud.profile && session.user.id !== cloud.profile.id)) clear(); cb(session); }); };
+})();
