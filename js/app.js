@@ -271,16 +271,35 @@
     secretCache.items.forEach(it => { byCode[it.codigo] = it.fob; });
     state.products.forEach(p => { if (byCode[p.codigo] != null) p.fob = byCode[p.codigo]; });
   }
+  // O padrão de câmbio vem da área privada de custos. Uma edição local continua
+  // válida na sessão enquanto o padrão compartilhado permanecer igual.
+  const RATE_SESSION_KEY = 'torque_cost_rate_snapshot';
+  async function syncBaseExchangeRate() {
+    if (!unlocked || !Cloud.isAdmin()) return;
+    const userId = Cloud.profile.id;
+    const current = state.params.cambio;
+    try {
+      const rate = await Cloud.loadBaseExchangeRate();
+      if (!rate || !unlocked || Cloud.profile?.id !== userId || state.params.cambio !== current) return;
+      const snapshot = JSON.stringify([userId, rate]);
+      if (sessionStorage.getItem(RATE_SESSION_KEY) !== snapshot) {
+        state.params.cambio = rate;
+        sessionStorage.setItem(RATE_SESSION_KEY, snapshot);
+      }
+    } catch (err) { console.warn('Câmbio compartilhado indisponível.', err); }
+  }
   async function unlock(password) {
     secretCache = await decryptSecure(password);   // lança se a senha estiver errada
     mergeSecret();
     unlocked = true;
     sessionStorage.setItem(UNLOCK_KEY, '1');
+    await syncBaseExchangeRate();
     save();
   }
   function lock() {
     unlocked = false;
     sessionStorage.removeItem(UNLOCK_KEY);
+    sessionStorage.removeItem(RATE_SESSION_KEY);
     stripSecret(state);
     state.mode = 'vendedor';
     save(); render();
@@ -2770,6 +2789,7 @@
     setRoleUI(nome);
     await reloadClientes();
     await pullSettings();          // puxa etapas/metas/condições compartilhadas
+    await syncBaseExchangeRate();
     save();
     document.body.dataset.auth = 'in';
     render();
@@ -2785,6 +2805,7 @@
   }
 
   function resetToLogin() {
+    if (unlocked) { secretCache = null; lock(); }
     state.currentVendedor = null; state.clientes = []; state.cart = {};
     state.quote = { clienteId: null, descMode: 'pct', descValue: 0, sinal: 0 };
     document.body.classList.remove('role-admin');

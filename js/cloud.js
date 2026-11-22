@@ -124,6 +124,14 @@ window.Cloud = (function () {
     if (error) throw error;
     return data ? data.data : null;
   }
+  async function loadBaseExchangeRate() {
+    if (!sb || !profile || profile.role !== 'admin') return null;
+    const { data, error } = await sb.from('equipment_cost_records')
+      .select('cambio:payload->>cambio').eq('codigo', '__defaults__').maybeSingle();
+    if (error) throw error;
+    const rate = Number(data && data.cambio);
+    return Number.isFinite(rate) && rate > 0 ? rate : null;
+  }
   async function saveSettings(obj) {
     if (!sb) return;
     const { error } = await sb.from('settings').upsert({ id: 1, data: obj, updated_at: new Date().toISOString() });
@@ -161,7 +169,7 @@ window.Cloud = (function () {
     signIn, signUp, signOut, loadProfile, updateMyProfile,
     listClientes, saveCliente, deleteCliente,
     saveOrcamento, updateOrcamento, deleteOrcamento, listOrcamentos, listVendedores, updateVendedor,
-    loadSettings, saveSettings, suggestReply, uploadProductImage, publishCatalogJson,
+    loadSettings, loadBaseExchangeRate, saveSettings, suggestReply, uploadProductImage, publishCatalogJson,
     get profile() { return profile; },
     isAdmin() { return !!profile && profile.role === 'admin'; }
   };
