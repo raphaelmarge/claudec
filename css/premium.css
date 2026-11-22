@@ -132,3 +132,53 @@ html.tf-motion-paused [data-tf-reveal]{opacity:1;transform:none}html.tf-motion-p
 @media(hover:none),(pointer:coarse){.tf-hero-feature,.tf-hero-feature:hover{transform:none}}
 @media(prefers-reduced-motion:reduce){.tf-hero-media img{animation:none;transform:none}}
 @media print{.tf-hero-media,.tf-hero-shade,.tf-hero-feature{display:none!important}.hero.hero--premium.hero--cinematic{min-height:0;background:white}.hero--cinematic .tf-hero-grid{display:block;padding-block:24px}.hero--cinematic h1,.hero--cinematic .tf-hero-description{color:black;text-shadow:none}.hero--cinematic .tf-hero-bottom{display:none}}
+
+/* Banner interno de cada série. */
+.catbanner.catbanner--training {
+  display: grid;
+  justify-items: start;
+  align-content: center;
+  align-items: center;
+  justify-content: stretch;
+  min-height: clamp(260px, 36vw, 460px);
+  padding: clamp(28px, 4vw, 58px);
+  background: #0d0c14;
+  text-align: left;
+}
+.catbanner--training .catbanner__training-image {
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: auto;
+  max-width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: right center;
+  mask-image: linear-gradient(90deg, transparent, #000 28%);
+}
+.catbanner--training::after {
+  background: linear-gradient(90deg, #0d0c14 12%, rgba(13,12,20,.90) 30%, transparent 60%);
+}
+.catbanner--training .catbanner__inner { max-width: 40%; }
+.catbanner--training .catbanner__crumb { justify-content: flex-start; }
+.catbanner--training .catbanner__title {
+  color: #fff;
+  font-size: clamp(2.2rem, 4.6vw, 4rem);
+  line-height: 1.02;
+}
+.catbanner--training .catbanner__sub { color: #d3cdda; }
+
+@media (max-width: 640px) {
+  .catbanner.catbanner--training { display: block; min-height: 0; padding: 0; }
+  .catbanner--training .catbanner__training-image {
+    display: block;
+    position: static;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    mask-image: none;
+  }
+  .catbanner--training::after { display: none; }
+  .catbanner--training .catbanner__inner { max-width: none; padding: 16px 20px 21px; }
+  .catbanner--training .catbanner__title { margin-top: 8px; font-size: 1.9rem; }
+  .catbanner--training .catbanner__sub { margin-top: 6px; }
+}

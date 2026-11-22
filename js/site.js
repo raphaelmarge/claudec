@@ -227,16 +227,41 @@
   }
   function countSerie(s) { return PRODUCTS.filter(p => (p.serie || 'Geral') === s).length; }
 
-  const seriesWithCovers = new Set([
-    'a5-series', 'a7-series', 'a8-series', 'a9-series', 'cardio',
-    'hm-series', 'hy-series', 'k1-series', 'k3-series', 'k5-series',
-    'k6-series', 'k8-series', 'l-series', 'p-series', 'pilates', 'sq-f-series'
+  const seriesTrainingDescriptions = new Map([
+    ['a5-series', 'Atleta fazendo desenvolvimento de ombros no A503'],
+    ['a7-series', 'Atleta fazendo remada baixa no A704'],
+    ['a8-series', 'Atleta fazendo uma puxada no A802'],
+    ['a9-series', 'Atleta fazendo agachamento pendular no A946'],
+    ['cardio', 'Atleta correndo na esteira T13'],
+    ['hm-series', 'Atleta fazendo crucifixo sentado no HM04'],
+    ['hy-series', 'Atleta realizando uma série no leg press HY56'],
+    ['k1-series', 'Atleta fazendo extensão de joelhos no K101'],
+    ['k3-series', 'Atleta fazendo desenvolvimento de ombros no K373'],
+    ['k5-series', 'Atleta fazendo remada com apoio no peito no K575'],
+    ['k6-series', 'Atleta fazendo extensão de joelhos na extensora K602'],
+    ['k8-series', 'Atleta fazendo desenvolvimento de ombros no K806'],
+    ['l-series', 'Atleta fazendo crucifixo em pé nas polias do L1017'],
+    ['p-series', 'Atleta fazendo elevação pélvica no P812A'],
+    ['pilates', 'Atleta deitada, pressionando a plataforma com os pés no reformer SYT-PL30'],
+    ['sq-f-series', 'Atleta fazendo agachamento na barra guiada do SQ7010']
   ]);
+
+  // Cada upload recebe um nome único. Só estes três banners foram substituídos.
+  const replacedSeriesBanners = new Map([
+    ['a7-series', '/storage/v1/object/public/produtos/p/mr2xd6de8um0tu.jpg'],
+    ['hm-series', '/storage/v1/object/public/produtos/p/mqvrrwb3l7lt8q.jpg'],
+    ['l-series', '/storage/v1/object/public/produtos/p/mqvn123rnstm43.jpg']
+  ]);
+
+  function coveredSeriesSlug(name) {
+    const slug = normName(name).replace(/ /g, '-');
+    return seriesTrainingDescriptions.has(slug) ? slug : '';
+  }
 
   function renderSeries() {
     $('#seriesGrid').innerHTML = series().map(s => {
-      const slug = normName(s).replace(/ /g, '-');
-      const cover = seriesWithCovers.has(slug)
+      const slug = coveredSeriesSlug(s);
+      const cover = slug
         ? `<img class="scard__cover" src="assets/series/${slug}.webp" alt="" width="960" height="512" loading="lazy" decoding="async">`
         : '';
       return `<button type="button" class="scard ${filterSerie === s ? 'active' : ''}" data-serie="${esc(s)}" aria-pressed="${filterSerie === s}">${cover}<b>${esc(s)}</b><span>${countSerie(s)} itens</span></button>`;
@@ -724,21 +749,35 @@
     if (filterSerie && filterSerie !== 'all') return filterSerie;
     return null;
   }
-  function renderCatBanner() {
+  function renderCatBanner(allowTrainingImage = true) {
     const b = $('#catBanner'); if (!b) return;
     const nome = currentViewName();
     if (!nome) { b.hidden = true; b.innerHTML = ''; b.className = 'catbanner'; b.style.backgroundImage = ''; return; }
     const img = bannerImg(nome);
+    const slug = filterSerie !== 'all' ? coveredSeriesSlug(filterSerie) : '';
+    const replaced = replacedSeriesBanners.get(slug);
+    const showTraining = allowTrainingImage && Boolean(slug) &&
+      (!img || (replaced && img.split(/[?#]/, 1)[0].endsWith(replaced)));
+    const showCustom = Boolean(img) && !showTraining;
     b.hidden = false;
-    b.className = 'catbanner' + (img ? ' catbanner--img' : '');
-    b.style.backgroundImage = img ? `linear-gradient(to top, rgba(11,11,15,.86), rgba(11,11,15,.45)), url("${img}")` : '';
+    b.className = 'catbanner';
+    b.classList.toggle('catbanner--img', showCustom);
+    b.classList.toggle('catbanner--training', Boolean(showTraining));
+    b.style.backgroundImage = showCustom ? `linear-gradient(to top, rgba(11,11,15,.86), rgba(11,11,15,.45)), url("${img}")` : '';
     b.innerHTML = `
-      ${img ? '' : `<div class="catbanner__bg" aria-hidden="true">${plate}</div>`}
+      ${showTraining ? `<img class="catbanner__training-image" src="assets/series-training/${slug}.webp" width="1440" height="810" alt="${seriesTrainingDescriptions.get(slug)}, da linha ${esc(nome)}." fetchpriority="high">` : ''}
+      ${!showCustom && !showTraining ? `<div class="catbanner__bg" aria-hidden="true">${plate}</div>` : ''}
       <div class="catbanner__inner">
         <nav class="catbanner__crumb"><a href="${BASE_URL}" data-serie="all">Início</a><span>›</span><b>${esc(nome)}</b></nav>
         <h1 class="catbanner__title">${esc(nome)}</h1>
         <p class="catbanner__sub">Equipamentos profissionais Torque Fitness</p>
       </div>`;
+    if (showTraining) {
+      const photo = b.querySelector('.catbanner__training-image');
+      photo.addEventListener('error', () => {
+        if (photo.parentElement === b) renderCatBanner(false);
+      }, { once: true });
+    }
   }
   // página focada: dentro de uma categoria, esconde o hero e a seção "Nossas linhas"
   function applyViewLayout() {
@@ -769,12 +808,16 @@
   }
   // revela a grade de linhas + catálogo (escondidos na landing até abrir pelo menu)
   function openCatalog() { document.body.classList.remove('catalog-hidden'); }
+  function scrollToCatalog() {
+    const target = $(filterSerie === 'all' ? '#produtos' : '#catBanner');
+    if (target) target.scrollIntoView({ behavior: motionReduced() ? 'auto' : 'smooth' });
+  }
   function afterNav(push, urlParam, scroll) {
     openCatalog();
     if (push !== false) history[push === 'replace' ? 'replaceState' : 'pushState']({}, '', urlParam ? (BASE_URL + urlParam) : BASE_URL);
     renderSeries(); renderChips(); renderGrid(); renderLinhaHead();
     closeLinhasDrop(); closeMenu();
-    if (scroll) { const el = document.getElementById('produtos'); if (el) el.scrollIntoView({ behavior: motionReduced() ? 'auto' : 'smooth' }); }
+    if (scroll) scrollToCatalog();
   }
   function goToLinha(serie, push, scroll) {
     filterSerie = serie || 'all'; filterTipo = 'all'; resetFiltros();
@@ -1731,7 +1774,7 @@
     // chegada com #produtos (links de outras páginas): revela o catálogo antes de rolar
     const hashProd = location.hash === '#produtos';
     if (hashProd) openCatalog();
-    if (tp || dl || hashProd || fv) setTimeout(() => { const el = document.getElementById('produtos'); if (el) el.scrollIntoView({ behavior: motionReduced() ? 'auto' : 'smooth' }); }, 250);
+    if (tp || dl || hashProd || fv) setTimeout(scrollToCatalog, 250);
   })();
 
   // catálogo ao vivo: lê o catalog.json publicado pelo app (bucket público) e
