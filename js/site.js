@@ -227,6 +227,7 @@
   }
   function countSerie(s) { return PRODUCTS.filter(p => (p.serie || 'Geral') === s).length; }
 
+  const seriesImageVersion = '20261122c';
   const seriesTrainingDescriptions = new Map([
     ['a5-series', 'Atleta fazendo desenvolvimento de ombros no A503'],
     ['a7-series', 'Atleta fazendo remada baixa no A704'],
@@ -237,11 +238,11 @@
     ['hy-series', 'Atleta realizando uma série no leg press HY56'],
     ['k1-series', 'Atleta fazendo extensão de joelhos no K101'],
     ['k3-series', 'Atleta fazendo desenvolvimento de ombros no K373'],
-    ['k5-series', 'Atleta fazendo remada com apoio no peito no K575'],
+    ['k5-series', 'Atleta fazendo elevação pélvica na máquina K560'],
     ['k6-series', 'Atleta fazendo extensão de joelhos na extensora K602'],
     ['k8-series', 'Atleta fazendo desenvolvimento de ombros no K806'],
     ['l-series', 'Atleta fazendo crucifixo em pé nas polias do L1017'],
-    ['p-series', 'Atleta fazendo elevação pélvica no P812A'],
+    ['p-series', 'Atleta treinando no leg press P856'],
     ['pilates', 'Atleta deitada, pressionando a plataforma com os pés no reformer SYT-PL30'],
     ['sq-f-series', 'Atleta fazendo agachamento na barra guiada do SQ7010']
   ]);
@@ -262,7 +263,7 @@
     $('#seriesGrid').innerHTML = series().map(s => {
       const slug = coveredSeriesSlug(s);
       const cover = slug
-        ? `<img class="scard__cover" src="assets/series/${slug}.webp" alt="" width="960" height="512" loading="lazy" decoding="async">`
+        ? `<img class="scard__cover" src="assets/series/${slug}.webp?v=${seriesImageVersion}" alt="" width="960" height="512" loading="lazy" decoding="async">`
         : '';
       return `<button type="button" class="scard ${filterSerie === s ? 'active' : ''}" data-serie="${esc(s)}" aria-pressed="${filterSerie === s}">${cover}<b>${esc(s)}</b><span>${countSerie(s)} itens</span></button>`;
     }).join('');
@@ -765,7 +766,7 @@
     b.classList.toggle('catbanner--training', Boolean(showTraining));
     b.style.backgroundImage = showCustom ? `linear-gradient(to top, rgba(11,11,15,.86), rgba(11,11,15,.45)), url("${img}")` : '';
     b.innerHTML = `
-      ${showTraining ? `<img class="catbanner__training-image" src="assets/series-training/${slug}.webp" width="1440" height="810" alt="${seriesTrainingDescriptions.get(slug)}, da linha ${esc(nome)}." fetchpriority="high">` : ''}
+      ${showTraining ? `<img class="catbanner__training-image" src="assets/series-training/${slug}.webp?v=${seriesImageVersion}" width="1440" height="810" alt="${seriesTrainingDescriptions.get(slug)}, da linha ${esc(nome)}." fetchpriority="high">` : ''}
       ${!showCustom && !showTraining ? `<div class="catbanner__bg" aria-hidden="true">${plate}</div>` : ''}
       <div class="catbanner__inner">
         <nav class="catbanner__crumb"><a href="${BASE_URL}" data-serie="all">Início</a><span>›</span><b>${esc(nome)}</b></nav>
