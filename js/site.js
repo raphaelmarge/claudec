@@ -22,13 +22,17 @@
   const NOMES_PT = window.TORQUE_NOMES_PT || {};
   // Fotos locais em WebP (87% mais leve que o PNG); se o navegador ou o
   // arquivo falhar, o fallback abaixo devolve o PNG original.
-  const fotoWebp = src => /^assets\/products\/.+\.png$/i.test(src || '') ? src.replace(/\.png$/i, '.webp') : (src || '');
+  function fotoWebp(src) {
+    const foto = /^assets\/products\/.+\.png$/i.test(src || '') ? src.replace(/\.png$/i, '.webp') : (src || '');
+    // A foto original da T13 foi corrigida no mesmo endereço usado pelo catálogo publicado.
+    return foto === 'assets/products/d501fd345b7e.webp' ? foto + '?v=20261122d' : foto;
+  }
   document.addEventListener('error', e => {
     const img = e.target;
     if (img && img.tagName === 'IMG' && !img.dataset.pngFb && /assets\/products\/.+\.webp/i.test(img.src)) {
       img.dataset.pngFb = '1';
       e.stopPropagation();                                   // segura o onerror inline: ainda temos o PNG
-      img.src = img.src.replace(/\.webp(\?.*)?$/i, '.png');
+      img.src = img.src.replace(/\.webp(\?.*)?$/i, '.png$1');
     }
   }, true);
   function aplicaNomesPt(list) {
@@ -227,13 +231,13 @@
   }
   function countSerie(s) { return PRODUCTS.filter(p => (p.serie || 'Geral') === s).length; }
 
-  const seriesImageVersion = '20261122c';
+  const seriesImageVersion = '20261122d';
   const seriesTrainingDescriptions = new Map([
     ['a5-series', 'Atleta fazendo desenvolvimento de ombros no A503'],
     ['a7-series', 'Atleta fazendo remada baixa no A704'],
     ['a8-series', 'Atleta fazendo uma puxada no A802'],
     ['a9-series', 'Atleta fazendo agachamento pendular no A946'],
-    ['cardio', 'Atleta correndo na esteira T13'],
+    ['cardio', 'Atleta caminhando na esteira T13'],
     ['hm-series', 'Atleta fazendo crucifixo sentado no HM04'],
     ['hy-series', 'Atleta realizando uma série no leg press HY56'],
     ['k1-series', 'Atleta fazendo extensão de joelhos no K101'],
@@ -243,7 +247,7 @@
     ['k8-series', 'Atleta fazendo desenvolvimento de ombros no K806'],
     ['l-series', 'Atleta fazendo crucifixo em pé nas polias do L1017'],
     ['p-series', 'Atleta treinando no leg press P856'],
-    ['pilates', 'Atleta deitada, pressionando a plataforma com os pés no reformer SYT-PL30'],
+    ['pilates', 'Atleta praticando Pilates no reformer SYT-QB1010'],
     ['sq-f-series', 'Atleta fazendo agachamento na barra guiada do SQ7010']
   ]);
 
