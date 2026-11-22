@@ -231,12 +231,12 @@
   }
   function countSerie(s) { return PRODUCTS.filter(p => (p.serie || 'Geral') === s).length; }
 
-  const seriesImageVersion = '20261122d';
+  const seriesImageVersion = slug => slug === 'a9-series' ? '20261122e' : '20261122d';
   const seriesTrainingDescriptions = new Map([
     ['a5-series', 'Atleta fazendo desenvolvimento de ombros no A503'],
     ['a7-series', 'Atleta fazendo remada baixa no A704'],
     ['a8-series', 'Atleta fazendo uma puxada no A802'],
-    ['a9-series', 'Atleta fazendo agachamento pendular no A946'],
+    ['a9-series', 'Atleta fazendo leg press com um pé em cada plataforma do A956'],
     ['cardio', 'Atleta caminhando na esteira T13'],
     ['hm-series', 'Atleta fazendo crucifixo sentado no HM04'],
     ['hy-series', 'Atleta realizando uma série no leg press HY56'],
@@ -267,7 +267,7 @@
     $('#seriesGrid').innerHTML = series().map(s => {
       const slug = coveredSeriesSlug(s);
       const cover = slug
-        ? `<img class="scard__cover" src="assets/series/${slug}.webp?v=${seriesImageVersion}" alt="" width="960" height="512" loading="lazy" decoding="async">`
+        ? `<img class="scard__cover" src="assets/series/${slug}.webp?v=${seriesImageVersion(slug)}" alt="" width="960" height="512" loading="lazy" decoding="async">`
         : '';
       return `<button type="button" class="scard ${filterSerie === s ? 'active' : ''}" data-serie="${esc(s)}" aria-pressed="${filterSerie === s}">${cover}<b>${esc(s)}</b><span>${countSerie(s)} itens</span></button>`;
     }).join('');
@@ -770,7 +770,7 @@
     b.classList.toggle('catbanner--training', Boolean(showTraining));
     b.style.backgroundImage = showCustom ? `linear-gradient(to top, rgba(11,11,15,.86), rgba(11,11,15,.45)), url("${img}")` : '';
     b.innerHTML = `
-      ${showTraining ? `<img class="catbanner__training-image" src="assets/series-training/${slug}.webp?v=${seriesImageVersion}" width="1440" height="810" alt="${seriesTrainingDescriptions.get(slug)}, da linha ${esc(nome)}." fetchpriority="high">` : ''}
+      ${showTraining ? `<img class="catbanner__training-image" src="assets/series-training/${slug}.webp?v=${seriesImageVersion(slug)}" width="1440" height="810" alt="${seriesTrainingDescriptions.get(slug)}, da linha ${esc(nome)}." fetchpriority="high">` : ''}
       ${!showCustom && !showTraining ? `<div class="catbanner__bg" aria-hidden="true">${plate}</div>` : ''}
       <div class="catbanner__inner">
         <nav class="catbanner__crumb"><a href="${BASE_URL}" data-serie="all">Início</a><span>›</span><b>${esc(nome)}</b></nav>
