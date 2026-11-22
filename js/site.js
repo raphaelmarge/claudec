@@ -227,10 +227,20 @@
   }
   function countSerie(s) { return PRODUCTS.filter(p => (p.serie || 'Geral') === s).length; }
 
+  const seriesWithCovers = new Set([
+    'a5-series', 'a7-series', 'a8-series', 'a9-series', 'cardio',
+    'hm-series', 'hy-series', 'k1-series', 'k3-series', 'k5-series',
+    'k6-series', 'k8-series', 'l-series', 'p-series', 'pilates', 'sq-f-series'
+  ]);
+
   function renderSeries() {
-    $('#seriesGrid').innerHTML = series().map(s =>
-      `<button type="button" class="scard ${filterSerie === s ? 'active' : ''}" data-serie="${esc(s)}" aria-pressed="${filterSerie === s}"><b>${esc(s)}</b><span>${countSerie(s)} itens</span></button>`
-    ).join('');
+    $('#seriesGrid').innerHTML = series().map(s => {
+      const slug = normName(s).replace(/ /g, '-');
+      const cover = seriesWithCovers.has(slug)
+        ? `<img class="scard__cover" src="assets/series/${slug}.webp" alt="" width="960" height="512" loading="lazy" decoding="async">`
+        : '';
+      return `<button type="button" class="scard ${filterSerie === s ? 'active' : ''}" data-serie="${esc(s)}" aria-pressed="${filterSerie === s}">${cover}<b>${esc(s)}</b><span>${countSerie(s)} itens</span></button>`;
+    }).join('');
     $('#statProdutos').textContent = PRODUCTS.length;
     $('#statSeries').textContent = series().length;
   }
